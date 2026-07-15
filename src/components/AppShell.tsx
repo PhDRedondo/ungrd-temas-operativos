@@ -67,6 +67,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const userEmail = user.email;
+  const userName = user.name;
+
   function renderNav(compact: boolean) {
     const linkClass = (active: boolean) =>
       clsx(
@@ -208,7 +211,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           {!compact && (
             <div className="mb-2 truncate px-2 text-xs text-[#8fa7bb]">
-              {user.email}
+              {userEmail}
             </div>
           )}
           <button
@@ -297,7 +300,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               Plataforma de Temas Operativos
             </p>
             <p className="truncate text-xs text-ungrd-muted">
-              Hola, {user.name}
+              Hola, {userName}
             </p>
           </div>
           <ThemeToggle />
