@@ -1,26 +1,195 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+@import "driver.js/dist/driver.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ungrd-navy: #002d5a;
+  --ungrd-navy-deep: #001a36;
+  --ungrd-navy-mid: #0a3d6b;
+  --ungrd-yellow: #ffd100;
+  --ungrd-yellow-soft: #ffe566;
+  --ungrd-bg: #f3f6f9;
+  --ungrd-surface: #ffffff;
+  --ungrd-border: #d8e0e8;
+  --ungrd-text: #0f1c2e;
+  --ungrd-muted: #5a6b7d;
+  --ungrd-heading: #002d5a;
+  --ungrd-sidebar: #001a36;
+  --ungrd-sidebar-border: #0d3a63;
+  --ungrd-sidebar-hover: rgba(255, 209, 0, 0.08);
+  --ungrd-sidebar-active: rgba(255, 209, 0, 0.16);
+  --ungrd-success: #1f7a4d;
+  --ungrd-danger: #b42318;
+  --ungrd-warning: #b54708;
+  --ungrd-input: #ffffff;
+  --ungrd-hero: #001a36;
+  --ungrd-hero-fg: #ffffff;
+  --ungrd-hero-muted: rgba(255, 255, 255, 0.75);
+  --ungrd-card-glass: rgba(255, 255, 255, 0.06);
+  --ungrd-card-border: rgba(255, 255, 255, 0.12);
+}
+
+.dark {
+  --ungrd-navy: #1a4f86;
+  --ungrd-navy-deep: #060d18;
+  --ungrd-navy-mid: #2a65a0;
+  --ungrd-yellow: #ffd100;
+  --ungrd-yellow-soft: #ffe566;
+  --ungrd-bg: #0a1220;
+  --ungrd-surface: #121c2c;
+  --ungrd-border: #2a3a4f;
+  --ungrd-text: #e8eef5;
+  --ungrd-muted: #93a7bb;
+  --ungrd-heading: #f2f6fb;
+  --ungrd-sidebar: #060d18;
+  --ungrd-sidebar-border: #1c3048;
+  --ungrd-sidebar-hover: rgba(255, 209, 0, 0.1);
+  --ungrd-sidebar-active: rgba(255, 209, 0, 0.18);
+  --ungrd-success: #3dcea0;
+  --ungrd-danger: #ff7b72;
+  --ungrd-warning: #f0a060;
+  --ungrd-input: #0e1826;
+  --ungrd-hero: #060d18;
+  --ungrd-hero-fg: #ffffff;
+  --ungrd-hero-muted: rgba(255, 255, 255, 0.72);
+  --ungrd-card-glass: rgba(255, 255, 255, 0.05);
+  --ungrd-card-border: rgba(255, 255, 255, 0.12);
+}
+
+:root:not(.dark) {
+  --ungrd-hero: #f4f7fb;
+  --ungrd-hero-fg: #0f1c2e;
+  --ungrd-hero-muted: #5a6b7d;
+  --ungrd-card-glass: rgba(0, 45, 90, 0.04);
+  --ungrd-card-border: rgba(0, 45, 90, 0.1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ungrd-navy: var(--ungrd-navy);
+  --color-ungrd-navy-deep: var(--ungrd-navy-deep);
+  --color-ungrd-navy-mid: var(--ungrd-navy-mid);
+  --color-ungrd-yellow: var(--ungrd-yellow);
+  --color-ungrd-yellow-soft: var(--ungrd-yellow-soft);
+  --color-ungrd-bg: var(--ungrd-bg);
+  --color-ungrd-surface: var(--ungrd-surface);
+  --color-ungrd-border: var(--ungrd-border);
+  --color-ungrd-text: var(--ungrd-text);
+  --color-ungrd-muted: var(--ungrd-muted);
+  --color-ungrd-heading: var(--ungrd-heading);
+  --color-ungrd-sidebar: var(--ungrd-sidebar);
+  --color-ungrd-sidebar-border: var(--ungrd-sidebar-border);
+  --color-ungrd-sidebar-hover: var(--ungrd-sidebar-hover);
+  --color-ungrd-sidebar-active: var(--ungrd-sidebar-active);
+  --color-ungrd-success: var(--ungrd-success);
+  --color-ungrd-danger: var(--ungrd-danger);
+  --color-ungrd-warning: var(--ungrd-warning);
+  --color-ungrd-input: var(--ungrd-input);
+  --color-ungrd-hero: var(--ungrd-hero);
+  --color-ungrd-hero-fg: var(--ungrd-hero-fg);
+  --color-ungrd-hero-muted: var(--ungrd-hero-muted);
+  --color-ungrd-card-glass: var(--ungrd-card-glass);
+  --color-ungrd-card-border: var(--ungrd-card-border);
+  --font-sans: var(--font-nunito);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--ungrd-bg);
+  color: var(--ungrd-text);
+  font-family: var(--font-nunito), "Nunito Sans", system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--ungrd-yellow) 55%, white);
+  color: var(--ungrd-navy-deep);
+}
+
+.leaflet-container {
+  font-family: inherit;
+  border-radius: 0.75rem;
+  z-index: 0;
+}
+
+.driver-popover.ungrd-tour-popover {
+  background: var(--ungrd-surface);
+  border: 1px solid var(--ungrd-border);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 45, 90, 0.18);
+  color: var(--ungrd-text);
+}
+
+.driver-popover.ungrd-tour-popover .driver-popover-title {
+  color: var(--ungrd-heading);
+  font-weight: 800;
+}
+
+.driver-popover.ungrd-tour-popover .driver-popover-next-btn,
+.driver-popover.ungrd-tour-popover .driver-popover-done-btn {
+  background: var(--ungrd-navy);
+  color: #fff;
+  border: none;
+  text-shadow: none;
+}
+
+.driver-popover.ungrd-tour-popover .driver-popover-prev-btn {
+  border-color: var(--ungrd-border);
+  color: var(--ungrd-heading);
+  text-shadow: none;
+  background: var(--ungrd-surface);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.55s ease both;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 0.7s ease 0.12s both;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 209, 0, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 209, 0, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+:root:not(.dark) .hero-grid {
+  background-image:
+    linear-gradient(rgba(0, 45, 90, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 45, 90, 0.06) 1px, transparent 1px);
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #36587a;
+  border-radius: 999px;
+}
+
+.dark .scroll-thin::-webkit-scrollbar-thumb {
+  background: #4a6d8c;
 }
