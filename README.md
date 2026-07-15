@@ -19,9 +19,9 @@ Plataforma web institucional para **captura** y **analítica** de temas misional
 3. [Mapa de rutas y experiencia de usuario](#3-mapa-de-rutas-y-experiencia-de-usuario)
 4. [Módulo de captura](#4-módulo-de-captura)
 5. [Módulo de analítica (filtros cruzados)](#5-módulo-de-analítica-filtros-cruzados)
-6. [Temas operativos](#6-temas-operativos)
+6. [Temas operativos (carpetas autónomas)](#6-temas-operativos-carpetas-autónomas)
 7. [Stack tecnológico](#7-stack-tecnológico)
-8. [Estructura del repositorio](#8-estructura-del-repositorio)
+8. [Estructura del repositorio y flujo GitHub](#8-estructura-del-repositorio-y-flujo-github)
 9. [Arquitectura objetivo en Alibaba Cloud](#9-arquitectura-objetivo-en-alibaba-cloud)
 10. [Modelo de datos propuesto](#10-modelo-de-datos-propuesto)
 11. [Seguridad y operación](#11-seguridad-y-operación)
@@ -39,7 +39,9 @@ La aplicación centraliza **19 temas operativos** (agua y saneamiento, carrotanq
 - **Captura de datos**: formulario individual + carga masiva Excel.
 - **Analítica**: KPI, mapa departamental/municipal, torta, barras, serie temporal, Sankey y heatmap, con **filtros cruzados** entre visualizaciones.
 
-El prototipo actual es **100 % cliente** (Next.js App Router): autenticación demo, datos sintéticos y agregaciones en el navegador. La ficha técnica en `/app/acerca` y las secciones 9–12 de este README definen cómo articularlo con **Alibaba Cloud** para producción institucional.
+**Organización para equipos:** el monorepo aísla cada tema en `src/themes/<slug>/`, de modo que cada desarrollador puede evolucionar su módulo desde GitHub con PRs acotados, sin pisar el trabajo de otros. El núcleo compartido (`src/components`, `src/lib`, `src/themes/shared`) solo se toca en PRs de arquitectura.
+
+El prototipo actual es **100 % cliente** (Next.js App Router): autenticación demo, datos sintéticos y agregaciones en el navegador. La ficha técnica en `/app/acerca` y las secciones 9–12 definen la articulación con **Alibaba Cloud**.
 
 ---
 
@@ -85,10 +87,11 @@ flowchart LR
     P5["Acerca /app/acerca"]
   end
 
-  subgraph Dominio
-    D1["themes.ts<br/>19 configs"]
-    D2["geo.ts<br/>deptos / municipios"]
-    D3["data.ts<br/>records demo"]
+  subgraph Dominio["Dominio · monorepo por tema"]
+    D0["src/themes/index.ts<br/>registro"]
+    D1["src/themes/slug/<br/>theme.ts autónomo"]
+    D2["lib/geo.ts"]
+    D3["lib/data.ts"]
   end
 
   subgraph UX
@@ -98,7 +101,8 @@ flowchart LR
   end
 
   P3 --> U1
-  P4 --> D1
+  P4 --> D0
+  D0 --> D1
   P4 --> D2
   P4 --> D3
   U1 --> U2
@@ -236,33 +240,82 @@ flowchart LR
 
 ---
 
-## 6. Temas operativos
+## 6. Temas operativos (carpetas autónomas)
 
-Cada tema tiene `id` (slug de ruta), formulario, unidad y dataset demo.
+Cada tema es un **módulo de carpeta** con su propio `theme.ts`, registrado en `src/themes/index.ts`. La ruta pública sigue siendo `/app/temas/{slug}`.
 
-| # | Tema | Slug |
-|---|---|---|
-| 1 | Agua y Saneamiento | `agua-y-saneamiento` |
-| 2 | Carrotanques | `carrotanques` |
-| 3 | Obras de Emergencia | `obras-de-emergencia` |
-| 4 | Puentes | `puentes` |
-| 5 | Banco de Maquinaria | `banco-de-maquinaria` |
-| 6 | Obras por impuestos | `obras-por-impuestos` |
-| 7 | Asistencia Humanitaria | `asistencia-humanitaria` |
-| 8 | Gestión de Servicios | `gestion-de-servicios` |
-| 9 | Subsidios de Arriendos | `subsidios-de-arriendos` |
-| 10 | Alertas tempranas | `alertas-tempranas` |
-| 11 | Asistencia técnica | `asistencia-tecnica` |
-| 12 | Equipo de respuesta | `equipo-de-respuesta` |
-| 13 | Compra de materiales | `compra-de-materiales` |
-| 14 | FIC | `fic` |
-| 15 | Convenios | `convenios` |
-| 16 | Presupuesto | `presupuesto` |
-| 17 | Ejecución financiera | `ejecucion-financiera` |
-| 18 | Materiales | `materiales` |
-| 19 | Declaratoria de emergencia | `declaratoria-de-emergencia` |
+### 6.1 Catálogo
 
-Ruta: `/app/temas/{slug}`
+| # | Tema | Slug / carpeta | Ruta app |
+|---|---|---|---|
+| 1 | Agua y Saneamiento | `agua-y-saneamiento` | `/app/temas/agua-y-saneamiento` |
+| 2 | Carrotanques | `carrotanques` | `/app/temas/carrotanques` |
+| 3 | Obras de Emergencia | `obras-de-emergencia` | `/app/temas/obras-de-emergencia` |
+| 4 | Puentes | `puentes` | `/app/temas/puentes` |
+| 5 | Banco de Maquinaria | `banco-de-maquinaria` | `/app/temas/banco-de-maquinaria` |
+| 6 | Obras por impuestos | `obras-por-impuestos` | `/app/temas/obras-por-impuestos` |
+| 7 | Asistencia Humanitaria | `asistencia-humanitaria` | `/app/temas/asistencia-humanitaria` |
+| 8 | Gestión de Servicios | `gestion-de-servicios` | `/app/temas/gestion-de-servicios` |
+| 9 | Subsidios de Arriendos | `subsidios-de-arriendos` | `/app/temas/subsidios-de-arriendos` |
+| 10 | Alertas tempranas | `alertas-tempranas` | `/app/temas/alertas-tempranas` |
+| 11 | Asistencia técnica | `asistencia-tecnica` | `/app/temas/asistencia-tecnica` |
+| 12 | Equipo de respuesta | `equipo-de-respuesta` | `/app/temas/equipo-de-respuesta` |
+| 13 | Compra de materiales | `compra-de-materiales` | `/app/temas/compra-de-materiales` |
+| 14 | FIC | `fic` | `/app/temas/fic` |
+| 15 | Convenios | `convenios` | `/app/temas/convenios` |
+| 16 | Presupuesto | `presupuesto` | `/app/temas/presupuesto` |
+| 17 | Ejecución financiera | `ejecucion-financiera` | `/app/temas/ejecucion-financiera` |
+| 18 | Materiales | `materiales` | `/app/temas/materiales` |
+| 19 | Declaratoria de emergencia | `declaratoria-de-emergencia` | `/app/temas/declaratoria-de-emergencia` |
+
+Ruta en disco: `src/themes/<slug>/`.
+
+### 6.2 Contenido de cada carpeta de tema
+
+```text
+src/themes/<slug>/
+├── theme.ts      # buildTheme({ id, name, extraFields, … })
+├── index.ts      # export del ThemeModule
+└── README.md     # guía del desarrollador dueño del tema
+```
+
+Contrato exportado (`ThemeModule`):
+
+```ts
+{ config: ThemeConfig }
+```
+
+`ThemeConfig` incluye `id`, textos, `icon`, `unit`, `valueLabel` y `fields` (geo + campos propios + fecha/estado).
+
+### 6.3 Diagrama de registro
+
+```mermaid
+flowchart TB
+  subgraph Carpetas["src/themes/*  · un owner por carpeta"]
+    A["agua-y-saneamiento/theme.ts"]
+    B["carrotanques/theme.ts"]
+    C["… 17 temas más"]
+  end
+
+  subgraph Núcleo["Compartido"]
+    S["shared/buildTheme.ts"]
+    R["index.ts · THEME_MODULES"]
+    L["lib/themes.ts · reexport"]
+  end
+
+  subgraph App["Consumidores"]
+    SHELL["AppShell sidebar"]
+    PAGE["app/temas/slug/page.tsx"]
+    CAP["CapturePanel"]
+    AN["AnalyticsPanel"]
+  end
+
+  A & B & C --> R
+  S --> A & B & C
+  R --> L
+  L --> SHELL & PAGE
+  PAGE --> CAP & AN
+```
 
 ---
 
@@ -297,27 +350,90 @@ flowchart TB
 
 ---
 
-## 8. Estructura del repositorio
+## 8. Estructura del repositorio y flujo GitHub
 
 ```text
 ungrd-app/
+├── .github/CODEOWNERS        # Dueños por carpeta de tema
+├── CONTRIBUTING.md           # Cómo trabajar un tema de forma autónoma
 ├── public/branding/          # Logos color y 1 tinta
 ├── src/
-│   ├── app/
-│   │   ├── page.tsx          # Landing
-│   │   ├── login/page.tsx
-│   │   ├── app/
-│   │   │   ├── layout.tsx    # AppShell
-│   │   │   ├── page.tsx      # Panel temas
-│   │   │   ├── acerca/       # Ficha técnica Alibaba
-│   │   │   └── temas/[slug]/
-│   │   ├── globals.css
-│   │   └── layout.tsx
-│   ├── components/           # UI (Shell, Captura, Analítica, Sankey, Mapa…)
-│   └── lib/                  # auth, theme, data, geo, themes, tour
+│   ├── app/                  # Rutas Next.js (landing, login, shell, temas)
+│   ├── components/           # Núcleo compartido (Shell, Captura, Analítica)
+│   ├── lib/                  # Auth, data, geo; lib/themes.ts reexporta el registro
+│   └── themes/               # ★ Un directorio por tema (autonomía GitHub)
+│       ├── README.md
+│       ├── index.ts          # Registro THEME_MODULES
+│       ├── shared/           # types + buildTheme
+│       ├── agua-y-saneamiento/
+│       │   ├── theme.ts
+│       │   ├── index.ts
+│       │   └── README.md
+│       ├── carrotanques/
+│       └── … (19 temas)
 ├── package.json
 └── README.md
 ```
+
+### 8.1 Por qué carpetas (no un solo `themes.ts`)
+
+| Beneficio | Detalle |
+|---|---|
+| PRs pequeños | Un PR típicamente solo cambia `src/themes/<slug>/` |
+| Menos conflictos Git | Devs A y B no editan el mismo archivo monolítico |
+| CODEOWNERS | GitHub puede exigir review del dueño de la carpeta |
+| Onboarding | Cada tema trae su `README.md` local |
+| Extensión futura | Validaciones, demo data o UI propia viven junto al tema |
+
+### 8.2 Flujo de trabajo autónomo
+
+```mermaid
+sequenceDiagram
+  participant Dev as Desarrollador del tema
+  participant GH as GitHub
+  participant Core as Núcleo shared/components
+  participant CI as Build Vercel
+
+  Dev->>GH: branch feat/slug-cambio
+  Dev->>Dev: edita solo src/themes/slug/**
+  Dev->>GH: Pull Request
+  Note over GH: CODEOWNERS pide review del owner del slug
+  GH->>CI: typecheck + next build
+  CI-->>GH: OK
+  GH->>GH: merge a main
+  Note over Core: Intocado, salvo PRs de arquitectura
+```
+
+```bash
+# Ejemplo: trabajar Agua y Saneamiento
+git checkout -b feat/agua-y-saneamiento-nuevo-campo
+# Editar únicamente:
+#   src/themes/agua-y-saneamiento/theme.ts
+#   src/themes/agua-y-saneamiento/README.md  (opcional)
+git add src/themes/agua-y-saneamiento
+git commit -m "feat(agua-y-saneamiento): agregar campo X"
+git push -u origin HEAD
+# Abrir PR en GitHub
+```
+
+### 8.3 Crear un tema nuevo
+
+1. Copiar `src/themes/agua-y-saneamiento` como plantilla → renombrar carpeta.
+2. Ajustar `id`, textos e `extraFields` en `theme.ts`.
+3. Importar y registrar el módulo en `src/themes/index.ts`.
+4. Añadir la ruta en `.github/CODEOWNERS`.
+5. Verificar en `/app/temas/<slug>` y abrir PR (arquitectura + tema).
+
+### 8.4 Qué sí / qué no tocar
+
+| Sí (en su carpeta) | No (sin PR de núcleo) |
+|---|---|
+| `extraFields`, labels, icono, descripción | `src/components/*` |
+| README del tema | Otras carpetas `src/themes/<otro>/` |
+| Futuros `demo.ts` / `rules.ts` del tema | Romper el contrato `ThemeConfig` |
+| | Quitar el tema del registro sin acuerdo |
+
+Documentación detallada: [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`src/themes/README.md`](src/themes/README.md) · [`.github/CODEOWNERS`](.github/CODEOWNERS).
 
 ---
 
@@ -570,6 +686,16 @@ Abra [http://localhost:3000](http://localhost:3000).
 ### Login demo
 
 Cualquier correo válido + contraseña de **≥ 4 caracteres**. Ejemplo precargado: `analista@ungrd.gov.co` / `ungrd2026`.
+
+### Trabajar un solo tema en local
+
+```bash
+npm run dev
+# Abrir http://localhost:3000/app/temas/<slug>
+# Editar src/themes/<slug>/theme.ts y recargar
+```
+
+Ver sección [8. Estructura del repositorio y flujo GitHub](#8-estructura-del-repositorio-y-flujo-github).
 
 ---
 

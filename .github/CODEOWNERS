@@ -1,0 +1,29 @@
+# CODEOWNERS — autonomía por tema
+# Asigne revisores por carpeta. Ajuste handles de GitHub reales del equipo.
+
+# Núcleo compartido (requiere revisión de arquitectura)
+/src/components/          @PhDRedondo
+/src/lib/                 @PhDRedondo
+/src/themes/shared/       @PhDRedondo
+/src/themes/index.ts      @PhDRedondo
+
+# Temas (un desarrollador / equipo por carpeta)
+/src/themes/agua-y-saneamiento/           @PhDRedondo
+/src/themes/carrotanques/                 @PhDRedondo
+/src/themes/obras-de-emergencia/          @PhDRedondo
+/src/themes/puentes/                      @PhDRedondo
+/src/themes/banco-de-maquinaria/          @PhDRedondo
+/src/themes/obras-por-impuestos/          @PhDRedondo
+/src/themes/asistencia-humanitaria/       @PhDRedondo
+/src/themes/gestion-de-servicios/         @PhDRedondo
+/src/themes/subsidios-de-arriendos/       @PhDRedondo
+/src/themes/alertas-tempranas/            @PhDRedondo
+/src/themes/asistencia-tecnica/           @PhDRedondo
+/src/themes/equipo-de-respuesta/          @PhDRedondo
+/src/themes/compra-de-materiales/         @PhDRedondo
+/src/themes/fic/                          @PhDRedondo
+/src/themes/convenios/                    @PhDRedondo
+/src/themes/presupuesto/                  @PhDRedondo
+/src/themes/ejecucion-financiera/         @PhDRedondo
+/src/themes/materiales/                   @PhDRedondo
+/src/themes/declaratoria-de-emergencia/   @PhDRedondo
