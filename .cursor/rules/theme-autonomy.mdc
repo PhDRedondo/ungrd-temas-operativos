@@ -1,0 +1,30 @@
+---
+description: Autonomía por tema — no modificar núcleo ni otros temas
+alwaysApply: true
+---
+
+# Desarrollo autónomo por tema (UNGRD)
+
+Este monorepo aísla cada tema en `src/themes/<slug>/`.
+
+## Cuando el usuario trabaja un tema delegado
+
+1. Identifica el slug (ej. `carrotanques`, `agua-y-saneamiento`).
+2. **Edita solo** archivos bajo `src/themes/<slug>/` (p. ej. `theme.ts`, `README.md`).
+3. **No modifiques** salvo petición explícita de arquitectura:
+   - `src/components/**`
+   - `src/lib/**`
+   - `src/app/**`
+   - `src/themes/shared/**`
+   - `src/themes/<otro-slug>/**`
+   - `src/themes/index.ts` (solo al **crear** un tema nuevo)
+
+## Crear tema nuevo
+
+- Nueva carpeta `src/themes/<slug>/` + registro en `src/themes/index.ts` + entrada en `.github/CODEOWNERS`.
+- Documentar en el README del tema.
+
+## Verificar
+
+- Ruta de prueba: `/app/temas/<slug>`
+- Guía: `CONTRIBUTING.md` y `src/themes/README.md`
