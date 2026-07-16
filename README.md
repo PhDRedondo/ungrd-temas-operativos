@@ -34,7 +34,7 @@ Plataforma web institucional para **captura** y **analítica** de temas misional
 
 ## 1. Resumen ejecutivo
 
-La aplicación centraliza **19 temas operativos** (agua y saneamiento, carrotanques, obras de emergencia, presupuesto, declaratorias, etc.). Cada tema ofrece:
+La aplicación centraliza **20 módulos** (19 temas operativos + plantilla de referencia: agua y saneamiento, carrotanques, obras de emergencia, presupuesto, declaratorias, etc.). Cada tema ofrece:
 
 - **Captura de datos**: formulario individual + carga masiva Excel.
 - **Analítica**: KPI, mapa departamental/municipal, torta, barras, serie temporal, Sankey y heatmap, con **filtros cruzados** entre visualizaciones.
@@ -154,7 +154,7 @@ flowchart TD
 
 | Elemento | Comportamiento |
 |---|---|
-| **Sidebar** | Lista de 19 temas + visita guiada + acerca de + panel + logout |
+| **Sidebar** | Lista de temas (19 operativos + plantilla) + visita guiada + acerca de + panel + logout |
 | **Plegar** | Rail de íconos (`w-16`) con tooltips; pestaña a media altura |
 | **Tema** | Claro / oscuro (persistido); logo color vs `1 tinta` |
 | **Auth** | Guarda usuario en `localStorage` (`ungrd-auth-user`) |
@@ -267,8 +267,9 @@ Cada tema es un **módulo de carpeta** con su propio `theme.ts`, registrado en `
 | 17 | Ejecución financiera | `ejecucion-financiera` | `/app/temas/ejecucion-financiera` |
 | 18 | Materiales | `materiales` | `/app/temas/materiales` |
 | 19 | Declaratoria de emergencia | `declaratoria-de-emergencia` | `/app/temas/declaratoria-de-emergencia` |
+| 20 | **Plantilla** (línea base, no modificar) | `plantilla` | `/app/temas/plantilla` |
 
-Ruta en disco: `src/themes/<slug>/`.
+Ruta en disco: `src/themes/<slug>/`. La carpeta `plantilla` es la referencia congelada para copiar o comparar temas.
 
 ### 6.2 Contenido de cada carpeta de tema
 
@@ -370,7 +371,7 @@ ungrd-app/
 │       │   ├── index.ts
 │       │   └── README.md
 │       ├── carrotanques/
-│       └── … (19 temas)
+│       └── … (19 temas + plantilla)
 ├── package.json
 └── README.md
 ```

@@ -25,6 +25,7 @@ import presupuestoTheme from "./presupuesto";
 import ejecucionFinancieraTheme from "./ejecucion-financiera";
 import materialesTheme from "./materiales";
 import declaratoriaDeEmergenciaTheme from "./declaratoria-de-emergencia";
+import plantillaTheme from "./plantilla";
 import type { ThemeConfig, ThemeModule } from "./shared";
 
 export type { FieldType, FormField, ThemeConfig, ThemeModule } from "./shared";
@@ -50,6 +51,8 @@ export const THEME_MODULES: ThemeModule[] = [
   ejecucionFinancieraTheme,
   materialesTheme,
   declaratoriaDeEmergenciaTheme,
+  /** Línea base congelada — no modificar en trabajo diario de temas. */
+  plantillaTheme,
 ];
 
 export const THEMES: ThemeConfig[] = THEME_MODULES.map((m) => m.config);

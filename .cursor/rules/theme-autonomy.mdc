@@ -21,8 +21,10 @@ Este monorepo aísla cada tema en `src/themes/<slug>/`.
 
 ## Crear tema nuevo
 
+- Preferir copiar `src/themes/plantilla/` (línea base congelada).
 - Nueva carpeta `src/themes/<slug>/` + registro en `src/themes/index.ts` + entrada en `.github/CODEOWNERS`.
 - Documentar en el README del tema.
+- **No modificar** `src/themes/plantilla/` salvo actualización explícita de la línea base.
 
 ## Verificar
 

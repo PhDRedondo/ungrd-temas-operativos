@@ -18,7 +18,7 @@ export function startGuidedTour() {
         popover: {
           title: "Navegación lateral",
           description:
-            "Desde aquí accede a los 19 temas operativos, la visita guiada y la sección Acerca de.",
+            "Desde aquí accede a los temas operativos, la plantilla de referencia, la visita guiada y la sección Acerca de.",
           side: "right",
         },
       },

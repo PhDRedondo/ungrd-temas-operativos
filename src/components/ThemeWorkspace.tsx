@@ -18,14 +18,14 @@ export function ThemeWorkspace({ theme }: { theme: ThemeConfig }) {
   );
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-ungrd-navy p-3 text-ungrd-yellow">
+    <div className="min-w-0 max-w-full space-y-5">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="shrink-0 rounded-xl bg-ungrd-navy p-3 text-ungrd-yellow">
             <ThemeIcon name={theme.icon} className="h-6 w-6" />
           </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-ungrd-heading">
+          <div className="min-w-0">
+            <h1 className="text-xl font-extrabold text-ungrd-heading sm:text-2xl">
               {theme.name}
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-ungrd-muted">
@@ -37,12 +37,12 @@ export function ThemeWorkspace({ theme }: { theme: ThemeConfig }) {
 
       <div
         id="tour-tabs"
-        className="flex gap-1 border-b border-ungrd-border"
+        className="flex min-w-0 gap-1 overflow-x-auto border-b border-ungrd-border"
         role="tablist"
       >
         {(
           [
-            ["captura", "Captura de datos"],
+            ["captura", "Captura"],
             ["analitica", "Analítica"],
           ] as const
         ).map(([id, label]) => (
@@ -52,13 +52,16 @@ export function ThemeWorkspace({ theme }: { theme: ThemeConfig }) {
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`relative px-4 py-3 text-sm font-extrabold transition ${
+            className={`relative shrink-0 px-3 py-3 text-sm font-extrabold transition sm:px-4 ${
               tab === id
                 ? "text-ungrd-heading"
                 : "text-ungrd-muted hover:text-ungrd-heading"
             }`}
           >
-            {label}
+            <span className="sm:hidden">{label}</span>
+            <span className="hidden sm:inline">
+              {id === "captura" ? "Captura de datos" : "Analítica"}
+            </span>
             {tab === id && (
               <span className="absolute inset-x-2 -bottom-px h-1 rounded-full bg-ungrd-yellow" />
             )}
