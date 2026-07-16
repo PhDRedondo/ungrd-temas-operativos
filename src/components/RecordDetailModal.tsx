@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { MapPin, X } from "lucide-react";
+import { Download, FileDown, MapPin, X } from "lucide-react";
 import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, type RecordRow } from "@/lib/data";
 import { resolveLocation } from "@/lib/geo";
+import { downloadRecordPdf } from "@/lib/recordPdf";
 
 const markerIcon = L.divIcon({
   className: "",
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export function RecordDetailModal({ theme, record, onClose }: Props) {
+  const [exporting, setExporting] = useState(false);
   const location = resolveLocation(
     String(record.departamento),
     String(record.municipio),
@@ -47,6 +49,15 @@ export function RecordDetailModal({ theme, record, onClose }: Props) {
       document.body.style.overflow = prev;
     };
   }, [onClose]);
+
+  function handleDownloadPdf() {
+    setExporting(true);
+    try {
+      downloadRecordPdf(theme, record);
+    } finally {
+      window.setTimeout(() => setExporting(false), 400);
+    }
+  }
 
   const entries = theme.fields
     .map((f) => ({
@@ -87,13 +98,28 @@ export function RecordDetailModal({ theme, record, onClose }: Props) {
               </h2>
               <p className="mt-1 font-mono text-sm text-white/60">{record.id}</p>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={exporting}
+                className="inline-flex items-center gap-2 rounded-xl border border-ungrd-yellow/40 bg-ungrd-yellow px-3 py-2 text-xs font-extrabold text-ungrd-navy-deep transition hover:brightness-105 disabled:opacity-60"
+              >
+                {exporting ? (
+                  <Download className="h-4 w-4 animate-pulse" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                {exporting ? "Generando…" : "Descargar PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           <div className="relative mt-5 flex flex-wrap gap-2">
@@ -177,6 +203,20 @@ export function RecordDetailModal({ theme, record, onClose }: Props) {
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ungrd-border bg-ungrd-bg/60 px-5 py-3">
+          <p className="text-xs text-ungrd-muted">
+            Exporta este registro con atributos y ubicación en formato PDF.
+          </p>
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 rounded-xl bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ungrd-navy-deep disabled:opacity-60"
+          >
+            <FileDown className="h-4 w-4 text-ungrd-yellow" />
+            {exporting ? "Generando PDF…" : "Descargar PDF"}
+          </button>
+        </div>
         <div className="h-1.5 w-full bg-[linear-gradient(90deg,#ffd100_0%,#002d5a_55%,#ce1126_100%)]" />
       </div>
     </div>

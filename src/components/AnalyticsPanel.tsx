@@ -266,7 +266,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
   }
 
   return (
-    <div className="space-y-5" id="tour-analitica">
+    <div className="min-w-0 space-y-5" id="tour-analitica">
       <div className="grid gap-3 rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 md:grid-cols-4">
         <label className="text-xs font-bold tracking-wide text-ungrd-heading uppercase">
           Departamento
@@ -410,7 +410,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Mapa geográfico · {departamento ? "Municipal" : "Departamental"}
