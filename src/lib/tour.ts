@@ -52,9 +52,9 @@ export function startGuidedTour() {
       {
         element: "#tour-tabs",
         popover: {
-          title: "Captura y Analítica",
+          title: "Captura, descriptiva y avanzado",
           description:
-            "En cada tema encontrará dos pestañas: captura (formulario y Excel) y analítica (filtros, mapa y gráficos).",
+            "Tres pestañas por tema: captura de datos, analítica descriptiva (filtros, mapa y gráficos) y análisis avanzado (redes complejas y métricas).",
           side: "bottom",
         },
       },
