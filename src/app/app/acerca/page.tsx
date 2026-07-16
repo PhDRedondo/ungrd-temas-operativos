@@ -33,8 +33,12 @@ const MODULES = [
     "Formulario individual + carga masiva Excel por tema; registros en memoria de sesión.",
   ],
   [
-    "Analítica",
+    "Analítica descriptiva",
     "Filtros cruzados entre mapa, torta, barras, serie, Sankey y heatmap.",
+  ],
+  [
+    "Análisis avanzado",
+    "Red compleja multipartite (depto–muni–estado–categoría) con métricas de grado, intermediación, clustering y topología.",
   ],
 ];
 
@@ -186,8 +190,12 @@ export default function AboutPage() {
             Captura individual (formularios tipados por tema) y masiva (Excel).
           </li>
           <li>
-            Analítica territorial con filtros cruzados: mapa dept/muni, KPI,
+            Analítica descriptiva con filtros cruzados: mapa dept/muni, KPI,
             torta, barras, serie temporal, Sankey y heatmap.
+          </li>
+          <li>
+            Análisis avanzado: modelo de redes complejas y métricas (grado,
+            intermediación, clustering, componente gigante, diámetro).
           </li>
           <li>
             Shell institucional: branding dual (claro/oscuro), sidebar
