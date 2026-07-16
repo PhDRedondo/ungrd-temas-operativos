@@ -308,7 +308,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="h-full w-full bg-[linear-gradient(90deg,#ffd100_0%,#002d5a_100%)]" />
           </div>
         </header>
-        <main className="flex-1 px-4 py-5 lg:px-6 lg:py-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 lg:px-6 lg:py-6">{children}</main>
       </div>
     </div>
   );
