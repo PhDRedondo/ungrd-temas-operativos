@@ -39,11 +39,13 @@ Luego abra un Pull Request en GitHub. Active branch protection + CODEOWNERS si d
 
 ## Crear un tema nuevo
 
-1. Copie `src/themes/agua-y-saneamiento` como plantilla.
-2. Renombre la carpeta y ajuste `theme.ts`.
+1. Copie **`src/themes/plantilla`** (línea base congelada; no la edite).
+2. Renombre la carpeta y ajuste `theme.ts` (`id`, textos, `extraFields`).
 3. Registre el módulo en `src/themes/index.ts`.
 4. Actualice `.github/CODEOWNERS` con el owner del tema.
 5. PR de arquitectura + tema.
+
+> `plantilla` se conserva intacta para comparar o restaurar temas. Solo arquitectura la actualiza.
 
 Documentación detallada: [`src/themes/README.md`](src/themes/README.md).
 

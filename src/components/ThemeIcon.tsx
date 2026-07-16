@@ -10,6 +10,7 @@ import {
   HeartHandshake,
   Home,
   Landmark,
+  LayoutTemplate,
   LineChart,
   Package,
   Route,
@@ -41,6 +42,7 @@ const MAP: Record<string, LucideIcon> = {
   "line-chart": LineChart,
   package: Package,
   siren: Siren,
+  "layout-template": LayoutTemplate,
 };
 
 export function ThemeIcon({

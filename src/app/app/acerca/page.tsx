@@ -26,7 +26,7 @@ const MODULES = [
   ],
   [
     "Shell (/app)",
-    "Sidebar plegable (iconos), visita guiada, tema claro/oscuro, 19 temas.",
+    "Sidebar plegable (iconos), visita guiada, tema claro/oscuro, 19 temas + plantilla.",
   ],
   [
     "Captura",

@@ -138,11 +138,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               {THEMES.map((theme) => {
                 const href = `/app/temas/${theme.id}`;
                 const active = pathname.startsWith(href);
+                const isTemplate = theme.id === "plantilla";
                 return (
                   <li key={theme.id}>
+                    {isTemplate && !compact && (
+                      <p className="mt-2 mb-1 px-3 text-[10px] font-bold tracking-wider text-[#7f98ad] uppercase">
+                        Referencia
+                      </p>
+                    )}
                     <Link
                       href={href}
-                      title={theme.name}
+                      title={
+                        isTemplate
+                          ? `${theme.name} · línea base (no modificar)`
+                          : theme.name
+                      }
                       aria-label={theme.name}
                       className={linkClass(active)}
                     >
@@ -155,7 +165,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                         )}
                       />
                       {!compact && (
-                        <span className="truncate">{theme.name}</span>
+                        <span className="truncate">
+                          {theme.name}
+                          {isTemplate ? " · base" : ""}
+                        </span>
                       )}
                     </Link>
                   </li>

@@ -27,3 +27,5 @@
 /src/themes/ejecucion-financiera/         @PhDRedondo
 /src/themes/materiales/                   @PhDRedondo
 /src/themes/declaratoria-de-emergencia/   @PhDRedondo
+# Línea base congelada — no editar en PRs de temas operativos
+/src/themes/plantilla/                    @PhDRedondo

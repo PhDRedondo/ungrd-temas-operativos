@@ -77,19 +77,20 @@ export function ColombiaMap({
 
   if (!mounted) {
     return (
-      <div className="flex h-[360px] items-center justify-center rounded-xl border border-ungrd-border bg-ungrd-bg text-sm text-ungrd-muted">
+      <div className="flex h-[240px] items-center justify-center rounded-xl border border-ungrd-border bg-ungrd-bg text-sm text-ungrd-muted sm:h-[360px]">
         Cargando mapa…
       </div>
     );
   }
 
   return (
-    <MapContainer
-      center={[4.5, -74.1]}
-      zoom={5.2}
-      scrollWheelZoom={false}
-      className="h-[360px] w-full rounded-xl border border-ungrd-border"
-    >
+    <div className="min-w-0 max-w-full overflow-hidden rounded-xl border border-ungrd-border">
+      <MapContainer
+        center={[4.5, -74.1]}
+        zoom={5.2}
+        scrollWheelZoom={false}
+        className="h-[240px] w-full sm:h-[360px]"
+      >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -126,6 +127,7 @@ export function ColombiaMap({
           </CircleMarker>
         );
       })}
-    </MapContainer>
+      </MapContainer>
+    </div>
   );
 }

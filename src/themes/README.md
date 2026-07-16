@@ -33,10 +33,14 @@ git push -u origin HEAD
 
 ## Crear un tema nuevo
 
-1. Copie una carpeta existente como plantilla.
-2. Cambie `id`, textos y `extraFields` en `theme.ts`.
+1. Copie la carpeta **`plantilla`** (línea base congelada):
+   `cp -R src/themes/plantilla src/themes/<slug>`
+2. Cambie `id`, textos y `extraFields` en `theme.ts` del nuevo slug.
 3. Registre el módulo en `src/themes/index.ts`.
 4. Verifique en `/app/temas/<slug>`.
+
+> **Importante:** no modifique `src/themes/plantilla/` en el trabajo diario.
+> Es la referencia para comparar o restaurar temas. Solo arquitectura la actualiza.
 
 ## CODEOWNERS (opcional)
 

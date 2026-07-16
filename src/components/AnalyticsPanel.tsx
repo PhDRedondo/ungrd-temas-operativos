@@ -266,9 +266,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
   }
 
   return (
-    <div className="min-w-0 space-y-5" id="tour-analitica">
-      <div className="grid gap-3 rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 md:grid-cols-4">
-        <label className="text-xs font-bold tracking-wide text-ungrd-heading uppercase">
+    <div className="min-w-0 max-w-full space-y-4 sm:space-y-5" id="tour-analitica">
+      <div className="grid min-w-0 gap-3 rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-4">
+        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
           Departamento
           <select
             value={departamento}
@@ -276,7 +276,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
               setDepartamento(e.target.value);
               setMunicipio("");
             }}
-            className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
+            className="mt-1 w-full max-w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
           >
             <option value="">Todos</option>
             {departmentNames().map((d) => (
@@ -286,12 +286,12 @@ export function AnalyticsPanel({ theme, records }: Props) {
             ))}
           </select>
         </label>
-        <label className="text-xs font-bold tracking-wide text-ungrd-heading uppercase">
+        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
           Estado
           <select
             value={estado}
             onChange={(e) => setEstado(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
+            className="mt-1 w-full max-w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
           >
             <option value="">Todos</option>
             {["Programado", "En ejecución", "Finalizado", "Suspendido"].map(
@@ -303,7 +303,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
             )}
           </select>
         </label>
-        <label className="text-xs font-bold tracking-wide text-ungrd-heading uppercase">
+        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
           Desde
           <input
             type="date"
@@ -312,10 +312,10 @@ export function AnalyticsPanel({ theme, records }: Props) {
               setFrom(e.target.value);
               setPeriodo("");
             }}
-            className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
+            className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
           />
         </label>
-        <label className="text-xs font-bold tracking-wide text-ungrd-heading uppercase">
+        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
           Hasta
           <input
             type="date"
@@ -324,13 +324,13 @@ export function AnalyticsPanel({ theme, records }: Props) {
               setTo(e.target.value);
               setPeriodo("");
             }}
-            className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
+            className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
           />
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-ungrd-muted">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+        <span className="text-xs text-ungrd-muted sm:text-sm">
           Clic en cualquier visualización para filtrar cruzado.
         </span>
         {hasFilters && (
@@ -342,7 +342,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
                   setDepartamento("");
                   setMunicipio("");
                 }}
-                className="rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
                 Depto: {departamento} ×
               </button>
@@ -351,7 +351,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
               <button
                 type="button"
                 onClick={() => setMunicipio("")}
-                className="rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
                 Mpio: {municipio} ×
               </button>
@@ -360,7 +360,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
               <button
                 type="button"
                 onClick={() => setEstado("")}
-                className="rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
                 Estado: {estado} ×
               </button>
@@ -369,7 +369,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
               <button
                 type="button"
                 onClick={() => setTercero("")}
-                className="rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
                 {thirdLabel}: {tercero} ×
               </button>
@@ -378,7 +378,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
               <button
                 type="button"
                 onClick={() => setPeriodo("")}
-                className="rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
                 Periodo: {periodo} ×
               </button>
@@ -394,16 +394,16 @@ export function AnalyticsPanel({ theme, records }: Props) {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((c) => (
           <article
             key={c.label}
-            className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4"
+            className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4"
           >
             <p className="text-xs font-bold tracking-wide text-ungrd-muted uppercase">
               {c.label}
             </p>
-            <p className="mt-2 text-2xl font-extrabold text-ungrd-heading">
+            <p className="mt-2 break-words text-xl font-extrabold text-ungrd-heading tabular-nums sm:text-2xl">
               {c.value}
             </p>
           </article>
@@ -411,7 +411,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
       </div>
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-        <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Mapa geográfico · {departamento ? "Municipal" : "Departamental"}
           </h3>
@@ -427,19 +427,19 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </p>
         </section>
 
-        <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Distribución · {categoryField?.label || "Estado"}
           </h3>
-          <div className="h-72">
+          <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                 <Pie
                   data={byCategory}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={55}
-                  outerRadius={95}
+                  innerRadius="28%"
+                  outerRadius="68%"
                   paddingAngle={2}
                   cursor="pointer"
                   onClick={(_, index) => {
@@ -472,20 +472,27 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Top departamentos (valor)
           </h3>
-          <div className="h-72">
+          <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byDept} layout="vertical" margin={{ left: 24 }}>
+              <BarChart
+                data={byDept}
+                layout="vertical"
+                margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5ebf1" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <XAxis type="number" tick={{ fontSize: 10 }} />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={110}
-                  tick={{ fontSize: 11 }}
+                  width={72}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v: string) =>
+                    v.length > 10 ? `${v.slice(0, 9)}…` : v
+                  }
                 />
                 <Tooltip formatter={(v) => formatCop(Number(v))} />
                 <Bar
@@ -514,22 +521,36 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Serie de tiempo
           </h3>
-          <div className="h-72">
+          <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={timeSeries}
+                margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
                 onClick={(state) => {
                   const label = state?.activeLabel;
                   if (typeof label === "string") onPeriodClick(label);
                 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5ebf1" />
-                <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
+                <XAxis
+                  dataKey="period"
+                  tick={{ fontSize: 10 }}
+                  interval="preserveStartEnd"
+                  minTickGap={28}
+                />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  width={44}
+                  tickFormatter={(v: number) =>
+                    v >= 1_000_000
+                      ? `${Math.round(v / 1_000_000)}M`
+                      : String(v)
+                  }
+                />
                 <Tooltip formatter={(v) => formatCop(Number(v))} />
                 <Line
                   type="monotone"
@@ -566,7 +587,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 xl:col-span-2">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
           <SankeyFlowDiagram
             records={sankeyRecords}
             thirdLabel={thirdLabel}
@@ -575,7 +596,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
           />
         </section>
 
-        <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 xl:col-span-2">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Tabla de calor · Departamento × Mes
           </h3>
@@ -583,11 +604,11 @@ export function AnalyticsPanel({ theme, records }: Props) {
             Clic en una celda para filtrar por departamento y periodo; clic en
             el nombre del departamento o el mes para filtrar solo esa dimensión.
           </p>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-xs">
+          <div className="scroll-thin -mx-1 max-w-full overflow-x-auto px-1">
+            <table className="w-max min-w-full text-xs">
               <thead>
                 <tr>
-                  <th className="px-2 py-2 text-left font-bold text-ungrd-heading">
+                  <th className="sticky left-0 z-[1] bg-ungrd-surface px-2 py-2 text-left font-bold text-ungrd-heading shadow-[2px_0_6px_rgba(0,45,90,0.06)]">
                     Depto
                   </th>
                   {heatmap.months.map((m) => (
@@ -603,7 +624,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
                             : undefined
                         }
                       >
-                        {m}
+                        {m.slice(2)}
                       </span>
                     </th>
                   ))}
@@ -613,7 +634,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
                 {heatmap.matrix.map((row) => (
                   <tr key={row.dept}>
                     <td
-                      className="cursor-pointer whitespace-nowrap px-2 py-1.5 font-semibold text-ungrd-heading hover:underline"
+                      className="sticky left-0 z-[1] cursor-pointer whitespace-nowrap bg-ungrd-surface px-2 py-1.5 font-semibold text-ungrd-heading shadow-[2px_0_6px_rgba(0,45,90,0.06)] hover:underline"
                       onClick={() => onBarClick(row.dept)}
                     >
                       <span
@@ -623,7 +644,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
                             : undefined
                         }
                       >
-                        {row.dept}
+                        {row.dept.length > 14
+                          ? `${row.dept.slice(0, 13)}…`
+                          : row.dept}
                       </span>
                     </td>
                     {row.cells.map((cell) => {
@@ -638,7 +661,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
                             onClick={() =>
                               onHeatmapCell(row.dept, cell.month)
                             }
-                            className="flex h-8 min-w-14 w-full items-center justify-center rounded-md text-[10px] font-bold transition hover:ring-2 hover:ring-ungrd-yellow"
+                            className="flex h-8 min-w-11 w-full items-center justify-center rounded-md text-[10px] font-bold transition hover:ring-2 hover:ring-ungrd-yellow sm:min-w-14"
                             style={{
                               background: active
                                 ? "#ffd100"

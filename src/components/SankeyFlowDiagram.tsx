@@ -136,12 +136,17 @@ export function SankeyFlowDiagram({
     const el = wrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      const w = Math.max(640, entry?.contentRect.width || 900);
-      setSize({ w, h: Math.max(360, Math.min(520, w * 0.48)) });
+      const raw = entry?.contentRect.width || 320;
+      const w = Math.max(280, Math.floor(raw));
+      const h = w < 480 ? Math.max(300, Math.min(400, w * 0.9)) : Math.max(360, Math.min(520, w * 0.48));
+      setSize({ w, h });
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const narrow = size.w < 520;
+  const sidePad = narrow ? 52 : 110;
 
   const layout = useMemo(() => {
     const { nodes, links } = buildGraph(records);
@@ -150,11 +155,11 @@ export function SankeyFlowDiagram({
     try {
       const gen = sankey<ExtraNode, ExtraLink>()
         .nodeId((d) => d.id)
-        .nodeWidth(14)
-        .nodePadding(14)
+        .nodeWidth(narrow ? 10 : 14)
+        .nodePadding(narrow ? 8 : 14)
         .extent([
-          [110, 36],
-          [size.w - 110, size.h - 16],
+          [sidePad, 36],
+          [size.w - sidePad, size.h - 16],
         ]);
 
       const graph = gen({
@@ -162,7 +167,7 @@ export function SankeyFlowDiagram({
         links: links.map((l) => ({ ...l })),
       }) as SankeyGraph<ExtraNode, ExtraLink>;
 
-      const xs = [110, size.w / 2 - 7, size.w - 124];
+      const xs = [sidePad, size.w / 2 - 7, size.w - sidePad - 14];
       for (const node of graph.nodes) {
         const x0 = xs[node.column] ?? node.x0!;
         const w = (node.x1 ?? 0) - (node.x0 ?? 0);
@@ -175,7 +180,7 @@ export function SankeyFlowDiagram({
     } catch {
       return null;
     }
-  }, [records, size.w, size.h]);
+  }, [records, size.w, size.h, narrow, sidePad]);
 
   const path = sankeyLinkHorizontal();
 
@@ -196,12 +201,12 @@ export function SankeyFlowDiagram({
   };
 
   return (
-    <div ref={wrapRef} className="w-full">
+    <div ref={wrapRef} className="min-w-0 w-full max-w-full overflow-hidden">
       <div className="mb-1">
-        <h3 className="text-base font-extrabold text-ungrd-heading">
+        <h3 className="text-sm font-extrabold text-ungrd-heading sm:text-base">
           Flujo departamento → estado → {thirdLabel.toLowerCase()}
         </h3>
-        <p className="mt-0.5 text-sm text-ungrd-muted">
+        <p className="mt-0.5 text-xs text-ungrd-muted sm:text-sm">
           Clic en un nodo para filtrar cruzado. El grosor del flujo representa el
           número de registros.
         </p>
@@ -212,19 +217,26 @@ export function SankeyFlowDiagram({
           Sin datos suficientes para el diagrama de Sankey.
         </p>
       ) : (
-        <svg
-          width="100%"
-          height={size.h}
-          viewBox={`0 0 ${size.w} ${size.h}`}
-          className="select-none"
-          role="img"
-          aria-label="Diagrama de Sankey"
-        >
+        <div className="scroll-thin w-full max-w-full overflow-x-auto">
+          <svg
+            width="100%"
+            height={size.h}
+            viewBox={`0 0 ${size.w} ${size.h}`}
+            preserveAspectRatio="xMidYMid meet"
+            className="select-none"
+            role="img"
+            aria-label="Diagrama de Sankey"
+          >
           {/* Column headers */}
           {[
-            { x: 117, label: "DEPARTAMENTO" },
+            { x: sidePad + 7, label: narrow ? "DEPTO" : "DEPARTAMENTO" },
             { x: size.w / 2, label: "ESTADO" },
-            { x: size.w - 117, label: thirdLabel.toUpperCase() },
+            {
+              x: size.w - sidePad - 7,
+              label: narrow
+                ? thirdLabel.slice(0, 8).toUpperCase()
+                : thirdLabel.toUpperCase(),
+            },
           ].map((h) => (
             <text
               key={h.label}
@@ -232,7 +244,7 @@ export function SankeyFlowDiagram({
               y={18}
               textAnchor="middle"
               className="fill-ungrd-muted"
-              style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em" }}
+              style={{ fontSize: narrow ? 9 : 11, fontWeight: 700, letterSpacing: "0.06em" }}
             >
               {h.label}
             </text>
@@ -287,6 +299,7 @@ export function SankeyFlowDiagram({
 
               const labelLeft = node.column === 0;
               const labelRight = node.column === 2;
+              const maxLen = narrow ? 10 : 18;
 
               return (
                 <g
@@ -313,30 +326,31 @@ export function SankeyFlowDiagram({
                   <text
                     x={
                       labelLeft
-                        ? x0 - 8
+                        ? x0 - 6
                         : labelRight
-                          ? x1 + 8
-                          : x1 + 10
+                          ? x1 + 6
+                          : x1 + 8
                     }
                     y={midY}
                     dy="0.35em"
                     textAnchor={labelLeft ? "end" : "start"}
                     style={{
-                      fontSize: 11,
+                      fontSize: narrow ? 9 : 11,
                       fontWeight: 600,
                       fill: "currentColor",
                     }}
                     className="fill-ungrd-heading"
                   >
-                    {node.name.length > 18
-                      ? `${node.name.slice(0, 16)}…`
+                    {node.name.length > maxLen
+                      ? `${node.name.slice(0, maxLen - 1)}…`
                       : node.name}
                   </text>
                 </g>
               );
             })}
           </g>
-        </svg>
+          </svg>
+        </div>
       )}
     </div>
   );

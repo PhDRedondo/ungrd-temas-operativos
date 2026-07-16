@@ -78,8 +78,8 @@ export default function HomePage() {
           {[
             {
               icon: Shield,
-              title: "19 temas operativos",
-              text: "Desde agua y saneamiento hasta presupuesto y declaratorias.",
+              title: "19 temas + plantilla",
+              text: "Operativos misionales y una línea base de referencia para el equipo.",
             },
             {
               icon: Map,
