@@ -46,3 +46,12 @@ Luego abra un Pull Request en GitHub. Active branch protection + CODEOWNERS si d
 5. PR de arquitectura + tema.
 
 Documentación detallada: [`src/themes/README.md`](src/themes/README.md).
+
+## Reglas de Cursor
+
+El proyecto incluye `.cursor/rules/`:
+
+- `theme-autonomy.mdc` — siempre activa: no tocar núcleo ni otros temas.
+- `theme-module.mdc` — al editar `src/themes/**`: permanecer en la carpeta del slug.
+
+Así, si un desarrollador pide cambios en su tema, el agente no debería modificar la app global ni carpetas de otros.

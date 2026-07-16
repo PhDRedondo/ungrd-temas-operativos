@@ -435,6 +435,8 @@ git push -u origin HEAD
 
 Documentación detallada: [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`src/themes/README.md`](src/themes/README.md) · [`.github/CODEOWNERS`](.github/CODEOWNERS).
 
+Reglas de Cursor (el agente respeta la carpeta del tema): [`.cursor/rules/theme-autonomy.mdc`](.cursor/rules/theme-autonomy.mdc) · [`.cursor/rules/theme-module.mdc`](.cursor/rules/theme-module.mdc).
+
 ---
 
 ## 9. Arquitectura objetivo en Alibaba Cloud

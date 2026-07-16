@@ -1,0 +1,34 @@
+---
+description: Al editar un módulo de tema, permanecer en esa carpeta
+globs: src/themes/**/*
+alwaysApply: false
+---
+
+# Módulo de tema (`src/themes/<slug>/`)
+
+Estás en un módulo autónomo. El slug es el nombre de la carpeta inmediata bajo `src/themes/` (no `shared`).
+
+## Permitido
+
+- Cambiar `theme.ts` (campos `extraFields`, textos, icono, descripción, unidad).
+- Actualizar `README.md` / `index.ts` **del mismo slug**.
+- Añadir archivos opcionales **en la misma carpeta** (`demo.ts`, `rules.ts`, etc.) si el usuario lo pide.
+
+## Prohibido sin pedirlo
+
+- Tocar `src/themes/shared/**` u otras carpetas `src/themes/<otro>/`.
+- Refactorizar captura/analítica global (`src/components/**`).
+- Cambiar auth, layout, login o landing.
+
+## Contrato
+
+Usar `buildTheme` desde `../shared`. Mantener `id` alineado con el nombre de la carpeta.
+
+```ts
+// ✅ extraFields del tema
+extraFields: [{ name: "campo", label: "Campo", type: "text", required: true }]
+
+// ❌ no redefinir GEO_FIELDS / BASE_DATE_FIELDS aquí
+```
+
+Tras cambios, indicar verificar `/app/temas/<slug>`.
