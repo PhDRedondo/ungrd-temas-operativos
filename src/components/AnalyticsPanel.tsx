@@ -20,6 +20,7 @@ import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/data";
 import { departmentNames } from "@/lib/geo";
 import { SankeyFlowDiagram } from "@/components/SankeyFlowDiagram";
+import { RecordsDataTable } from "@/components/RecordsDataTable";
 import type { MapPoint } from "@/components/ColombiaMap";
 
 const ColombiaMap = dynamic(
@@ -666,6 +667,8 @@ export function AnalyticsPanel({ theme, records }: Props) {
             </table>
           </div>
         </section>
+
+        <RecordsDataTable theme={theme} records={filtered} />
       </div>
     </div>
   );

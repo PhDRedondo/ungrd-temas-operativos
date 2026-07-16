@@ -234,3 +234,29 @@ export const DEPARTMENTS: Department[] = [
 export function departmentNames() {
   return DEPARTMENTS.map((d) => d.name);
 }
+
+/** Resuelve coordenadas aproximadas de un registro (municipio o departamento). */
+export function resolveLocation(
+  departamento: string,
+  municipio: string,
+): { lat: number; lng: number; label: string; level: "municipio" | "departamento" } | null {
+  const dept = DEPARTMENTS.find((d) => d.name === departamento);
+  if (!dept) return null;
+  const muni = dept.municipalities.find(
+    (m) => m.name.toLowerCase() === municipio.toLowerCase(),
+  );
+  if (muni) {
+    return {
+      lat: muni.lat,
+      lng: muni.lng,
+      label: `${muni.name}, ${dept.name}`,
+      level: "municipio",
+    };
+  }
+  return {
+    lat: dept.lat,
+    lng: dept.lng,
+    label: dept.name,
+    level: "departamento",
+  };
+}
