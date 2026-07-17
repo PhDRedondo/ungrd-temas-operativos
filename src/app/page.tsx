@@ -26,6 +26,9 @@ export default function HomePage() {
               <p className="text-sm text-ungrd-hero-muted">
                 Gestión de Temas Operativos
               </p>
+              <p className="text-sm text-ungrd-hero-muted">
+                Subdirección de Manejo del Riesgo de Desastres
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -53,9 +56,9 @@ export default function HomePage() {
             Una vista operativa para capturar, validar y analizar la respuesta
           </h1>
           <p className="mt-5 max-w-lg text-base leading-relaxed text-ungrd-hero-muted sm:text-lg">
-            Plataforma institucional para los temas misionales de la UNGRD:
-            captura individual o masiva, y analítica territorial con mapas,
-            indicadores y series de tiempo.
+            Plataforma de gestión temática de la Subdirección de Manejo del
+            Riesgo de Desastres: captura individual o masiva, y analítica
+            territorial con mapas, indicadores y series de tiempo.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -78,8 +81,8 @@ export default function HomePage() {
           {[
             {
               icon: Shield,
-              title: "19 temas + plantilla",
-              text: "Operativos misionales y una línea base de referencia para el equipo.",
+              title: "19 temas",
+              text: "Temas operativos misionales de la UNGRD.",
             },
             {
               icon: Map,
