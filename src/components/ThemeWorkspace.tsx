@@ -14,21 +14,25 @@ const TABS = [
     id: "captura",
     short: "Captura",
     label: "Captura de datos",
-  },
-  {
-    id: "analitica",
-    short: "Descriptiva",
-    label: "Analítica descriptiva",
-  },
-  {
-    id: "avanzado",
-    short: "Avanzado",
-    label: "Análisis avanzado",
+    highlight: false,
   },
   {
     id: "quickbi",
     short: "QuickBI",
     label: "QuickBI",
+    highlight: true,
+  },
+  {
+    id: "analitica",
+    short: "Descriptiva",
+    label: "Analítica descriptiva",
+    highlight: false,
+  },
+  {
+    id: "avanzado",
+    short: "Avanzado",
+    label: "Análisis avanzado",
+    highlight: false,
   },
 ] as const;
 
@@ -75,13 +79,30 @@ export function ThemeWorkspace({ theme }: { theme: ThemeConfig }) {
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={`relative shrink-0 px-3 py-3 text-sm font-extrabold transition sm:px-4 ${
-              tab === t.id
-                ? "text-ungrd-heading"
-                : "text-ungrd-muted hover:text-ungrd-heading"
+              t.highlight
+                ? tab === t.id
+                  ? "text-ungrd-heading"
+                  : "text-ungrd-heading/80 hover:text-ungrd-heading"
+                : tab === t.id
+                  ? "text-ungrd-heading"
+                  : "text-ungrd-muted hover:text-ungrd-heading"
             }`}
           >
-            <span className="sm:hidden">{t.short}</span>
-            <span className="hidden sm:inline">{t.label}</span>
+            {t.highlight ? (
+              <>
+                <span className="rounded-full bg-ungrd-yellow px-2.5 py-1 text-ungrd-navy sm:hidden">
+                  {t.short}
+                </span>
+                <span className="hidden rounded-full bg-ungrd-yellow px-2.5 py-1 text-ungrd-navy sm:inline">
+                  {t.label}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden">{t.short}</span>
+                <span className="hidden sm:inline">{t.label}</span>
+              </>
+            )}
             {tab === t.id && (
               <span className="absolute inset-x-2 -bottom-px h-1 rounded-full bg-ungrd-yellow" />
             )}
