@@ -109,7 +109,7 @@ export default function HomePage() {
       </section>
 
       <footer className="relative z-10 border-t border-ungrd-card-border px-6 py-5 text-center text-xs text-ungrd-muted">
-        SNGRD · UNGRD — Prototipo de gestión temática · Demo local
+        UNGRD - Gestión Temática - Subdirección de Manejo del Riesgo de Desastres
       </footer>
     </main>
   );
