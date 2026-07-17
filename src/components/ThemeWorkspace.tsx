@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CapturePanel } from "@/components/CapturePanel";
 import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { AdvancedAnalysisPanel } from "@/components/AdvancedAnalysisPanel";
+import { QuickBIPanel } from "@/components/QuickBIPanel";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import { getRecordsForTheme } from "@/lib/data";
 import type { ThemeConfig } from "@/lib/themes";
@@ -23,6 +24,11 @@ const TABS = [
     id: "avanzado",
     short: "Avanzado",
     label: "Análisis avanzado",
+  },
+  {
+    id: "quickbi",
+    short: "QuickBI",
+    label: "QuickBI",
   },
 ] as const;
 
@@ -92,6 +98,7 @@ export function ThemeWorkspace({ theme }: { theme: ThemeConfig }) {
       {tab === "avanzado" && (
         <AdvancedAnalysisPanel theme={theme} records={records} />
       )}
+      {tab === "quickbi" && <QuickBIPanel theme={theme} />}
     </div>
   );
 }

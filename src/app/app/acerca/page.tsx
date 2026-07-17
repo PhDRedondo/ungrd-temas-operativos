@@ -40,6 +40,10 @@ const MODULES = [
     "Análisis avanzado",
     "Red compleja multipartite (depto–muni–estado–categoría) con métricas de grado, intermediación, clustering y topología.",
   ],
+  [
+    "QuickBI",
+    "Pestaña por tema para el tablero ejecutivo Quick BI (Alibaba); embed opcional vía quickBiUrl en la config del tema.",
+  ],
 ];
 
 const CURRENT_LIMITS = [
@@ -196,6 +200,10 @@ export default function AboutPage() {
           <li>
             Análisis avanzado: modelo de redes complejas y métricas (grado,
             intermediación, clustering, componente gigante, diámetro).
+          </li>
+          <li>
+            QuickBI: pestaña por tema (incl. plantilla) para tableros
+            ejecutivos Quick BI embebidos.
           </li>
           <li>
             Shell institucional: branding dual (claro/oscuro), sidebar
