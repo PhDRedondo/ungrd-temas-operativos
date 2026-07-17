@@ -52,9 +52,9 @@ export function startGuidedTour() {
       {
         element: "#tour-tabs",
         popover: {
-          title: "Captura, descriptiva y avanzado",
+          title: "Captura, descriptiva, avanzado y QuickBI",
           description:
-            "Tres pestañas por tema: captura de datos, analítica descriptiva (filtros, mapa y gráficos) y análisis avanzado (redes complejas y métricas).",
+            "Cuatro pestañas por tema: captura de datos, analítica descriptiva (filtros, mapa y gráficos), análisis avanzado (redes complejas) y QuickBI (tablero ejecutivo).",
           side: "bottom",
         },
       },
