@@ -2,22 +2,34 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { FileSpreadsheet, Upload } from "lucide-react";
-import * as XLSX from "xlsx";
 import type { ThemeConfig } from "@/lib/themes";
-import { addRecords, type RecordRow } from "@/lib/data";
+import type { RecordRow } from "@/lib/records/types";
 import { DEPARTMENTS } from "@/lib/geo";
+import { useAuth } from "@/lib/auth";
+import { canWrite } from "@/lib/auth/roles";
 
 type Props = {
   theme: ThemeConfig;
   onSaved: () => void;
 };
 
+type UploadError = {
+  row: number;
+  field: string;
+  code: string;
+  message: string;
+};
+
 export function CapturePanel({ theme, onSaved }: Props) {
+  const { role } = useAuth();
+  const writable = canWrite(role || undefined);
   const [mode, setMode] = useState<"form" | "excel">("form");
   const [form, setForm] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<RecordRow[]>([]);
+  const [uploadErrors, setUploadErrors] = useState<UploadError[]>([]);
+  const [busy, setBusy] = useState(false);
 
   const department = form.departamento || "";
   const municipalities = useMemo(() => {
@@ -32,88 +44,116 @@ export function CapturePanel({ theme, onSaved }: Props) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!writable) {
+      setError("Su rol no permite captura (requiere captura o admin).");
+      return;
+    }
     setError(null);
-    for (const field of theme.fields) {
-      if (field.required && !form[field.name]?.trim()) {
-        setError(`Complete el campo: ${field.label}`);
+    setMessage(null);
+    setBusy(true);
+    try {
+      const values: Record<string, string | number> = {};
+      for (const field of theme.fields) {
+        const raw = form[field.name] || "";
+        values[field.name] =
+          field.type === "number" ? Number(raw || 0) : raw;
+      }
+      const res = await fetch(`/api/themes/${theme.id}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const detail =
+          data.errors?.[0]?.message || data.error || "Error al guardar";
+        setError(detail);
         return;
       }
+      setForm({});
+      setMessage("Registro guardado en PostgreSQL.");
+      onSaved();
+    } catch {
+      setError("No se pudo conectar con el servidor.");
+    } finally {
+      setBusy(false);
     }
-    const row: RecordRow = {
-      id: `${theme.id}-${Date.now()}`,
-      departamento: form.departamento || "",
-      municipio: form.municipio || "",
-      fecha: form.fecha || new Date().toISOString().slice(0, 10),
-      estado: form.estado || "Programado",
-      valor: Number(form.valor || form.cantidad || form.beneficiarios || 0),
-      ...Object.fromEntries(
-        theme.fields.map((f) => [
-          f.name,
-          f.type === "number" ? Number(form[f.name] || 0) : form[f.name] || "",
-        ]),
-      ),
-    };
-    addRecords(theme.id, [row]);
-    setForm({});
-    setMessage("Registro guardado correctamente.");
-    onSaved();
   }
 
-  function downloadTemplate() {
-    const headers = theme.fields.map((f) => f.name);
-    const sample = theme.fields.map((f) => {
-      if (f.type === "select") return f.options?.[0] || "";
-      if (f.type === "number") return 100;
-      if (f.type === "date") return "2026-07-15";
-      return `Ejemplo ${f.label}`;
-    });
-    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, theme.shortName.slice(0, 28));
-    XLSX.writeFile(wb, `plantilla_${theme.id}.xlsx`);
+  async function downloadTemplate() {
+    setError(null);
+    try {
+      const res = await fetch(`/api/themes/${theme.id}/template`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "No se pudo descargar la plantilla");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `plantilla_${theme.id}_v${theme.schemaVersion ?? 1}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Error al descargar la plantilla.");
+    }
   }
 
   async function onFile(file: File | null) {
     setError(null);
     setMessage(null);
     setPreview([]);
+    setUploadErrors([]);
     if (!file) return;
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf);
-    const sheet = wb.Sheets[wb.SheetNames[0]!];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet!, {
-      defval: "",
-    });
-    if (!rows.length) {
-      setError("El archivo no contiene filas.");
+    if (!writable) {
+      setError("Su rol no permite carga masiva.");
       return;
     }
-    const mapped: RecordRow[] = rows.map((raw, idx) => {
-      const normalized: Record<string, string | number> = {};
-      for (const [k, v] of Object.entries(raw)) {
-        normalized[String(k).trim()] =
-          typeof v === "number" ? v : String(v ?? "").trim();
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch(`/api/themes/${theme.id}/uploads`, {
+        method: "POST",
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Error en la carga");
+        return;
       }
-      return {
-        id: `${theme.id}-xls-${Date.now()}-${idx}`,
-        departamento: String(normalized.departamento || ""),
-        municipio: String(normalized.municipio || ""),
-        fecha: String(normalized.fecha || new Date().toISOString().slice(0, 10)),
-        estado: String(normalized.estado || "Programado"),
-        valor: Number(normalized.valor || normalized.cantidad || 0),
-        ...normalized,
-      };
-    });
-    setPreview(mapped.slice(0, 8));
-    addRecords(theme.id, mapped);
-    setMessage(`${mapped.length} registros cargados desde Excel.`);
-    onSaved();
+      setPreview((data.preview as RecordRow[]) || []);
+      setUploadErrors((data.errors as UploadError[]) || []);
+      if (data.async) {
+        setMessage(
+          `Carga encolada (${data.queued} filas). Vea progreso en la pestaña Cargas Excel / bandeja.`,
+        );
+      } else {
+        setMessage(
+          `Carga ${data.uploadId}: ${data.accepted} aceptados, ${data.rejected} rechazados, ${data.duplicates ?? 0} duplicados omitidos.`,
+        );
+      }
+      if (data.accepted > 0 || data.async) onSaved();
+    } catch {
+      setError("No se pudo subir el archivo.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="space-y-5" id="tour-captura">
+      {!writable && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Modo lectura: su rol <strong>{role}</strong> no puede crear registros.
+          Use un usuario con rol <strong>captura</strong> o <strong>admin</strong>.
+        </p>
+      )}
+
       <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-surface p-1">
         <button
           type="button"
@@ -168,6 +208,7 @@ export function CapturePanel({ theme, onSaved }: Props) {
                     onChange={(e) => updateField("municipio", e.target.value)}
                     className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
                     required={field.required}
+                    disabled={!writable || busy}
                   >
                     <option value="">Seleccione…</option>
                     {municipalities.map((m) => (
@@ -197,6 +238,7 @@ export function CapturePanel({ theme, onSaved }: Props) {
                     onChange={(e) => updateField(field.name, e.target.value)}
                     className={common}
                     required={field.required}
+                    disabled={!writable || busy}
                   >
                     <option value="">Seleccione…</option>
                     {field.options?.map((o) => (
@@ -211,6 +253,7 @@ export function CapturePanel({ theme, onSaved }: Props) {
                     onChange={(e) => updateField(field.name, e.target.value)}
                     className={`${common} min-h-24`}
                     placeholder={field.placeholder}
+                    disabled={!writable || busy}
                   />
                 ) : (
                   <input
@@ -220,6 +263,9 @@ export function CapturePanel({ theme, onSaved }: Props) {
                     className={common}
                     required={field.required}
                     placeholder={field.placeholder}
+                    min={field.min}
+                    max={field.max}
+                    disabled={!writable || busy}
                   />
                 )}
               </label>
@@ -228,9 +274,10 @@ export function CapturePanel({ theme, onSaved }: Props) {
           <div className="md:col-span-2">
             <button
               type="submit"
-              className="rounded-lg bg-ungrd-yellow px-5 py-2.5 text-sm font-extrabold text-ungrd-navy-deep transition hover:bg-ungrd-yellow-soft"
+              disabled={!writable || busy}
+              className="rounded-lg bg-ungrd-yellow px-5 py-2.5 text-sm font-extrabold text-ungrd-navy-deep transition hover:bg-ungrd-yellow-soft disabled:opacity-50"
             >
-              Guardar registro
+              {busy ? "Guardando…" : "Guardar registro"}
             </button>
           </div>
         </form>
@@ -243,23 +290,44 @@ export function CapturePanel({ theme, onSaved }: Props) {
               className="inline-flex items-center gap-2 rounded-lg border border-ungrd-border px-4 py-2.5 text-sm font-bold text-ungrd-heading hover:bg-ungrd-bg"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Descargar plantilla
+              Descargar plantilla (ExcelJS)
             </button>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white hover:bg-ungrd-navy-mid">
+            <label
+              className={`inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white hover:bg-ungrd-navy-mid ${
+                !writable || busy ? "pointer-events-none opacity-50" : "cursor-pointer"
+              }`}
+            >
               <Upload className="h-4 w-4" />
-              Subir Excel
+              {busy ? "Procesando…" : "Subir Excel"}
               <input
                 type="file"
-                accept=".xlsx,.xls,.csv"
+                accept=".xlsx,.xls"
                 className="hidden"
+                disabled={!writable || busy}
                 onChange={(e) => onFile(e.target.files?.[0] || null)}
               />
             </label>
           </div>
           <p className="text-sm text-ungrd-muted">
-            Use la plantilla con las columnas del tema. Al cargar, los registros
-            se incorporan de inmediato a la analítica.
+            Plantilla con DIVIPOLA oficial (datos.gov.co), listas desplegables,
+            hoja <code>_meta</code> y validación Zod. Filas inválidas se
+            rechazan; duplicados se omiten; cargas ≥500 filas van en cola
+            asíncrona.
           </p>
+          {uploadErrors.length > 0 && (
+            <div className="max-h-48 overflow-auto rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-900">
+              <p className="mb-2 font-bold">
+                Errores de validación ({uploadErrors.length})
+              </p>
+              <ul className="space-y-1">
+                {uploadErrors.slice(0, 40).map((err, i) => (
+                  <li key={`${err.row}-${err.field}-${i}`}>
+                    Fila {err.row} · {err.field}: {err.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {preview.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-ungrd-border">
               <table className="min-w-full text-left text-xs">

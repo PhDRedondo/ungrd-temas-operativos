@@ -1,34 +1,22 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: Banco de Maquinaria
- * Carpeta: src/themes/banco-de-maquinaria/
- * Ruta app: /app/temas/banco-de-maquinaria
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * Banco de Maquinaria — inventario, convenios, bitácora y entregas.
+ * Discriminador: tipo_registro.
  */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "banco-de-maquinaria",
   name: "Banco de Maquinaria",
   shortName: "Maquinaria",
-  description: "Disponibilidad y asignación de maquinaria amarilla.",
+  description:
+    "Inventario de maquinaria, convenios contractuales, bitácora de estados y entregas a beneficiarios — unidos por serial/convenio.",
   icon: "cog",
-  unit: "horas",
-  valueLabel: "Horas máquina",
-  extraFields: [
-      {
-        name: "equipo",
-        label: "Equipo",
-        type: "select",
-        required: true,
-        options: ["Retroexcavadora", "Bulldozer", "Volqueta", "Motoniveladora", "Cargador"],
-      },
-      { name: "horas", label: "Horas asignadas", type: "number", required: true },
-      { name: "valor", label: "Costo (COP)", type: "number", required: true },
-    ],
+  unit: "equipos",
+  valueLabel: "Equipos",
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

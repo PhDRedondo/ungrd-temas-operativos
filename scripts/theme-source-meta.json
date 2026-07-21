@@ -1,0 +1,30 @@
+{
+  "puentes": {
+    "note": "2025-08-19 CONSOLIDADO DE PUENTES SMD  ARCGIS DRIVE.xlsx · PUENTES (44 filas)",
+    "fieldCount": 30
+  },
+  "obras-de-emergencia": {
+    "note": "OBRAS DE EMERGENCIA+O.P. OBRAS DE EMERGENCIA",
+    "fieldCount": 123
+  },
+  "obras-por-impuestos": {
+    "note": "2025-09-15 OBRAS POR IMPUESTO ARCGIS DRIVE.xlsx · OBRAS POR IMPUESTO",
+    "fieldCount": 31
+  },
+  "declaratoria-de-emergencia": {
+    "note": "2025-08-14 DECLATARORIAS DE CALAMIDAD ARCGIS.xlsx · DECRETOS DE CALAMIDAD",
+    "fieldCount": 38
+  },
+  "banco-de-maquinaria": {
+    "note": "DETALLE+CONVENIOS+BITACORA+ENTREGA",
+    "fieldCount": 72
+  },
+  "carrotanques": {
+    "note": "MAQUETA+Bitacora+SUMINISTRO DEF",
+    "fieldCount": 43
+  },
+  "agua-y-saneamiento": {
+    "note": "General+control+modificaciones+bitacora+PAGOS",
+    "fieldCount": 125
+  }
+}

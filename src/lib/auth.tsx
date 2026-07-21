@@ -2,68 +2,95 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
+import { SessionProvider, signIn, signOut, useSession } from "next-auth/react";
+import type { AppRole } from "@/themes/shared/types";
 
-type User = { name: string; email: string };
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: AppRole;
+};
 
 type AuthContextValue = {
   user: User | null;
   ready: boolean;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+  role: AppRole | null;
+  login: (
+    email: string,
+    password: string,
+    role?: AppRole,
+  ) => Promise<{ ok: boolean; error?: string }>;
+  loginWithKeycloak: () => Promise<void>;
+  logout: () => Promise<void>;
+  authMode: "demo" | "keycloak";
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const STORAGE_KEY = "ungrd-auth-user";
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(false);
+const authMode =
+  (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "keycloak") || "demo";
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw) as User);
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, []);
+function AuthBridge({ children }: { children: ReactNode }) {
+  const { data, status } = useSession();
 
-  const login = useCallback(async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 450));
-    if (!email.trim() || !password.trim()) {
-      return { ok: false, error: "Ingrese correo y contraseña." };
-    }
-    if (password.length < 4) {
-      return { ok: false, error: "La contraseña debe tener al menos 4 caracteres." };
-    }
-    const next: User = {
-      email: email.trim(),
-      name: email.split("@")[0]?.replace(/[._]/g, " ") || "Usuario UNGRD",
+  const value = useMemo<AuthContextValue>(() => {
+    const ready = status !== "loading";
+    const user: User | null = data?.user
+      ? {
+          id: data.user.id,
+          name: data.user.name || "Usuario UNGRD",
+          email: data.user.email || "",
+          role: data.user.role || "analista",
+        }
+      : null;
+
+    return {
+      user,
+      ready,
+      role: user?.role ?? null,
+      authMode,
+      async login(email, password, role = "captura") {
+        if (authMode === "keycloak") {
+          await signIn("keycloak", { callbackUrl: "/app" });
+          return { ok: true };
+        }
+        const res = await signIn("credentials", {
+          email,
+          password,
+          role,
+          redirect: false,
+        });
+        if (res?.error) {
+          return {
+            ok: false,
+            error: "Credenciales inválidas (correo + contraseña ≥ 4).",
+          };
+        }
+        return { ok: true };
+      },
+      async loginWithKeycloak() {
+        await signIn("keycloak", { callbackUrl: "/app" });
+      },
+      async logout() {
+        await signOut({ callbackUrl: "/" });
+      },
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setUser(next);
-    return { ok: true };
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setUser(null);
-  }, []);
-
-  const value = useMemo(
-    () => ({ user, ready, login, logout }),
-    [user, ready, login, logout],
-  );
+  }, [data, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessionProvider>
+      <AuthBridge>{children}</AuthBridge>
+    </SessionProvider>
+  );
 }
 
 export function useAuth() {

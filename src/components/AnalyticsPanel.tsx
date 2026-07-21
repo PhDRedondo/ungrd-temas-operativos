@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -17,7 +17,7 @@ import {
   YAxis,
 } from "recharts";
 import type { ThemeConfig } from "@/lib/themes";
-import { formatCop, formatNumber, type RecordRow } from "@/lib/data";
+import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { departmentNames } from "@/lib/geo";
 import { SankeyFlowDiagram } from "@/components/SankeyFlowDiagram";
 import { RecordsDataTable } from "@/components/RecordsDataTable";
@@ -44,6 +44,15 @@ type Props = {
   records: RecordRow[];
 };
 
+type SqlAgg = {
+  totals: { count: number; valor: number };
+  byDepartamento: { key: string; count: number; valor: number }[];
+  byEstado: { key: string; count: number; valor: number }[];
+  byMonth: { key: string; count: number; valor: number }[];
+  byTipoRegistro?: { key: string; count: number; valor: number }[];
+  byClaveSeguimiento?: { key: string; count: number; valor: number }[];
+};
+
 function toggle(current: string, next: string) {
   return current === next ? "" : next;
 }
@@ -56,6 +65,25 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const [periodo, setPeriodo] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [sqlAgg, setSqlAgg] = useState<SqlAgg | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSql() {
+      try {
+        const res = await fetch(`/api/themes/${theme.id}/analytics`);
+        if (!res.ok) return;
+        const data = (await res.json()) as SqlAgg;
+        if (!cancelled) setSqlAgg(data);
+      } catch {
+        /* analítica cliente sigue operativa */
+      }
+    }
+    void loadSql();
+    return () => {
+      cancelled = true;
+    };
+  }, [theme.id, records.length]);
 
   const categoryField = theme.fields.find(
     (f) =>
@@ -265,8 +293,35 @@ export function AnalyticsPanel({ theme, records }: Props) {
     setTo("");
   }
 
+  const sqlSynced =
+    !hasFilters && sqlAgg != null && sqlAgg.totals.count === records.length;
+
   return (
-    <div className="min-w-0 max-w-full space-y-4 sm:space-y-5" id="tour-analitica">
+    <div
+      className="min-w-0 max-w-full space-y-4 sm:space-y-5"
+      id="tour-analitica"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ungrd-muted">
+        <span>
+          Gráficos y mapa desde PostgreSQL
+          {sqlAgg
+            ? ` · SQL: ${formatNumber(sqlAgg.totals.count)} filas / ${formatCop(sqlAgg.totals.valor)}`
+            : ""}
+        </span>
+        {sqlSynced ? (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-800">
+            Cliente ↔ SQL sincronizados
+          </span>
+        ) : null}
+      </div>
+
+      {records.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-ungrd-border px-4 py-8 text-center text-sm text-ungrd-muted">
+          Sin registros. Capture en el formulario o cargue la plantilla Excel
+          para ver mapa y gráficos.
+        </p>
+      ) : null}
+
       <div className="grid min-w-0 gap-3 rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
           Departamento
@@ -422,8 +477,8 @@ export function AnalyticsPanel({ theme, records }: Props) {
             onSelect={onMapSelect}
           />
           <p className="mt-2 text-xs text-ungrd-muted">
-            Clic en un punto para filtrar. Con departamento activo verá
-            municipios.
+            Polígonos MGN DANE 2024 (depto) · puntos DIVIPOLA (municipio). Clic
+            para filtrar el resto de gráficos.
           </p>
         </section>
 
@@ -693,6 +748,20 @@ export function AnalyticsPanel({ theme, records }: Props) {
 
         <RecordsDataTable theme={theme} records={filtered} />
       </div>
+
+      {sqlAgg && !hasFilters ? (
+        <p className="text-xs text-ungrd-muted">
+          Agregación SQL: {sqlAgg.byDepartamento.length} deptos ·{" "}
+          {sqlAgg.byEstado.length} estados · {sqlAgg.byMonth.length} meses
+          {sqlAgg.byTipoRegistro?.length
+            ? ` · ${sqlAgg.byTipoRegistro.length} capas (maqueta/bitácora)`
+            : ""}
+          {sqlAgg.byClaveSeguimiento?.length
+            ? ` · top ${sqlAgg.byClaveSeguimiento.length} claves de seguimiento`
+            : ""}
+          .
+        </p>
+      ) : null}
     </div>
   );
 }
