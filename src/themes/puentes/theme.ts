@@ -1,34 +1,21 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: Puentes
- * Carpeta: src/themes/puentes/
- * Ruta app: /app/temas/puentes
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * Puentes — Consolidado de Puentes SMD ArcGIS (todos los campos).
  */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "puentes",
   name: "Puentes",
   shortName: "Puentes",
-  description: "Intervención y reconstrucción de puentes vehiculares y peatonales.",
+  description:
+    "Inventario e intervención de puentes modulares SMD (Acrow/Bailey) desde consolidado ArcGIS.",
   icon: "bridge",
   unit: "puentes",
   valueLabel: "Puentes",
-  extraFields: [
-      {
-        name: "tipo_puente",
-        label: "Tipo",
-        type: "select",
-        required: true,
-        options: ["Vehicular", "Peatonal", "Bailey", "Provisional"],
-      },
-      { name: "longitud_m", label: "Longitud (m)", type: "number", required: true },
-      { name: "valor", label: "Inversión (COP)", type: "number", required: true },
-    ],
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

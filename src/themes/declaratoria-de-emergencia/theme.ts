@@ -1,34 +1,18 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
-/**
- * Módulo autónomo del tema: Declaratoria de emergencia
- * Carpeta: src/themes/declaratoria-de-emergencia/
- * Ruta app: /app/temas/declaratoria-de-emergencia
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
- */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "declaratoria-de-emergencia",
   name: "Declaratoria de emergencia",
   shortName: "Declaratoria",
-  description: "Registro y seguimiento de declaratorias de calamidad y emergencia.",
+  description:
+    "Decretos de calamidad pública: vigencia, prórrogas, retorno a normalidad y soportes (ACTA, PAE, EDAN).",
   icon: "siren",
   unit: "declaratorias",
   valueLabel: "Declaratorias",
-  extraFields: [
-      {
-        name: "tipo",
-        label: "Tipo",
-        type: "select",
-        required: true,
-        options: ["Calamidad pública", "Emergencia", "Desastre", "Alerta máxima"],
-      },
-      { name: "acto_administrativo", label: "Acto administrativo", type: "text", required: true },
-      { name: "poblacion_afectada", label: "Población afectada", type: "number", required: true },
-    ],
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

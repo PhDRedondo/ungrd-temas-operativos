@@ -1,34 +1,22 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: Obras de Emergencia
- * Carpeta: src/themes/obras-de-emergencia/
- * Ruta app: /app/temas/obras-de-emergencia
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * Obras de Emergencia — contratos de obra + órdenes de proveeduría (O.P.).
+ * Discriminador: tipo_registro.
  */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "obras-de-emergencia",
   name: "Obras de Emergencia",
   shortName: "Obras emerg.",
-  description: "Obras temporales y de estabilización ante eventos.",
+  description:
+    "Contratos de obra de emergencia y órdenes de proveeduría (maquinaria amarilla / horas máquina).",
   icon: "hard-hat",
   unit: "obras",
   valueLabel: "Obras",
-  extraFields: [
-      {
-        name: "tipo_obra",
-        label: "Tipo de obra",
-        type: "select",
-        required: true,
-        options: ["Jarillón", "Descolmatación", "Estabilización", "Vía temporal", "Otra"],
-      },
-      { name: "valor", label: "Inversión (COP)", type: "number", required: true },
-      { name: "avance", label: "Avance (%)", type: "number", required: true },
-    ],
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

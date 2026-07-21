@@ -28,7 +28,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "data/**/*.geojson",
+    "data/**/*.json"
   ],
   "exclude": ["node_modules"]
 }

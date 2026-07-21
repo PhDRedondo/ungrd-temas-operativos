@@ -7,15 +7,19 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  FolderOpen,
   Info,
   LogOut,
   Menu,
   Route,
+  Shield,
+  Upload,
   X,
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth";
-import { THEMES } from "@/lib/themes";
+import { canAdmin } from "@/lib/auth/roles";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -23,13 +27,22 @@ import { startGuidedTour } from "@/lib/tour";
 
 const SIDEBAR_KEY = "ungrd-sidebar-collapsed";
 
+type AccessTheme = {
+  id: string;
+  name: string;
+  icon: string;
+  canRead: boolean;
+  canWrite: boolean;
+};
+
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, ready, logout } = useAuth();
+  const { user, ready, logout, role } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [themesOpen, setThemesOpen] = useState(true);
+  const [themes, setThemes] = useState<AccessTheme[]>([]);
 
   useEffect(() => {
     if (ready && !user) router.replace("/login?next=/app");
@@ -46,6 +59,24 @@ export function AppShell({ children }: { children: ReactNode }) {
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    async function loadAccess() {
+      try {
+        const res = await fetch("/api/me/access");
+        const data = await res.json();
+        if (!cancelled && res.ok) setThemes(data.themes || []);
+      } catch {
+        /* ignore */
+      }
+    }
+    void loadAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -69,6 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const userEmail = user.email;
   const userName = user.name;
+  const admin = canAdmin(role || undefined);
 
   function renderNav(compact: boolean) {
     const linkClass = (active: boolean) =>
@@ -107,6 +139,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <p className="truncate text-sm font-semibold text-white">
                   Temas operativos
                 </p>
+                <p className="truncate text-[10px] uppercase tracking-wide text-ungrd-yellow">
+                  {role}
+                </p>
               </div>
             )}
           </div>
@@ -123,7 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold tracking-wider text-ungrd-yellow uppercase"
               id="tour-temas"
             >
-              Temas
+              Temas ({themes.length})
               <ChevronLeft
                 className={clsx(
                   "h-4 w-4 transition",
@@ -135,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {(compact || themesOpen) && (
             <ul className={clsx("mb-3", compact ? "space-y-1" : "space-y-0.5")}>
-              {THEMES.map((theme) => {
+              {themes.map((theme) => {
                 const href = `/app/temas/${theme.id}`;
                 const active = pathname.startsWith(href);
                 const isTemplate = theme.id === "plantilla";
@@ -167,7 +202,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                       {!compact && (
                         <span className="truncate">
                           {theme.name}
-                          {isTemplate ? " · base" : ""}
+                          {isTemplate
+                            ? " · base"
+                            : theme.canWrite
+                              ? ""
+                              : " · L"}
                         </span>
                       )}
                     </Link>
@@ -183,6 +222,44 @@ export function AppShell({ children }: { children: ReactNode }) {
               compact ? "mt-2 space-y-1 pt-3" : "mt-2 space-y-0.5 pt-3",
             )}
           >
+            <Link
+              href="/app/tareas"
+              title="Mis tareas"
+              aria-label="Mis tareas"
+              className={linkClass(pathname.startsWith("/app/tareas"))}
+            >
+              <ClipboardList className={compact ? "h-5 w-5" : "h-4 w-4"} />
+              {!compact && "Mis tareas"}
+            </Link>
+            <Link
+              href="/app/casos"
+              title="Mis casos"
+              aria-label="Mis casos"
+              className={linkClass(pathname.startsWith("/app/casos"))}
+            >
+              <FolderOpen className={compact ? "h-5 w-5" : "h-4 w-4"} />
+              {!compact && "Mis casos"}
+            </Link>
+            <Link
+              href="/app/cargas"
+              title="Cargas Excel"
+              aria-label="Cargas Excel"
+              className={linkClass(pathname.startsWith("/app/cargas"))}
+            >
+              <Upload className={compact ? "h-5 w-5" : "h-4 w-4"} />
+              {!compact && "Cargas Excel"}
+            </Link>
+            {admin && (
+              <Link
+                href="/app/admin/permisos"
+                title="Permisos por tema"
+                aria-label="Permisos por tema"
+                className={linkClass(pathname.startsWith("/app/admin"))}
+              >
+                <Shield className={compact ? "h-5 w-5" : "h-4 w-4"} />
+                {!compact && "Permisos"}
+              </Link>
+            )}
             <button
               type="button"
               id={compact ? undefined : "tour-visita"}
@@ -232,8 +309,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
             onClick={() => {
-              logout();
-              router.push("/");
+              void logout();
             }}
             className={linkClass(false)}
           >

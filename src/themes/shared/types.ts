@@ -7,6 +7,11 @@ export type FormField = {
   required?: boolean;
   options?: string[];
   placeholder?: string;
+  /** Validación numérica / Excel */
+  min?: number;
+  max?: number;
+  pattern?: string;
+  excelWidth?: number;
 };
 
 export type ThemeConfig = {
@@ -20,9 +25,13 @@ export type ThemeConfig = {
   fields: FormField[];
   /** URL de publicación/embed de Quick BI (Alibaba) para la pestaña QuickBI. */
   quickBiUrl?: string;
+  /** Versión del schema para plantillas Excel (bump al cambiar fields). */
+  schemaVersion?: number;
 };
 
 /** Módulo autónomo de un tema: lo que cada desarrollador mantiene en su carpeta. */
 export type ThemeModule = {
   config: ThemeConfig;
 };
+
+export type AppRole = "captura" | "analista" | "admin" | "auditor";

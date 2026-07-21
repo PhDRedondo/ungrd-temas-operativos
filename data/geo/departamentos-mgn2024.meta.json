@@ -1,0 +1,8 @@
+{
+  "source": "https://geoportal.dane.gov.co/mparcgis/rest/services/MGN2024/Serv_CapasMGN_2024/FeatureServer/319",
+  "dataset": "MGN 2024 · Nivel Departamento (DANE)",
+  "crs": "EPSG:4326",
+  "fetched": "2026-07-16",
+  "countFeatures": 33,
+  "note": "GeoJSON oficial DANE; geometría simplificada (maxAllowableOffset=0.01) para uso web."
+}

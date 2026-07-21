@@ -1,29 +1,22 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: Carrotanques
- * Carpeta: src/themes/carrotanques/
- * Ruta app: /app/temas/carrotanques
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * Carrotanques — maqueta/inventario + bitácora de estados.
+ * Discriminador: tipo_registro.
  */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "carrotanques",
   name: "Carrotanques",
   shortName: "Carrotanques",
-  description: "Despacho y seguimiento de carrotanques de agua potable.",
+  description:
+    "Maqueta/inventario de carrotanques, bitácora de estados y suministro (litros/beneficiarios) — unidos por placa.",
   icon: "truck",
-  unit: "m³",
-  valueLabel: "Volumen (m³)",
-  extraFields: [
-      { name: "placa", label: "Placa", type: "text", required: true },
-      { name: "volumen_m3", label: "Volumen (m³)", type: "number", required: true },
-      { name: "destino", label: "Sitio de descarga", type: "text", required: true },
-      { name: "valor", label: "Costo (COP)", type: "number", required: true },
-    ],
+  unit: "unidades",
+  valueLabel: "Carrotanques",
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

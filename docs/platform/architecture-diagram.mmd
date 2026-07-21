@@ -1,0 +1,62 @@
+flowchart TB
+  subgraph Users["Usuarios institucionales"]
+    U1[Capturador]
+    U2[Revisor técnico]
+    U3[Revisor jurídico]
+    U4[Dirección]
+  end
+
+  subgraph Portal["portal-frontend · Next.js AppShell"]
+    LOGIN[Login único]
+    DASH[Dashboard]
+    BANDEJA[Bandeja central /app/tareas]
+    CASOS[Expedientes /app/casos]
+    TEMAS[Módulos /app/temas/*]
+  end
+
+  subgraph AuthZ["Autenticación y autorización"]
+    KC[Keycloak OIDC]
+    AUTHJS[Auth.js]
+    IAM[iam.users · dependencies · permissions]
+  end
+
+  subgraph API["platform-api"]
+    V1["/api/v1/cases"]
+    TASKS["/api/v1/me/tasks"]
+    LEGACY["/api/themes/* legacy"]
+  end
+
+  subgraph Services["Servicios en proceso"]
+    WFE[workflow-engine]
+    PUB[publication-service]
+    IMP[import-worker]
+    NOTIF[notification-worker]
+  end
+
+  subgraph DB["PostgreSQL"]
+    direction TB
+    S_IAM[iam]
+    S_CFG[config]
+    S_STG[staging]
+    S_WF[workflow]
+    S_CORE[core]
+    S_AUD[audit]
+    S_PUB[public legacy]
+  end
+
+  Users --> LOGIN
+  LOGIN --> KC
+  KC --> AUTHJS
+  AUTHJS --> Portal
+  Portal --> API
+  API --> IAM
+  V1 --> WFE
+  WFE --> S_WF
+  WFE --> S_STG
+  PUB --> S_CORE
+  IMP --> S_STG
+  TEMAS --> LEGACY
+  LEGACY --> S_PUB
+  PUB --> S_AUD
+  WFE --> S_AUD
+  NOTIF --> Users

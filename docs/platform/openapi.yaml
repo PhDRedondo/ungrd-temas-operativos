@@ -1,0 +1,92 @@
+openapi: 3.1.0
+info:
+  title: UNGRD Platform API
+  version: 1.0.0
+  description: API v1 — casos, tareas, workflow multidependencia
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/v1/cases:
+    get:
+      summary: Listar casos
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Crear caso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caseType, title]
+              properties:
+                caseType: { type: string }
+                moduleId: { type: string }
+                title: { type: string }
+                payload: { type: object }
+      responses:
+        "201":
+          description: Creado
+  /api/v1/cases/{caseId}:
+    get:
+      summary: Detalle caso
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+  /api/v1/cases/{caseId}/draft:
+    patch:
+      summary: Actualizar borrador
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+  /api/v1/cases/{caseId}/submit:
+    post:
+      summary: Enviar caso a revisión
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+  /api/v1/me/tasks:
+    get:
+      summary: Bandeja de tareas
+      responses:
+        "200":
+          description: OK
+  /api/v1/tasks/{taskId}/complete:
+    post:
+      summary: Completar tarea
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, return, reject]
+                comment: { type: string }
+      responses:
+        "200":
+          description: OK

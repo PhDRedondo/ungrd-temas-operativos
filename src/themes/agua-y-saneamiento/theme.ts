@@ -1,40 +1,22 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: Agua y Saneamiento
- * Carpeta: src/themes/agua-y-saneamiento/
- * Ruta app: /app/temas/agua-y-saneamiento
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * Agua y Saneamiento — maqueta de órdenes + bitácora de estados.
+ * Discriminador: tipo_registro.
  */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "agua-y-saneamiento",
   name: "Agua y Saneamiento",
   shortName: "Agua",
-  description: "Proyectos de acueducto, alcantarillado y potabilización en emergencias.",
+  description:
+    "Maqueta de órdenes OP, control físico (tanques/CT/vactor/M.A.), modificaciones, bitácora de estados y pagos — unidos por orden de proveeduría.",
   icon: "droplets",
-  unit: "beneficiarios",
-  valueLabel: "Beneficiarios",
-  extraFields: [
-      {
-        name: "tipo_intervencion",
-        label: "Tipo de intervención",
-        type: "select",
-        required: true,
-        options: [
-          "Acueducto",
-          "Alcantarillado",
-          "Potabilización",
-          "Carrotanque",
-          "Kit higiene",
-        ],
-      },
-      { name: "valor", label: "Valor (COP)", type: "number", required: true },
-      { name: "beneficiarios", label: "Beneficiarios", type: "number", required: true },
-    ],
+  unit: "órdenes",
+  valueLabel: "Órdenes",
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

@@ -6,14 +6,16 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import type { AppRole } from "@/themes/shared/types";
 
 function LoginForm() {
-  const { login, user, ready } = useAuth();
+  const { login, loginWithKeycloak, user, ready, authMode } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
   const [email, setEmail] = useState("analista@ungrd.gov.co");
   const [password, setPassword] = useState("ungrd2026");
+  const [role, setRole] = useState<AppRole>("captura");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +27,7 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const result = await login(email, password);
+    const result = await login(email, password, role);
     setLoading(false);
     if (!result.ok) {
       setError(result.error || "No fue posible iniciar sesión.");
@@ -54,55 +56,105 @@ function LoginForm() {
           <p className="mt-1 text-sm text-white/70">
             Gestión de Temas Operativos
           </p>
+          <p className="mt-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-ungrd-yellow uppercase">
+            Auth: {authMode === "keycloak" ? "Keycloak OIDC" : "Demo local"}
+          </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4 px-6 py-6">
-          <label className="block text-sm font-semibold text-ungrd-heading">
-            Correo institucional
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
-              autoComplete="username"
-              required
-            />
-          </label>
-          <label className="block text-sm font-semibold text-ungrd-heading">
-            Contraseña
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
-              autoComplete="current-password"
-              required
-            />
-          </label>
-
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-ungrd-danger dark:bg-red-950/40">
-              {error}
+        {authMode === "keycloak" ? (
+          <div className="space-y-4 px-6 py-6">
+            <p className="text-sm text-ungrd-muted">
+              Autenticación institucional vía{" "}
+              <strong className="text-ungrd-heading">Keycloak</strong> (open
+              source). Roles: captura, analista, admin, auditor.
             </p>
-          )}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                await loginWithKeycloak();
+              }}
+              className="w-full rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-ungrd-navy-mid disabled:opacity-60"
+            >
+              {loading ? "Redirigiendo…" : "Continuar con Keycloak"}
+            </button>
+            <p className="text-center text-sm">
+              <Link
+                href="/"
+                className="font-semibold text-ungrd-heading hover:underline"
+              >
+                Volver al inicio
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4 px-6 py-6">
+            <label className="block text-sm font-semibold text-ungrd-heading">
+              Correo institucional
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
+                autoComplete="username"
+                required
+              />
+            </label>
+            <label className="block text-sm font-semibold text-ungrd-heading">
+              Contraseña
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <label className="block text-sm font-semibold text-ungrd-heading">
+              Rol (demo)
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as AppRole)}
+                className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
+              >
+                <option value="captura">captura (escritura)</option>
+                <option value="analista">analista (lectura)</option>
+                <option value="admin">admin</option>
+                <option value="auditor">auditor</option>
+              </select>
+            </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-ungrd-navy-mid disabled:opacity-60"
-          >
-            {loading ? "Validando…" : "Ingresar"}
-          </button>
+            {error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-ungrd-danger dark:bg-red-950/40">
+                {error}
+              </p>
+            )}
 
-          <p className="text-center text-xs text-ungrd-muted">
-            Demo: use cualquier correo y contraseña (≥ 4 caracteres).
-          </p>
-          <p className="text-center text-sm">
-            <Link href="/" className="font-semibold text-ungrd-heading hover:underline">
-              Volver al inicio
-            </Link>
-          </p>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-ungrd-navy-mid disabled:opacity-60"
+            >
+              {loading ? "Validando…" : "Ingresar"}
+            </button>
+
+            <p className="text-center text-xs text-ungrd-muted">
+              Modo demo sin Keycloak. Para OIDC real:{" "}
+              <code className="rounded bg-ungrd-bg px-1">AUTH_MODE=keycloak</code>{" "}
+              + Docker Compose.
+            </p>
+            <p className="text-center text-sm">
+              <Link
+                href="/"
+                className="font-semibold text-ungrd-heading hover:underline"
+              >
+                Volver al inicio
+              </Link>
+            </p>
+          </form>
+        )}
       </div>
     </main>
   );

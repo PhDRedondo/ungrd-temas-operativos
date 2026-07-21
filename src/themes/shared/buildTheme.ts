@@ -1,42 +1,21 @@
 import type { FormField, ThemeConfig } from "./types";
+import { departmentNames } from "@/lib/geo";
 
+/** Geo DIVIPOLA: departamentos oficiales; municipio se restringe en UI/validación. */
 export const GEO_FIELDS: FormField[] = [
   {
     name: "departamento",
     label: "Departamento",
     type: "select",
     required: true,
-    options: [
-      "Antioquia",
-      "Atlántico",
-      "Bogotá D.C.",
-      "Bolívar",
-      "Boyacá",
-      "Caldas",
-      "Cauca",
-      "Cesar",
-      "Córdoba",
-      "Cundinamarca",
-      "Huila",
-      "La Guajira",
-      "Magdalena",
-      "Meta",
-      "Nariño",
-      "Norte de Santander",
-      "Quindío",
-      "Risaralda",
-      "Santander",
-      "Sucre",
-      "Tolima",
-      "Valle del Cauca",
-    ],
+    options: departmentNames(),
   },
   {
     name: "municipio",
-    label: "Municipio",
+    label: "Municipio (DIVIPOLA)",
     type: "text",
     required: true,
-    placeholder: "Nombre del municipio",
+    placeholder: "Seleccione departamento primero",
   },
 ];
 
@@ -64,5 +43,24 @@ export function buildTheme(
   return {
     ...partial,
     fields: [...GEO_FIELDS, ...partial.extraFields, ...BASE_DATE_FIELDS],
+  };
+}
+
+/**
+ * Tema alimentado por Excel/maqueta/bitácora real.
+ * Los campos ya incluyen departamento/municipio/fecha/estado/valor
+ * (sin duplicar GEO_FIELDS ni BASE_DATE_FIELDS).
+ */
+export function buildThemeFromSource(
+  partial: Omit<ThemeConfig, "fields"> & {
+    sourceFields: FormField[];
+    schemaVersion?: number;
+  },
+): ThemeConfig {
+  const { sourceFields, schemaVersion = 2, ...rest } = partial;
+  return {
+    ...rest,
+    schemaVersion,
+    fields: sourceFields,
   };
 }
