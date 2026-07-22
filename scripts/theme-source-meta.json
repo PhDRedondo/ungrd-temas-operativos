@@ -26,5 +26,9 @@
   "agua-y-saneamiento": {
     "note": "General+control+modificaciones+bitacora+PAGOS",
     "fieldCount": 125
+  },
+  "fic": {
+    "note": "Seguimiento_FIC_2026.xlsx · vigencias 2014+2015+2016+2017+2018+2019+2020+2021+2022+2023+2023+2024+2025+2026",
+    "fieldCount": 33
   }
 }

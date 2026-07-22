@@ -37,11 +37,45 @@ function parseSheet(
     ) ||
     wb.SheetNames[0]!;
   const ws = wb.Sheets[sheetName]!;
-  const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, {
-    defval: "",
-    raw: false,
-  });
-  console.log(`Hoja "${sheetName}": ${json.length} filas`);
+  const matrix = XLSX.utils.sheet_to_json<(string | number | Date | null)[]>(
+    ws,
+    { header: 1, defval: "", raw: false },
+  );
+
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(matrix.length, 15); i++) {
+    const cells = (matrix[i] || []).map((c) => String(c ?? "").trim());
+    const joined = cells.join(" | ").toLowerCase();
+    if (
+      cells.some((c) => /^departamento$/i.test(c)) ||
+      (cells.some((c) => /^vigencia$/i.test(c)) &&
+        cells.some((c) => /municipio/i.test(c)))
+    ) {
+      headerIdx = i;
+      break;
+    }
+    const n = cells.filter(Boolean).length;
+    if (n >= 5 && !/seguimiento y control|subdirección|código:/i.test(joined)) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const headers = (matrix[headerIdx] || []).map((h) => String(h ?? "").trim());
+  const json: Record<string, unknown>[] = [];
+  for (let r = headerIdx + 1; r < matrix.length; r++) {
+    const row = matrix[r] || [];
+    if (!row.some((c) => String(c ?? "").trim() !== "")) continue;
+    const obj: Record<string, unknown> = {};
+    headers.forEach((h, i) => {
+      if (!h) return;
+      obj[h] = row[i] ?? "";
+    });
+    json.push(obj);
+  }
+  console.log(
+    `Hoja "${sheetName}": ${json.length} filas (header fila ${headerIdx + 1})`,
+  );
   return json;
 }
 
@@ -102,6 +136,10 @@ async function main() {
     puentes: "Inventario puente",
     "obras-por-impuestos": "Convenio obra por impuesto",
     "declaratoria-de-emergencia": "Decreto / declaratoria",
+    fic: (() => {
+      const y = (sheetHint || "").match(/(20\d{2})/);
+      return y ? `Transferencia FIC ${y[1]}` : "Transferencia FIC";
+    })(),
   };
 
   rawRows.forEach((raw, idx) => {
@@ -125,6 +163,8 @@ async function main() {
       mapped.placa,
       mapped.serial,
       mapped.no_convenio,
+      mapped.no_cdp,
+      mapped.no_rc,
       mapped.clave_seguimiento,
       mapped.id,
     ].some((v) => v != null && String(v).trim() !== "");
@@ -146,6 +186,8 @@ async function main() {
         mapped.no_convenio,
         mapped.contrato_de_obra,
         mapped.no_declaratoria,
+        mapped.no_cdp,
+        mapped.no_rc,
         mapped.id,
       ].find((v) => v != null && String(v).trim() !== "");
       if (key != null) mapped.clave_seguimiento = String(key).trim();

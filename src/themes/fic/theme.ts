@@ -1,26 +1,22 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: FIC
- * Carpeta: src/themes/fic/
- * Ruta app: /app/temas/fic
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * FIC — Seguimiento y control de transferencias directas
+ * (Fondo de Inversión Colectiva). Fuente: Seguimiento_FIC_2026.xlsx
+ * Capas = vigencia (hoja por año). Clave: No. CDP.
  */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "fic",
   name: "FIC",
   shortName: "FIC",
-  description: "Fondo de Inversión para la Construcción — seguimiento de recursos.",
+  description:
+    "Seguimiento y control de transferencias directas del Fondo de Inversión Colectiva (FR-1703-SMD-44) — una capa por vigencia, unidos por No. CDP.",
   icon: "building-2",
-  unit: "proyectos",
-  valueLabel: "Proyectos FIC",
-  extraFields: [
-      { name: "codigo_fic", label: "Código FIC", type: "text", required: true },
-      { name: "proyecto", label: "Proyecto", type: "text", required: true },
-      { name: "valor", label: "Valor (COP)", type: "number", required: true },
-    ],
+  unit: "transferencias",
+  valueLabel: "Transferencias FIC",
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
 });
 
 const themeModule: ThemeModule = { config };
