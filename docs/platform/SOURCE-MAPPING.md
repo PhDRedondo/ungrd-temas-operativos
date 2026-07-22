@@ -20,5 +20,6 @@ npm run db:seed
 | **Banco de Maquinaria** | Inventario + Convenio + Bitácora + Entrega | Serial / máquina / convenio | 72 |
 | **Carrotanques** | Maqueta + Bitácora + Suministro | Placa | 43 |
 | **Agua y Saneamiento** | Maqueta + Control + Mods + Bitácora + Pagos | Orden de proveeduría | 125 |
+| **FIC** | Transferencias por vigencia 2014–2026 (`Seguimiento_FIC_2026.xlsx`) | No. CDP | 33 |
 
 Todo registro lleva `tipo_registro`, `capa` y `clave_seguimiento` para análisis y cruce.

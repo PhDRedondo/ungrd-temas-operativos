@@ -34,6 +34,7 @@ export function fillFixedAliases(
       "estado_de_ejecucion",
       "estado_macro",
       "proceso_actual",
+      "estado_en_terminos_de_legalizacion_ungrd",
     );
     if (v !== undefined) out.estado = v;
   }
@@ -52,6 +53,7 @@ export function fillFixedAliases(
       "fecha_del_reporte",
       "fecha_de_estado",
       "fecha_de_pago",
+      "fecha_de_desembolso",
     );
     if (v !== undefined) out.fecha = v;
   }
@@ -65,6 +67,8 @@ export function fillFixedAliases(
       "valor_unitario",
       "valor_total",
       "valor_pagado",
+      "valor_desemboloso",
+      "valor_desembolso",
       "capacidad",
       "no_beneficiarios",
       "longitud_puente",
@@ -93,6 +97,8 @@ export function fillFixedAliases(
       "contrato_de_obra",
       "contrato_de_adquisicion_o_convenio",
       "no_declaratoria",
+      "no_cdp",
+      "no_rc",
       "id",
     );
     if (v !== undefined) out.clave_seguimiento = String(v).trim();
@@ -347,6 +353,8 @@ export function normalizeValidated(
       raw.no_convenio,
       raw.contrato_de_obra,
       raw.no_declaratoria,
+      raw.no_cdp,
+      raw.no_rc,
       raw.id,
     ].find((v) => v !== undefined && v !== null && String(v).trim() !== "");
     if (key !== undefined) payload.clave_seguimiento = String(key).trim();

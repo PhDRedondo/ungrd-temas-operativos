@@ -5,27 +5,29 @@
 | **ID / slug** | `fic` |
 | **Ruta** | `/app/temas/fic` |
 | **Carpeta** | `src/themes/fic/` |
+| **Fuente** | `Seguimiento_FIC_2026.xlsx` (FR-1703-SMD-44) |
+| **schemaVersion** | 3 |
 
-## Trabajo autónomo
+## Capas
 
-1. Cree una rama: `feat/fic-descripcion`
-2. Edite **solo** archivos dentro de esta carpeta (más el registro si es tema nuevo).
-3. Abra un PR enfocado a este tema.
+Una por vigencia (`Transferencia FIC 2014` … `2026`). Clave de seguimiento: **No. CDP**.
+
+## Regenerar campos
+
+```bash
+node scripts/generate-theme-fields.cjs
+```
+
+## Importar datos
+
+```bash
+npx tsx scripts/import-source-file.ts fic ~/Downloads/Seguimiento_FIC_2026.xlsx "TRANSFERENCIAS - FIC - 2026"
+# o todas las vigencias:
+npm run db:reimport
+```
 
 ## Archivos
 
-- `theme.ts` — configuración del tema (campos de captura, textos, icono).
+- `theme.ts` — configuración del tema.
+- `fields-from-source.ts` — campos generados desde el Excel (no editar a mano).
 - `index.ts` — reexporta el módulo.
-- `README.md` — esta guía.
-
-## Extensiones futuras (opcional en esta carpeta)
-
-- `demo.ts` — generador de datos demo propio.
-- `rules.ts` — validaciones de negocio.
-- `components/` — UI específica del tema (si diverge del shell compartido).
-
-## No modificar (núcleo compartido)
-
-- `src/components/*` — shell, captura genérica, analítica.
-- `src/themes/shared/*` — tipos y `buildTheme`.
-- Otros directorios bajo `src/themes/<otro-tema>/`.

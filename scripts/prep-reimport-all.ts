@@ -98,6 +98,77 @@ const JOBS: Array<{ theme: string; file: string; sheet: string }> = [
     file: "Bitacora Agua y Saneamiento def.xlsx",
     sheet: "PAGOS",
   },
+  // FIC — una hoja por vigencia
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2014",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2015",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2016",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2017",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2018",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2019",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "Transferencias -FIC-2020",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFRENCIAS - FIC - 2021",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFRENCIAS - FIC - 2022",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFERENCIAS FIC - 2023",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFERENCIAS - FIC - 2023",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFERENCIAS - FIC - 2024",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFERENCIAS - FIC - 2025",
+  },
+  {
+    theme: "fic",
+    file: "Seguimiento_FIC_2026.xlsx",
+    sheet: "TRANSFERENCIAS - FIC - 2026",
+  },
 ];
 
 function run(theme: string, file: string, sheet: string) {

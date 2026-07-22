@@ -32,9 +32,20 @@ function readSheetFields(file, sheetHint) {
   const ws = wb.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
   let headerIdx = 0;
-  for (let i = 0; i < Math.min(rows.length, 12); i++) {
-    const n = rows[i].filter((c) => String(c).trim()).length;
-    if (n >= 3) {
+  // Preferir fila con encabezados reales (p. ej. FIC tiene título arriba).
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const cells = rows[i].map((c) => String(c).trim());
+    const joined = cells.join(" | ").toLowerCase();
+    if (
+      cells.some((c) => /^departamento$/i.test(c)) ||
+      (cells.some((c) => /^vigencia$/i.test(c)) &&
+        cells.some((c) => /municipio/i.test(c)))
+    ) {
+      headerIdx = i;
+      break;
+    }
+    const n = cells.filter(Boolean).length;
+    if (n >= 5 && !/seguimiento y control|subdirección|código:/i.test(joined)) {
       headerIdx = i;
       break;
     }
@@ -66,6 +77,7 @@ const ALIASES = {
     "estado_del_convenio_obra_por_impuesto",
     "estado_de_ejecucion",
     "estado_macro",
+    "estado_en_terminos_de_legalizacion_ungrd",
   ],
   fecha: [
     "fecha",
@@ -81,6 +93,7 @@ const ALIASES = {
     "fecha_corte_del_reporte",
     "fecha_del_reporte",
     "fecha_de_estado",
+    "fecha_de_desembolso",
   ],
   valor: [
     "valor",
@@ -92,6 +105,8 @@ const ALIASES = {
     "valor_total",
     "valor_op",
     "valor_pagado",
+    "valor_desemboloso",
+    "valor_desembolso",
   ],
   departamento: ["departamento"],
   municipio: ["municipio"],
@@ -111,6 +126,8 @@ const ALIASES = {
     "contrato_de_adquisicion_o_convenio",
     "convenio_de_obra_por_impuesto_no",
   ],
+  no_cdp: ["no_cdp", "n_cdp", "cdp"],
+  no_rc: ["no_rc", "n_rc", "rc"],
   divipola: ["divipola"],
 };
 
@@ -451,6 +468,47 @@ const specs = [];
       fieldsFrom(mods).fields,
       fieldsFrom(bitacora).fields,
       fieldsFrom(pagos).fields,
+    ]),
+  });
+}
+
+// FIC — Seguimiento transferencias directas (una hoja por vigencia)
+{
+  const ficFile = "Seguimiento_FIC_2026.xlsx";
+  const ficFull = path.join(DOWNLOADS, ficFile);
+  if (!fs.existsSync(ficFull)) {
+    throw new Error(`No existe: ${ficFull}`);
+  }
+  const ficWb = XLSX.readFile(ficFull, { cellDates: true, raw: false });
+  const yearSheets = ficWb.SheetNames.filter(
+    (n) => /fic|transfer/i.test(n) && !/^hoja/i.test(n.trim()),
+  );
+  const yearOptions = [];
+  const yearFieldLists = [];
+  for (const sheetName of yearSheets) {
+    const s = readSheetFields(ficFile, sheetName);
+    const yearMatch = sheetName.match(/(20\d{2})/);
+    const yearLabel = yearMatch
+      ? `Transferencia FIC ${yearMatch[1]}`
+      : `Transferencia FIC (${sheetName.trim()})`;
+    if (!yearOptions.includes(yearLabel)) yearOptions.push(yearLabel);
+    const parsed = fieldsFrom(s);
+    yearFieldLists.push(parsed.fields);
+  }
+  yearOptions.sort();
+  const base = yearFieldLists[0] ? [...yearFieldLists[0]] : [];
+  const seenBase = new Set(base.map((f) => f.name));
+  ensureFixed(base, seenBase);
+  specs.push({
+    id: "fic",
+    note: `${ficFile} · vigencias ${yearSheets
+      .map((n) => (n.match(/(20\d{2})/) || [])[1])
+      .filter(Boolean)
+      .join("+")}`,
+    fields: mergeFields([
+      trackingFields(yearOptions, "no_cdp", "No. CDP"),
+      base,
+      ...yearFieldLists.slice(1),
     ]),
   });
 }
