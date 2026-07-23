@@ -286,7 +286,10 @@ test("serie temporal Puentes usa conteo y fechas de instalación", () => {
     }),
   ] as RecordRow[];
   assert.equal(resolveEventDate(rows[0]!, "puentes"), "2024-03-15");
-  const series = buildThemeTimeSeries(rows, theme, "auto", { fillGaps: true });
+  const series = buildThemeTimeSeries(rows, theme, "auto", {
+    fillGaps: true,
+    window: "24",
+  });
   assert.equal(series.metric, "count");
   assert.match(series.title, /puentes/i);
   assert.doesNotMatch(series.title, /intensidad/i);
@@ -296,7 +299,44 @@ test("serie temporal Puentes usa conteo y fechas de instalación", () => {
   assert.ok(series.points.some((p) => p.period === "2024-04" && p.value === 0));
 });
 
-test("fillMonthGaps completa huecos", () => {
+test("serie no se estira años vacíos ni se aplasta con carga masiva", () => {
+  const theme = {
+    id: "agua-y-saneamiento",
+    name: "Agua",
+    unit: "órdenes",
+    valueLabel: "Órdenes",
+  };
+  const rows: RecordRow[] = [];
+  // Histórico real pequeño
+  for (let i = 1; i <= 5; i++) {
+    rows.push(
+      row({
+        id: `h${i}`,
+        fecha: `2021-0${i}-10`,
+        valor: 1_000_000,
+      }),
+    );
+  }
+  // Pico basura: 200 filas el mismo mes futuro/carga
+  for (let i = 0; i < 200; i++) {
+    rows.push(
+      row({
+        id: `b${i}`,
+        fecha: "2026-07-01",
+        valor: 0,
+      }),
+    );
+  }
+  const series = buildThemeTimeSeries(rows, theme, "count", {
+    window: "24",
+  });
+  assert.ok(series.excludedBulk >= 200);
+  assert.ok(!series.points.some((p) => p.period === "2026-07" && p.count >= 200));
+  // No debe haber ~80 meses de ceros 2019-2026
+  assert.ok(series.points.length <= 36);
+});
+
+test("fillMonthGaps completa huecos cortos y no tramos largos", () => {
   const filled = fillMonthGaps([
     { period: "2024-01", value: 1, count: 1, valor: 0 },
     { period: "2024-03", value: 2, count: 2, valor: 0 },
@@ -304,6 +344,15 @@ test("fillMonthGaps completa huecos", () => {
   assert.equal(filled.length, 3);
   assert.equal(filled[1]!.period, "2024-02");
   assert.equal(filled[1]!.value, 0);
+
+  const long = fillMonthGaps(
+    [
+      { period: "2019-01", value: 1, count: 1, valor: 0 },
+      { period: "2026-01", value: 2, count: 2, valor: 0 },
+    ],
+    24,
+  );
+  assert.equal(long.length, 2, "no rellena 7 años de ceros");
 });
 
 test("mapa Puentes prioriza conteo, no $ genérico", () => {

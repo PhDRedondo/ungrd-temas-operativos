@@ -1,5 +1,6 @@
 /**
  * Series de tiempo por tema: métrica y fecha alineadas a la realidad de cada base.
+ * Evita el gráfico “plano + pico” por huecos de 7 años o fechas basura masivas.
  */
 import {
   getThemeMapSemantics,
@@ -16,6 +17,8 @@ type ThemeLike = {
   valueLabel: string;
 };
 
+export type SeriesWindow = "12" | "24" | "36" | "all";
+
 /** Campos de fecha preferidos por tema (orden de prioridad). */
 const DATE_FIELDS_BY_THEME: Record<string, string[]> = {
   fic: [
@@ -25,37 +28,37 @@ const DATE_FIELDS_BY_THEME: Record<string, string[]> = {
     "fecha_formato_de_aprobacion_de_la_atencion",
   ],
   "agua-y-saneamiento": [
-    "fecha",
     "fecha_de_pago",
     "fecha_ultimo_seguimiento",
     "fecha_inicio_orden",
+    "fecha",
     "fecha_sucripcion",
     "fecha_de_asignacion",
   ],
   carrotanques: [
-    "fecha",
     "fecha_desde_ultm_estado",
     "fecha_inicio_estado_actual",
     "fecha_corte_del_reporte",
+    "fecha",
     "fecha_fin",
   ],
   "banco-de-maquinaria": [
-    "fecha",
     "fecha_entrega_o_recibo",
     "fecha_acta_de_inicio",
+    "fecha",
     "fecha_cdp",
   ],
   "obras-de-emergencia": [
-    "fecha",
     "fecha_orden",
     "fecha_de_activacion",
     "acta_de_inicio_fecha_inicial",
+    "fecha",
     "fecha_aceptacion",
   ],
   "obras-por-impuestos": [
-    "fecha",
     "fecha_de_inicio_del_convenio",
     "fecha_de_activacion",
+    "fecha",
     "fecha_finalizacion",
   ],
   puentes: [
@@ -83,10 +86,10 @@ const DEFAULT_DATE_FIELDS = [
 
 const DATE_LABEL: Record<string, string> = {
   fic: "Fecha de desembolso / acto",
-  "agua-y-saneamiento": "Fecha de suscripción / pago / seguimiento",
+  "agua-y-saneamiento": "Fecha de pago / seguimiento / inicio orden",
   carrotanques: "Fecha de estado / corte del reporte",
   "banco-de-maquinaria": "Fecha de recibo / entrega / acta",
-  "obras-de-emergencia": "Fecha de inicio / orden / activación",
+  "obras-de-emergencia": "Fecha de orden / activación / inicio",
   "obras-por-impuestos": "Fecha de inicio / activación del convenio",
   puentes: "Fecha de instalación / proceso",
   "declaratoria-de-emergencia": "Fecha de inicio de la declaratoria",
@@ -107,7 +110,12 @@ export type TimeSeriesResult = {
   yLabel: string;
   dateLabel: string;
   unmatchedDates: number;
+  excludedFuture: number;
+  excludedBulk: number;
   totalPoints: number;
+  window: SeriesWindow;
+  /** Meses con dato real antes de recortar ventana */
+  monthsWithData: number;
 };
 
 function normalizeDate(raw: unknown): string {
@@ -120,18 +128,35 @@ function normalizeDate(raw: unknown): string {
   const s = String(raw).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`;
-  // DD/MM/YYYY o MM/DD/YYYY ambiguo: preferir ISO-like
   const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
   if (m) {
     const a = Number(m[1]);
     const b = Number(m[2]);
     const y = m[3]!;
-    // Si a > 12 → día/mes; si b > 12 → mes/día; si ambos ≤12 asumir DD/MM (CO)
-    if (a > 12) return `${y}-${String(b).padStart(2, "0")}-${String(a).padStart(2, "0")}`;
-    if (b > 12) return `${y}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
+    if (a > 12)
+      return `${y}-${String(b).padStart(2, "0")}-${String(a).padStart(2, "0")}`;
+    if (b > 12)
+      return `${y}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
+    // CO: DD/MM/YYYY
     return `${y}-${String(b).padStart(2, "0")}-${String(a).padStart(2, "0")}`;
   }
   return "";
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addMonths(period: string, delta: number): string {
+  const [y0, m0] = period.split("-").map(Number) as [number, number];
+  const d = new Date(Date.UTC(y0, m0 - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthsBetween(a: string, b: string): number {
+  const [ay, am] = a.split("-").map(Number) as [number, number];
+  const [by, bm] = b.split("-").map(Number) as [number, number];
+  return (by - ay) * 12 + (bm - am);
 }
 
 /** Mejor fecha de evento para la serie del tema. */
@@ -153,8 +178,13 @@ export function getThemeTimeLabels(theme: ThemeLike) {
       metric === "valor"
         ? `Serie temporal · ${mapSem.legendTitle("valor")}`
         : `Serie temporal · ${mapSem.legendTitle("count")}`,
-    seriesSubtitle: (metric: MapMetric) =>
-      `Eje X: ${dateLabel} (mes). Eje Y: ${mapSem.legendTitle(metric)}. Clic en un mes para filtrar.`,
+    seriesSubtitle: (metric: MapMetric, window: SeriesWindow) => {
+      const win =
+        window === "all"
+          ? "todo el histórico con dato"
+          : `últimos ${window} meses con actividad`;
+      return `Eje X: ${dateLabel} (${win}). Eje Y: ${mapSem.legendTitle(metric)}. Clic en un mes para filtrar.`;
+    },
     yLabel: (metric: MapMetric) => mapSem.legendTitle(metric),
     mapSem,
   };
@@ -165,12 +195,16 @@ function monthKey(isoDate: string): string | null {
   return isoDate.slice(0, 7);
 }
 
-/** Rellena meses faltantes entre min y max para una línea continua. */
-export function fillMonthGaps(points: TimePoint[]): TimePoint[] {
+/** Rellena huecos solo si el tramo es corto (≤ 24 meses). */
+export function fillMonthGaps(
+  points: TimePoint[],
+  maxSpanMonths = 24,
+): TimePoint[] {
   if (points.length < 2) return points;
   const sorted = [...points].sort((a, b) => a.period.localeCompare(b.period));
   const start = sorted[0]!.period;
   const end = sorted[sorted.length - 1]!.period;
+  if (monthsBetween(start, end) > maxSpanMonths) return sorted;
   const by = new Map(sorted.map((p) => [p.period, p]));
   const out: TimePoint[] = [];
   let [y, m] = start.split("-").map(Number) as [number, number];
@@ -187,15 +221,52 @@ export function fillMonthGaps(points: TimePoint[]): TimePoint[] {
   return out;
 }
 
+/**
+ * Detecta mes “basura” (carga masiva con la misma fecha): ≥40% del total y ≥80 filas.
+ * Esos meses se excluyen de la serie por defecto para no aplastar la escala.
+ */
+export function detectBulkDumpMonths(
+  map: Map<string, { count: number; valor: number }>,
+): Set<string> {
+  const total = [...map.values()].reduce((s, v) => s + v.count, 0);
+  const out = new Set<string>();
+  if (total < 80) return out;
+  for (const [period, v] of map) {
+    if (v.count >= 80 && v.count / total >= 0.4) out.add(period);
+  }
+  return out;
+}
+
+function applyWindow(
+  points: TimePoint[],
+  window: SeriesWindow,
+): TimePoint[] {
+  if (window === "all" || points.length === 0) return points;
+  const n = Number(window);
+  const withData = points.filter((p) => p.count > 0 || p.valor > 0);
+  if (withData.length <= n) return withData;
+  const last = withData[withData.length - 1]!.period;
+  const start = addMonths(last, -(n - 1));
+  return withData.filter((p) => p.period >= start);
+}
+
 export function buildThemeTimeSeries(
   rows: RecordRow[],
   theme: ThemeLike,
   metricOverride: MapMetric | "auto" = "auto",
-  opts?: { fillGaps?: boolean },
+  opts?: {
+    fillGaps?: boolean;
+    window?: SeriesWindow;
+    /** Si true, no excluye meses de carga masiva */
+    keepBulkMonths?: boolean;
+  },
 ): TimeSeriesResult {
   const labels = getThemeTimeLabels(theme);
+  const window: SeriesWindow = opts?.window || "24";
   const map = new Map<string, { valor: number; count: number }>();
   let unmatchedDates = 0;
+  let excludedFuture = 0;
+  const maxFuture = addMonths(todayIso().slice(0, 7), 2);
 
   for (const r of rows) {
     const d = resolveEventDate(r, theme.id);
@@ -204,10 +275,31 @@ export function buildThemeTimeSeries(
       unmatchedDates += 1;
       continue;
     }
+    // Fechas muy a futuro suelen ser defaults/errores de carga
+    if (key > maxFuture) {
+      excludedFuture += 1;
+      continue;
+    }
+    // Fechas absurdas pre-2000
+    if (key < "2000-01") {
+      unmatchedDates += 1;
+      continue;
+    }
     const cur = map.get(key) || { valor: 0, count: 0 };
     cur.valor += Number(r.valor || 0);
     cur.count += 1;
     map.set(key, cur);
+  }
+
+  const bulkMonths = opts?.keepBulkMonths
+    ? new Set<string>()
+    : detectBulkDumpMonths(map);
+  let excludedBulk = 0;
+  if (bulkMonths.size) {
+    for (const p of bulkMonths) {
+      excludedBulk += map.get(p)?.count || 0;
+      map.delete(p);
+    }
   }
 
   const anyValor = [...map.values()].some((v) => v.valor > 0);
@@ -225,19 +317,44 @@ export function buildThemeTimeSeries(
     }))
     .sort((a, b) => a.period.localeCompare(b.period));
 
-  if (opts?.fillGaps !== false) {
-    points = fillMonthGaps(points);
+  const monthsWithData = points.length;
+  points = applyWindow(points, window);
+
+  // Solo rellenar huecos dentro de ventanas cortas (evita 2019→2026 en cero)
+  if (opts?.fillGaps !== false && window !== "all") {
+    points = fillMonthGaps(points, Number(window) || 24);
+  } else if (opts?.fillGaps !== false && window === "all") {
+    points = fillMonthGaps(points, 18);
   }
+
+  const notes: string[] = [];
+  if (excludedBulk > 0) {
+    notes.push(
+      `${excludedBulk} filas en mes(es) de carga masiva omitidas para no aplastar la escala`,
+    );
+  }
+  if (excludedFuture > 0) {
+    notes.push(`${excludedFuture} con fecha a futuro omitidas`);
+  }
+
+  const baseSubtitle = labels.seriesSubtitle(metric, window);
+  const subtitle = notes.length
+    ? `${baseSubtitle} · ${notes.join(" · ")}`
+    : baseSubtitle;
 
   return {
     points,
     metric,
     title: labels.seriesTitle(metric),
-    subtitle: labels.seriesSubtitle(metric),
+    subtitle,
     yLabel: labels.yLabel(metric),
     dateLabel: labels.dateLabel,
     unmatchedDates,
+    excludedFuture,
+    excludedBulk,
     totalPoints: points.filter((p) => p.count > 0 || p.valor > 0).length,
+    window,
+    monthsWithData,
   };
 }
 

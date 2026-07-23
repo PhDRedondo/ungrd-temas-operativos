@@ -38,6 +38,7 @@ import {
 import {
   buildThemeTimeSeries,
   resolveEventDate,
+  type SeriesWindow,
 } from "@/lib/analytics/timeSeries";
 
 const ColombiaMap = dynamic(
@@ -91,6 +92,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const [seriesMetricOverride, setSeriesMetricOverride] = useState<
     MapMetric | "auto"
   >("auto");
+  const [seriesWindow, setSeriesWindow] = useState<SeriesWindow>("24");
 
   const workingRecords = useMemo(
     () => (sourceTheme ? enrichRecordsForDecision(records) : records),
@@ -263,18 +265,27 @@ export function AnalyticsPanel({ theme, records }: Props) {
   }, [spatial.areas, mapMetric]);
 
   const timeSeries = useMemo(
-    () => buildThemeTimeSeries(filtered, theme, seriesMetricOverride),
-    [filtered, theme, seriesMetricOverride],
+    () =>
+      buildThemeTimeSeries(filtered, theme, seriesMetricOverride, {
+        window: seriesWindow,
+      }),
+    [filtered, theme, seriesMetricOverride, seriesWindow],
   );
 
   const heatmap = useMemo(() => {
-    const months = Array.from(
+    let months = Array.from(
       new Set(
         filtered
           .map((r) => resolveEventDate(r, theme.id).slice(0, 7))
           .filter((m) => /^\d{4}-\d{2}/.test(m)),
       ),
     ).sort();
+    // Misma ventana corta que la serie (legible)
+    if (seriesWindow !== "all" && months.length > Number(seriesWindow)) {
+      months = months.slice(-Number(seriesWindow));
+    } else if (months.length > 24) {
+      months = months.slice(-24);
+    }
     const depts = Array.from(
       new Set(
         filtered
@@ -319,7 +330,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
       metric: heatMetric,
       useful: months.length > 1 && depts.length > 0 && max > 0,
     };
-  }, [filtered, theme]);
+  }, [filtered, theme, seriesWindow]);
 
   const deptBarUsesValor = byDept[0]?.metric !== "count";
 
@@ -874,28 +885,53 @@ export function AnalyticsPanel({ theme, records }: Props) {
                   : ""}
               </p>
             </div>
-            <div className="inline-flex max-w-full flex-wrap rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
-              {(
-                [
-                  ["auto", "Auto"],
-                  ["valor", mapSem.toggleValor],
-                  ["count", mapSem.toggleCount],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  title={label}
-                  onClick={() => setSeriesMetricOverride(id)}
-                  className={`max-w-[10rem] truncate rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
-                    seriesMetricOverride === id
-                      ? "bg-ungrd-navy text-white"
-                      : "text-ungrd-muted hover:text-ungrd-heading"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="inline-flex max-w-full flex-wrap rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
+                {(
+                  [
+                    ["auto", "Auto"],
+                    ["valor", mapSem.toggleValor],
+                    ["count", mapSem.toggleCount],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    title={label}
+                    onClick={() => setSeriesMetricOverride(id)}
+                    className={`max-w-[10rem] truncate rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
+                      seriesMetricOverride === id
+                        ? "bg-ungrd-navy text-white"
+                        : "text-ungrd-muted hover:text-ungrd-heading"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
+                {(
+                  [
+                    ["12", "12 m"],
+                    ["24", "24 m"],
+                    ["36", "36 m"],
+                    ["all", "Todo"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSeriesWindow(id)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
+                      seriesWindow === id
+                        ? "bg-ungrd-yellow text-ungrd-navy-deep"
+                        : "text-ungrd-muted hover:text-ungrd-heading"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           {timeSeries.points.length === 0 ? (
