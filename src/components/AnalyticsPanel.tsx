@@ -24,6 +24,7 @@ import { DecisionDashboard } from "@/components/DecisionDashboard";
 import { RecordsDataTable } from "@/components/RecordsDataTable";
 import type { MapPoint } from "@/components/ColombiaMap";
 import { isSourceTheme } from "@/lib/analytics/decision";
+import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
 
 const ColombiaMap = dynamic(
   () => import("./ColombiaMap").then((m) => m.ColombiaMap),
@@ -70,6 +71,11 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const [to, setTo] = useState("");
   const [sqlAgg, setSqlAgg] = useState<SqlAgg | null>(null);
 
+  const workingRecords = useMemo(
+    () => (sourceTheme ? enrichRecordsForDecision(records) : records),
+    [records, sourceTheme],
+  );
+
   useEffect(() => {
     let cancelled = false;
     async function loadSql() {
@@ -103,17 +109,17 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const estadoOptions = useMemo(() => {
     if (sourceTheme) {
       const set = new Set<string>();
-      for (const r of records) {
+      for (const r of workingRecords) {
         const e = String(r.estado || "").trim();
         if (e) set.add(e);
       }
       return [...set].sort((a, b) => a.localeCompare(b, "es"));
     }
     return ["Programado", "En ejecución", "Finalizado", "Suspendido"];
-  }, [records, sourceTheme]);
+  }, [workingRecords, sourceTheme]);
 
   const filtered = useMemo(() => {
-    return records.filter((r) => {
+    return workingRecords.filter((r) => {
       if (departamento && r.departamento !== departamento) return false;
       if (municipio && r.municipio !== municipio) return false;
       if (estado && r.estado !== estado) return false;
@@ -124,7 +130,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
       return true;
     });
   }, [
-    records,
+    workingRecords,
     departamento,
     municipio,
     estado,
@@ -197,36 +203,116 @@ export function AnalyticsPanel({ theme, records }: Props) {
   }, [filtered]);
 
   const byDept = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { valor: number; count: number }>();
     for (const r of filtered) {
-      const key = String(r.departamento);
-      map.set(key, (map.get(key) || 0) + Number(r.valor || 0));
+      const key = String(r.departamento || "").trim();
+      if (!key || /^sin departamento$/i.test(key)) continue;
+      const cur = map.get(key) || { valor: 0, count: 0 };
+      cur.valor += Number(r.valor || 0);
+      cur.count += 1;
+      map.set(key, cur);
     }
+    const useValor = [...map.values()].some((v) => v.valor > 0);
     return [...map.entries()]
-      .map(([name, value]) => ({ name, value }))
+      .map(([name, v]) => ({
+        name,
+        value: useValor ? v.valor : v.count,
+        metric: useValor ? ("valor" as const) : ("count" as const),
+      }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
   }, [filtered]);
 
   const mapAgg = useMemo(() => {
     const map: Record<string, number> = {};
+    let anyValor = false;
+    for (const r of filtered) {
+      if (Number(r.valor || 0) > 0) {
+        anyValor = true;
+        break;
+      }
+    }
     for (const r of filtered) {
       const key = departamento ? String(r.municipio) : String(r.departamento);
-      map[key] = (map[key] || 0) + Number(r.valor || 1);
+      if (!key || /^sin (departamento|municipio)$/i.test(key)) continue;
+      map[key] =
+        (map[key] || 0) + (anyValor ? Number(r.valor || 0) : 1);
     }
     return map;
   }, [filtered, departamento]);
 
   const timeSeries = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { valor: number; count: number }>();
     for (const r of filtered) {
       const key = String(r.fecha).slice(0, 7);
-      map.set(key, (map.get(key) || 0) + Number(r.valor || 0));
+      if (!/^\d{4}-\d{2}/.test(key)) continue;
+      const cur = map.get(key) || { valor: 0, count: 0 };
+      cur.valor += Number(r.valor || 0);
+      cur.count += 1;
+      map.set(key, cur);
     }
+    const useValor = [...map.values()].some((v) => v.valor > 0);
     return [...map.entries()]
-      .map(([period, value]) => ({ period, value }))
+      .map(([period, v]) => ({
+        period,
+        value: useValor ? v.valor : v.count,
+      }))
       .sort((a, b) => a.period.localeCompare(b.period));
   }, [filtered]);
+
+  const heatmap = useMemo(() => {
+    const months = Array.from(
+      new Set(
+        filtered
+          .map((r) => String(r.fecha).slice(0, 7))
+          .filter((m) => /^\d{4}-\d{2}/.test(m)),
+      ),
+    ).sort();
+    const depts = Array.from(
+      new Set(
+        filtered
+          .map((r) => String(r.departamento || "").trim())
+          .filter((d) => d && !/^sin departamento$/i.test(d)),
+      ),
+    ).slice(0, 10);
+    let anyValor = false;
+    for (const r of filtered) {
+      if (
+        Number(r.valor || 0) > 0 &&
+        !/^sin departamento$/i.test(String(r.departamento || ""))
+      ) {
+        anyValor = true;
+        break;
+      }
+    }
+    const matrix = depts.map((dept) => ({
+      dept,
+      cells: months.map((m) => {
+        const rows = filtered.filter(
+          (r) =>
+            String(r.departamento) === dept &&
+            String(r.fecha).startsWith(m),
+        );
+        const value = anyValor
+          ? rows.reduce((s, r) => s + Number(r.valor || 0), 0)
+          : rows.length;
+        return { month: m, value };
+      }),
+    }));
+    const max = Math.max(
+      ...matrix.flatMap((row) => row.cells.map((c) => c.value)),
+      1,
+    );
+    return {
+      months,
+      matrix,
+      max,
+      metric: anyValor ? ("valor" as const) : ("count" as const),
+      useful: months.length > 1 && depts.length > 0 && max > 0,
+    };
+  }, [filtered]);
+
+  const deptBarUsesValor = byDept[0]?.metric !== "count";
 
   const sankeyRecords = useMemo(
     () =>
@@ -237,33 +323,6 @@ export function AnalyticsPanel({ theme, records }: Props) {
       })),
     [filtered, thirdKey],
   );
-
-  const heatmap = useMemo(() => {
-    const months = Array.from(
-      new Set(filtered.map((r) => String(r.fecha).slice(0, 7))),
-    ).sort();
-    const depts = Array.from(
-      new Set(filtered.map((r) => String(r.departamento))),
-    ).slice(0, 8);
-    const matrix = depts.map((dept) => ({
-      dept,
-      cells: months.map((m) => {
-        const value = filtered
-          .filter(
-            (r) =>
-              String(r.departamento) === dept &&
-              String(r.fecha).startsWith(m),
-          )
-          .reduce((s, r) => s + Number(r.valor || 0), 0);
-        return { month: m, value };
-      }),
-    }));
-    const max = Math.max(
-      ...matrix.flatMap((row) => row.cells.map((c) => c.value)),
-      1,
-    );
-    return { months, matrix, max };
-  }, [filtered]);
 
   const byCategory = useMemo(() => {
     if (!categoryField) return byEstado;
@@ -346,8 +405,44 @@ export function AnalyticsPanel({ theme, records }: Props) {
         <DecisionDashboard
           themeId={theme.id}
           themeName={theme.name}
-          records={hasFilters ? filtered : records}
+          records={hasFilters ? filtered : workingRecords}
         />
+      ) : null}
+
+      {sourceTheme ? (
+        <aside className="rounded-2xl border border-ungrd-navy/15 bg-ungrd-surface px-4 py-3 text-sm text-ungrd-muted sm:px-5">
+          <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
+            Cómo interpretar este tablero
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
+            <li>
+              El <strong className="font-bold text-ungrd-heading">centro de mando</strong>{" "}
+              (arriba) es la lectura ejecutiva: semáforos, alertas y prioridades.
+            </li>
+            <li>
+              Bitácoras y pagos suelen llegar sin municipio: el sistema{" "}
+              <strong className="font-bold text-ungrd-heading">
+                completa ubicación y valor
+              </strong>{" "}
+              cruzando la misma orden/placa/CDP de la maqueta.
+            </li>
+            <li>
+              Mapa, barras y calor muestran{" "}
+              <strong className="font-bold text-ungrd-heading">
+                valor en pesos
+              </strong>{" "}
+              cuando existe; si no, muestran{" "}
+              <strong className="font-bold text-ungrd-heading">
+                cantidad de registros
+              </strong>{" "}
+              (actividad operativa).
+            </li>
+            <li>
+              La tabla inferior lista la base filtrada con columnas propias del
+              tema (clave, capa, estado real). Use «Detalle» para el expediente.
+            </li>
+          </ul>
+        </aside>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ungrd-muted">
@@ -578,7 +673,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
 
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            Top departamentos (valor)
+            Top departamentos ({deptBarUsesValor ? "valor $" : "nº registros"})
           </h3>
           <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -598,7 +693,13 @@ export function AnalyticsPanel({ theme, records }: Props) {
                     v.length > 10 ? `${v.slice(0, 9)}…` : v
                   }
                 />
-                <Tooltip formatter={(v) => formatCop(Number(v))} />
+                <Tooltip
+                  formatter={(v) =>
+                    deptBarUsesValor
+                      ? formatCop(Number(v))
+                      : `${formatNumber(Number(v))} registros`
+                  }
+                />
                 <Bar
                   dataKey="value"
                   radius={[0, 6, 6, 0]}
@@ -702,14 +803,17 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </section>
         ) : null}
 
-        {heatmap.months.length > 1 ? (
+        {heatmap.useful ? (
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            Tabla de calor · Departamento × Mes
+            {heatmap.metric === "valor"
+              ? "Mapa de calor · valor por departamento × mes"
+              : "Mapa de calor · actividad (registros) por departamento × mes"}
           </h3>
           <p className="mb-2 text-xs text-ungrd-muted">
-            Clic en una celda para filtrar por departamento y periodo; clic en
-            el nombre del departamento o el mes para filtrar solo esa dimensión.
+            {heatmap.metric === "valor"
+              ? "Intensidad = valor en pesos. Clic en celda para filtrar departamento y periodo."
+              : "Intensidad = cantidad de gestiones/registros (útil cuando la capa no trae $). Clic para filtrar."}
           </p>
           <div className="scroll-thin -mx-1 max-w-full overflow-x-auto px-1">
             <table className="w-max min-w-full text-xs">
@@ -764,7 +868,11 @@ export function AnalyticsPanel({ theme, records }: Props) {
                         <td key={cell.month} className="px-1 py-1">
                           <button
                             type="button"
-                            title={`${row.dept} · ${cell.month}: ${formatCop(cell.value)}`}
+                            title={
+                              heatmap.metric === "valor"
+                                ? `${row.dept} · ${cell.month}: ${formatCop(cell.value)}`
+                                : `${row.dept} · ${cell.month}: ${formatNumber(cell.value)} registros`
+                            }
                             onClick={() =>
                               onHeatmapCell(row.dept, cell.month)
                             }
@@ -785,7 +893,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
                             }}
                           >
                             {cell.value
-                              ? `${Math.round(cell.value / 1_000_000)}M`
+                              ? heatmap.metric === "valor"
+                                ? `${Math.round(cell.value / 1_000_000)}M`
+                                : formatNumber(cell.value)
                               : "—"}
                           </button>
                         </td>
