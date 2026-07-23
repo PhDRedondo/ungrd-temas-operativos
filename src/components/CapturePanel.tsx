@@ -1,7 +1,14 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { FileSpreadsheet, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  FileSpreadsheet,
+  RefreshCw,
+  ShieldCheck,
+  Upload,
+} from "lucide-react";
 import type { ThemeConfig } from "@/lib/themes";
 import type { RecordRow } from "@/lib/records/types";
 import { DEPARTMENTS } from "@/lib/geo";
@@ -21,6 +28,17 @@ type UploadError = {
   message: string;
 };
 
+type DrySummary = {
+  totalRows: number;
+  valid: number;
+  invalid: number;
+  wouldInsert: number;
+  wouldUpdate: number;
+  wouldSkipDuplicate: number;
+  withoutTrackingKey: number;
+  tip?: string;
+};
+
 export function CapturePanel({ theme, onSaved }: Props) {
   const { role } = useAuth();
   const writable = canWrite(role || undefined);
@@ -31,6 +49,9 @@ export function CapturePanel({ theme, onSaved }: Props) {
   const [preview, setPreview] = useState<RecordRow[]>([]);
   const [uploadErrors, setUploadErrors] = useState<UploadError[]>([]);
   const [busy, setBusy] = useState(false);
+  const [upsertMode, setUpsertMode] = useState(true);
+  const [drySummary, setDrySummary] = useState<DrySummary | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const department = form.departamento || "";
   const municipalities = useMemo(() => {
@@ -206,12 +227,12 @@ export function CapturePanel({ theme, onSaved }: Props) {
     }
   }
 
-  async function onFile(file: File | null) {
+  async function uploadExcel(file: File, dryRun: boolean) {
     setError(null);
     setMessage(null);
+    if (!dryRun) setDrySummary(null);
     setPreview([]);
     setUploadErrors([]);
-    if (!file) return;
     if (!writable) {
       setError("Su rol no permite carga masiva.");
       return;
@@ -220,6 +241,8 @@ export function CapturePanel({ theme, onSaved }: Props) {
     try {
       const body = new FormData();
       body.append("file", file);
+      body.append("dryRun", dryRun ? "1" : "0");
+      body.append("mode", upsertMode ? "upsert" : "insert");
       const res = await fetch(`/api/themes/${theme.id}/uploads`, {
         method: "POST",
         body,
@@ -231,21 +254,50 @@ export function CapturePanel({ theme, onSaved }: Props) {
       }
       setPreview((data.preview as RecordRow[]) || []);
       setUploadErrors((data.errors as UploadError[]) || []);
+
+      if (dryRun) {
+        setPendingFile(file);
+        setDrySummary({
+          totalRows: data.totalRows ?? 0,
+          valid: data.valid ?? data.accepted ?? 0,
+          invalid: data.invalid ?? data.rejected ?? 0,
+          wouldInsert: data.wouldInsert ?? 0,
+          wouldUpdate: data.wouldUpdate ?? 0,
+          wouldSkipDuplicate:
+            data.wouldSkipDuplicate ?? data.duplicates ?? 0,
+          withoutTrackingKey: data.withoutTrackingKey ?? 0,
+          tip: data.tip,
+        });
+        setMessage(
+          "Validación lista (no se guardó nada). Revise el resumen y pulse «Subir y guardar» si está correcto.",
+        );
+        return;
+      }
+
+      setPendingFile(null);
       if (data.async) {
         setMessage(
-          `Carga encolada (${data.queued} filas). Vea progreso en la pestaña Cargas Excel / bandeja.`,
+          `Carga encolada (${data.queued} filas, modo ${data.mode}). Vea progreso en Cargas Excel.`,
         );
       } else {
+        const ins = data.inserted ?? data.accepted ?? 0;
+        const upd = data.updated ?? 0;
         setMessage(
-          `Carga ${data.uploadId}: ${data.accepted} aceptados, ${data.rejected} rechazados, ${data.duplicates ?? 0} duplicados omitidos.`,
+          `Guardado: ${ins} nuevos · ${upd} actualizados · ${data.rejected ?? 0} rechazados · ${data.duplicates ?? 0} omitidos (duplicados).`,
         );
       }
-      if (data.accepted > 0 || data.async) onSaved();
+      if (data.accepted > 0 || data.updated > 0 || data.async) onSaved();
     } catch {
-      setError("No se pudo subir el archivo.");
+      setError("No se pudo procesar el archivo.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onFile(file: File | null) {
+    if (!file) return;
+    setPendingFile(file);
+    await uploadExcel(file, true);
   }
 
   return (
@@ -328,6 +380,53 @@ export function CapturePanel({ theme, onSaved }: Props) {
         </form>
       ) : (
         <div className="space-y-4 rounded-2xl border border-ungrd-border bg-ungrd-surface p-5">
+          <ol className="grid gap-2 text-sm text-ungrd-muted sm:grid-cols-3">
+            <li className="rounded-xl border border-ungrd-border bg-ungrd-bg/60 p-3">
+              <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
+                1 · Plantilla
+              </p>
+              <p className="mt-1">
+                Descargue la plantilla oficial de este tema (con listas DIVIPOLA).
+              </p>
+            </li>
+            <li className="rounded-xl border border-ungrd-border bg-ungrd-bg/60 p-3">
+              <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
+                2 · Validar
+              </p>
+              <p className="mt-1">
+                Suba el Excel: primero se valida sin guardar (sin riesgo).
+              </p>
+            </li>
+            <li className="rounded-xl border border-ungrd-border bg-ungrd-bg/60 p-3">
+              <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
+                3 · Guardar
+              </p>
+              <p className="mt-1">
+                Si el resumen es correcto, confirme para insertar o actualizar.
+              </p>
+            </li>
+          </ol>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-4 py-3">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={upsertMode}
+              disabled={!writable || busy}
+              onChange={(e) => setUpsertMode(e.target.checked)}
+            />
+            <span className="text-sm">
+              <span className="inline-flex items-center gap-1.5 font-extrabold text-ungrd-heading">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Actualizar por clave de seguimiento
+              </span>
+              <span className="mt-0.5 block text-ungrd-muted">
+                Recomendado: si la OP/placa/CDP + capa ya existe, se actualiza en
+                lugar de duplicar. Ideal para cargas semanales.
+              </span>
+            </span>
+          </label>
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -335,7 +434,7 @@ export function CapturePanel({ theme, onSaved }: Props) {
               className="inline-flex items-center gap-2 rounded-lg border border-ungrd-border px-4 py-2.5 text-sm font-bold text-ungrd-heading hover:bg-ungrd-bg"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Descargar plantilla (ExcelJS)
+              1. Descargar plantilla
             </button>
             <label
               className={`inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white hover:bg-ungrd-navy-mid ${
@@ -344,8 +443,8 @@ export function CapturePanel({ theme, onSaved }: Props) {
                   : "cursor-pointer"
               }`}
             >
-              <Upload className="h-4 w-4" />
-              {busy ? "Procesando…" : "Subir Excel"}
+              <ShieldCheck className="h-4 w-4" />
+              {busy ? "Validando…" : "2. Elegir Excel y validar"}
               <input
                 type="file"
                 accept=".xlsx,.xls"
@@ -354,13 +453,69 @@ export function CapturePanel({ theme, onSaved }: Props) {
                 onChange={(e) => onFile(e.target.files?.[0] || null)}
               />
             </label>
+            <button
+              type="button"
+              disabled={!writable || busy || !pendingFile || !drySummary}
+              onClick={() => pendingFile && uploadExcel(pendingFile, false)}
+              className="inline-flex items-center gap-2 rounded-lg bg-ungrd-yellow px-4 py-2.5 text-sm font-extrabold text-ungrd-navy-deep hover:bg-ungrd-yellow-soft disabled:opacity-40"
+            >
+              <Upload className="h-4 w-4" />
+              3. Subir y guardar
+            </button>
           </div>
+
+          {drySummary ? (
+            <div className="rounded-xl border border-emerald-300/50 bg-emerald-50 p-4">
+              <p className="inline-flex items-center gap-2 text-sm font-extrabold text-emerald-950">
+                <CheckCircle2 className="h-4 w-4" />
+                Resumen de validación (nada guardado aún)
+              </p>
+              <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+                {[
+                  ["Filas en archivo", drySummary.totalRows],
+                  ["Válidas", drySummary.valid],
+                  ["Con error", drySummary.invalid],
+                  ["Nuevas (insert)", drySummary.wouldInsert],
+                  ["Actualizarían", drySummary.wouldUpdate],
+                  ["Duplicados a omitir", drySummary.wouldSkipDuplicate],
+                ].map(([label, value]) => (
+                  <div
+                    key={String(label)}
+                    className="rounded-lg border border-emerald-200/80 bg-white px-3 py-2"
+                  >
+                    <dt className="text-[10px] font-bold tracking-wide text-emerald-900/70 uppercase">
+                      {label}
+                    </dt>
+                    <dd className="text-lg font-extrabold text-emerald-950 tabular-nums">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {drySummary.withoutTrackingKey > 0 ? (
+                <p className="mt-2 text-xs text-amber-900">
+                  {drySummary.withoutTrackingKey} filas válidas sin clave de
+                  seguimiento: en modo actualizar se insertarán como nuevas.
+                </p>
+              ) : null}
+              {drySummary.tip ? (
+                <p className="mt-2 text-xs text-emerald-900/80">{drySummary.tip}</p>
+              ) : null}
+              {pendingFile ? (
+                <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-950">
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Archivo listo: {pendingFile.name}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <p className="text-sm text-ungrd-muted">
-            Plantilla con DIVIPOLA oficial (datos.gov.co), listas desplegables,
-            hoja <code>_meta</code> y validación Zod. Filas inválidas se
-            rechazan; duplicados se omiten; cargas ≥500 filas van en cola
-            asíncrona.
+            PostgreSQL ya es el almacén oficial. El Excel es la forma segura de
+            que las personas carguen sin tocar la base. Filas inválidas se
+            rechazan; cargas ≥500 van en cola asíncrona.
           </p>
+
           {uploadErrors.length > 0 && (
             <div className="max-h-48 overflow-auto rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-900">
               <p className="mb-2 font-bold">
@@ -390,8 +545,11 @@ export function CapturePanel({ theme, onSaved }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.map((row) => (
-                    <tr key={row.id} className="border-t border-ungrd-border">
+                  {preview.map((row, idx) => (
+                    <tr
+                      key={String(row.id) + idx}
+                      className="border-t border-ungrd-border"
+                    >
                       {Object.values(row)
                         .slice(0, 6)
                         .map((v, i) => (
