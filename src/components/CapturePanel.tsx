@@ -15,6 +15,10 @@ import { DEPARTMENTS } from "@/lib/geo";
 import { useAuth } from "@/lib/auth";
 import { canWrite } from "@/lib/auth/roles";
 import { groupCaptureFields, isSourceTheme } from "@/lib/analytics/decision";
+import {
+  feedingGuideForTheme,
+  prepareTrackingRow,
+} from "@/lib/uploads/capa-inference";
 
 type Props = {
   theme: ThemeConfig;
@@ -52,6 +56,10 @@ export function CapturePanel({ theme, onSaved }: Props) {
   const [upsertMode, setUpsertMode] = useState(true);
   const [drySummary, setDrySummary] = useState<DrySummary | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const feedGuide = useMemo(
+    () => (isSourceTheme(theme.id) ? feedingGuideForTheme(theme.id) : null),
+    [theme.id],
+  );
 
   const department = form.departamento || "";
   const municipalities = useMemo(() => {
@@ -178,11 +186,18 @@ export function CapturePanel({ theme, onSaved }: Props) {
     setMessage(null);
     setBusy(true);
     try {
-      const values: Record<string, string | number> = {};
+      const rawValues: Record<string, unknown> = {};
       for (const field of theme.fields) {
         const raw = form[field.name] || "";
-        values[field.name] =
+        rawValues[field.name] =
           field.type === "number" ? Number(raw || 0) : raw;
+      }
+      const prepared = prepareTrackingRow(theme, rawValues);
+      const values: Record<string, string | number> = {};
+      for (const field of theme.fields) {
+        const v = prepared[field.name];
+        values[field.name] =
+          field.type === "number" ? Number(v || 0) : String(v ?? "");
       }
       const res = await fetch(`/api/themes/${theme.id}/records`, {
         method: "POST",
@@ -380,6 +395,33 @@ export function CapturePanel({ theme, onSaved }: Props) {
         </form>
       ) : (
         <div className="space-y-4 rounded-2xl border border-ungrd-border bg-ungrd-surface p-5">
+          {feedGuide ? (
+            <div className="rounded-xl border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-4 py-3 text-sm">
+              <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
+                Cómo alimentar este tema (maqueta + bitácora)
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-ungrd-muted">
+                <li>
+                  <strong className="text-ungrd-heading">Clave:</strong>{" "}
+                  {feedGuide.clave} — sin sufijos tipo « / pago 1 ».
+                </li>
+                <li>
+                  <strong className="text-ungrd-heading">Capas:</strong>{" "}
+                  {feedGuide.capas.join(" · ")}
+                </li>
+                <li>{feedGuide.tip}</li>
+                <li>
+                  Deje activo «Actualizar por clave». Misma clave + misma capa =
+                  actualiza; misma clave + otra capa = agrega seguimiento.
+                </li>
+                <li>
+                  Si el Excel no trae capa, el sistema puede inferirla del nombre
+                  del archivo (ej. <em>Bitacora_Agua.xlsx</em>).
+                </li>
+              </ul>
+            </div>
+          ) : null}
+
           <ol className="grid gap-2 text-sm text-ungrd-muted sm:grid-cols-3">
             <li className="rounded-xl border border-ungrd-border bg-ungrd-bg/60 p-3">
               <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">

@@ -37,8 +37,11 @@ async function processRows(params: {
   rows: Record<string, unknown>[];
   theme: NonNullable<ReturnType<typeof getTheme>>;
   mode: UploadMode;
+  hint?: string;
 }) {
-  const batch = await buildValidateBatch(params.theme, params.rows, params.mode);
+  const batch = await buildValidateBatch(params.theme, params.rows, params.mode, {
+    hint: params.hint,
+  });
 
   try {
     const { inserted, updated, duplicates } = await upsertValidatedRecords({
@@ -197,9 +200,13 @@ export async function POST(req: Request, ctx: Ctx) {
     );
   }
 
+  const capaHint = [file.name, parsed.meta.sheetName].filter(Boolean).join(" ");
+
   // Dry-run: valida y clasifica sin escribir en BD ni disco
   if (dryRun) {
-    const batch = await buildValidateBatch(theme, parsed.rows, mode);
+    const batch = await buildValidateBatch(theme, parsed.rows, mode, {
+      hint: capaHint,
+    });
     return NextResponse.json({
       ok: true,
       dryRun: true,
@@ -218,8 +225,9 @@ export async function POST(req: Request, ctx: Ctx) {
       })),
       tip:
         mode === "upsert"
-          ? "Modo actualizar: filas con la misma clave de seguimiento + capa se actualizarán."
+          ? "Modo actualizar: filas con la misma clave de seguimiento + capa se actualizarán. Si la capa venía vacía, se infirió del nombre del archivo/hoja."
           : "Modo solo altas: no se actualizarán registros existentes (solo hash idéntico se omite).",
+      capaHint: capaHint || null,
     });
   }
 
@@ -251,6 +259,7 @@ export async function POST(req: Request, ctx: Ctx) {
           rows: parsed.rows,
           theme,
           mode,
+          hint: capaHint,
         });
       } catch (err) {
         console.error("[upload async]", err);
@@ -275,6 +284,7 @@ export async function POST(req: Request, ctx: Ctx) {
     rows: parsed.rows,
     theme,
     mode,
+    hint: capaHint,
   });
 
   return NextResponse.json({
