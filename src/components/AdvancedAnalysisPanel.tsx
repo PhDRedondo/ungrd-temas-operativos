@@ -209,7 +209,9 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
               </article>
             ))}
           </div>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {/* Alertas a ancho completo; listas densas abajo en 2 cols.
+              Evita el hueco cuando hay 1 alerta frente a 2 bloques altos. */}
+          <div className="mt-4 space-y-4">
             <div>
               <h3 className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
                 Alertas accionables
@@ -217,14 +219,14 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
               {decision.alerts.length === 0 ? (
                 <p className="text-sm text-ungrd-muted">Sin alertas críticas.</p>
               ) : (
-                <ul className="space-y-2">
+                <ul className="grid gap-2 sm:grid-cols-2">
                   {decision.alerts.slice(0, 4).map((a) => (
                     <li
                       key={a.id}
                       className="rounded-xl border border-ungrd-border bg-white px-3 py-2.5 text-sm"
                     >
                       <p className="inline-flex items-center gap-1.5 font-extrabold text-ungrd-heading">
-                        <Siren className="h-3.5 w-3.5 text-[#c62828]" />
+                        <Siren className="h-3.5 w-3.5 shrink-0 text-[#c62828]" />
                         {a.title}
                       </p>
                       <p className="mt-1 text-ungrd-muted">{a.detail}</p>
@@ -238,45 +240,49 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
                 </ul>
               )}
             </div>
-            <div>
-              <h3 className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
-                Concentración territorial (top 8)
-              </h3>
-              <ul className="space-y-1.5">
-                {spatial.areas.slice(0, 8).map((a, i) => (
-                  <li
-                    key={a.name}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-sm"
-                  >
-                    <span className="truncate font-semibold text-ungrd-heading">
-                      {i + 1}. {a.name}
-                    </span>
-                    <span className="shrink-0 tabular-nums text-xs text-ungrd-muted">
-                      {spatial.metric === "valor"
-                        ? formatCop(a.valor)
-                        : `${formatNumber(a.count)} reg.`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <h3 className="mt-4 mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
-                {decision.focusLabel}
-              </h3>
-              <ul className="space-y-1.5">
-                {decision.priorityList.slice(0, 6).map((p, i) => (
-                  <li
-                    key={p.key}
-                    className="rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-sm"
-                  >
-                    <p className="font-bold text-ungrd-heading">
-                      {i + 1}. {p.label}
-                    </p>
-                    {p.extra ? (
-                      <p className="text-xs text-ungrd-muted">{p.extra}</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+              <div>
+                <h3 className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
+                  Concentración territorial (top 8)
+                </h3>
+                <ul className="space-y-1.5">
+                  {spatial.areas.slice(0, 8).map((a, i) => (
+                    <li
+                      key={a.name}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-sm"
+                    >
+                      <span className="truncate font-semibold text-ungrd-heading">
+                        {i + 1}. {a.name}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-xs text-ungrd-muted">
+                        {spatial.metric === "valor"
+                          ? formatCop(a.valor)
+                          : `${formatNumber(a.count)} reg.`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
+                  {decision.focusLabel}
+                </h3>
+                <ul className="space-y-1.5">
+                  {decision.priorityList.slice(0, 6).map((p, i) => (
+                    <li
+                      key={p.key}
+                      className="rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-sm"
+                    >
+                      <p className="font-bold text-ungrd-heading">
+                        {i + 1}. {p.label}
+                      </p>
+                      {p.extra ? (
+                        <p className="text-xs text-ungrd-muted">{p.extra}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </section>
