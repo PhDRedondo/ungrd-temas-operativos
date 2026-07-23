@@ -18,6 +18,8 @@ export type DecisionAlert = {
   severity: "critica" | "alta" | "media" | "info";
   title: string;
   detail: string;
+  /** Acción sugerida para el tomador de decisión */
+  action?: string;
   count?: number;
   valor?: number;
 };
@@ -229,12 +231,16 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     }
   }
 
+  const gapPct = desembolso > 0 ? (porLegalizar / desembolso) * 100 : 0;
+
   if (vencidos > 0) {
     alerts.push({
       id: "fic-vencidos",
       severity: "critica",
-      title: "Transferencias con riesgo de legalización",
-      detail: `${formatNumber(vencidos)} registros con saldo por legalizar y plazo vencido o estado VENCIDO.`,
+      title: "Legalización vencida o en riesgo",
+      detail: `${formatNumber(vencidos)} transferencias con saldo pendiente y plazo vencido (o estado VENCIDO). Dinero en riesgo: ${formatCop(vencidosValor)}.`,
+      action:
+        "Priorice CDP de la lista de la derecha y gestione prórroga o legalización inmediata.",
       count: vencidos,
       valor: vencidosValor,
     });
@@ -243,19 +249,19 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "fic-gap",
       severity: porLegalizar > desembolso * 0.15 ? "alta" : "media",
-      title: "Saldo por legalizar",
-      detail: `Hay ${formatCop(porLegalizar)} pendientes de legalizar frente a ${formatCop(desembolso)} desembolsados.`,
+      title: "Saldo aún no legalizado",
+      detail: `Pendiente ${formatCop(porLegalizar)} de ${formatCop(desembolso)} desembolsados (${gapPct.toFixed(1)}%).`,
+      action:
+        "Revise la brecha por vigencia y exija avance de legalización a las entidades receptoras.",
       valor: porLegalizar,
     });
   }
-
-  const gapPct = desembolso > 0 ? (porLegalizar / desembolso) * 100 : 0;
 
   return {
     themeId: "fic",
     title: "Tablero de decisión — FIC",
     subtitle:
-      "Legalización de transferencias directas (FR-1703-SMD-44) · clave No. CDP",
+      "Criterio: semáforo por estado de legalización · crítico si hay saldo por legalizar con plazo vencido (clave No. CDP)",
     kpis: [
       {
         id: "desembolso",
@@ -318,9 +324,10 @@ function buildAgua(rows: RecordRow[]): DecisionBrief {
   let valorOp = 0;
   let valorPagado = 0;
   let colaDias = 0;
-  let colaCount = 0;
+  let colaFilas = 0;
   const priority = new Map<string, { count: number; valor: number; extra?: string }>();
   let sinPago = 0;
+  const opsUnicas = new Set<string>();
 
   for (const r of rows) {
     const valor = num(r, "valor");
@@ -332,41 +339,58 @@ function buildAgua(rows: RecordRow[]): DecisionBrief {
       "valor_pagado_total",
     );
     const estado = str(r, "estado", "estado_actual");
-    bump(sem, classifyEstadoGenerico(estado), labelForLevel(classifyEstadoGenerico(estado), "agua"), valor);
+    const level = classifyEstadoGenerico(estado);
+    bump(sem, level, labelForLevel(level, "agua"), valor);
 
-    const dias = num(r, "dias_desde_ult_gestion", "dias_en_gestion_de_pagos", "dias_totales_en_la_linea");
+    const dias = num(
+      r,
+      "dias_desde_ult_gestion",
+      "dias_en_gestion_de_pagos",
+      "dias_totales_en_la_linea",
+    );
     if (dias >= 30) {
-      colaCount += 1;
+      colaFilas += 1;
       colaDias += dias;
-      const key = str(r, "clave_seguimiento", "orden_de_proveeduria") || "Sin OP";
+      const key =
+        str(r, "clave_seguimiento", "orden_de_proveeduria") || "Sin OP";
+      opsUnicas.add(key);
       const cur = priority.get(key) || { count: 0, valor: 0 };
       cur.count += 1;
       cur.valor += valor;
-      cur.extra = `${Math.round(dias)} días sin gestión`;
+      cur.extra = `${Math.round(dias)} días en línea / sin gestión`;
+      if (estado) cur.extra += ` · ${estado}`;
       priority.set(key, cur);
     }
 
     const tipo = str(r, "tipo_registro", "capa");
-    if (/pago/i.test(tipo) && !hasText(r, "op_paga") && !num(r, "valor_pagado")) {
+    if (
+      /pago/i.test(tipo) &&
+      !hasText(r, "op_paga") &&
+      !num(r, "valor_pagado")
+    ) {
       sinPago += 1;
     }
   }
 
-  if (colaCount > 0) {
+  const colaOps = opsUnicas.size;
+  if (colaOps > 0) {
     alerts.push({
       id: "agua-cola",
-      severity: "alta",
-      title: "Órdenes con demora operativa",
-      detail: `${formatNumber(colaCount)} registros con ≥30 días desde última gestión o en cola de pagos.`,
-      count: colaCount,
+      severity: colaOps >= 20 ? "critica" : "alta",
+      title: "Demora operativa (≥30 días)",
+      detail: `${formatNumber(colaOps)} órdenes distintas llevan 30 días o más en gestión o cola de pagos (${formatNumber(colaFilas)} movimientos en bitácora). Promedio ${Math.round(colaDias / Math.max(colaFilas, 1))} días.`,
+      action:
+        "Atienda primero las OP de la lista prioritaria: desbloqueen trámite técnico, contractual o de pago.",
+      count: colaOps,
     });
   }
   if (sinPago > 0) {
     alerts.push({
       id: "agua-pago",
       severity: "media",
-      title: "Capas de pago incompletas",
-      detail: `${formatNumber(sinPago)} filas de pago sin marca OP paga / valor pagado.`,
+      title: "Pagos sin cierre en la base",
+      detail: `${formatNumber(sinPago)} filas de capa pago sin “OP paga” ni valor pagado registrado.`,
+      action: "Complete el cierre financiero o marque el pago efectivo en la capa de pagos.",
       count: sinPago,
     });
   }
@@ -376,17 +400,18 @@ function buildAgua(rows: RecordRow[]): DecisionBrief {
   return {
     themeId: "agua-y-saneamiento",
     title: "Tablero de decisión — Agua y saneamiento",
-    subtitle: "Órdenes de proveeduría · control físico · bitácora · pagos",
+    subtitle:
+      "Criterio: semáforo por estado de ejecución · alerta roja si una OP supera 30 días en línea/gestión de pagos",
     kpis: [
       {
         id: "op",
         label: "Valor órdenes (OP)",
         value: formatCop(valorOp),
-        hint: `${formatNumber(rows.length)} registros`,
+        hint: `${formatNumber(rows.length)} filas en todas las capas`,
       },
       {
         id: "pagado",
-        label: "Valor pagado (campos pago)",
+        label: "Valor pagado",
         value: formatCop(valorPagado),
         tone: "verde",
       },
@@ -395,20 +420,23 @@ function buildAgua(rows: RecordRow[]): DecisionBrief {
         label: "Brecha OP − pagado",
         value: formatCop(execGap),
         tone: execGap > 0 ? "amarillo" : "verde",
+        hint: "Lo contratado/ordenado aún no reflejado como pagado",
       },
       {
         id: "cola",
-        label: "En cola (≥30 días)",
-        value: formatNumber(colaCount),
-        tone: colaCount > 0 ? "rojo" : "verde",
-        hint: colaCount ? `prom. ${Math.round(colaDias / colaCount)} días` : undefined,
+        label: "OP con demora ≥30 días",
+        value: formatNumber(colaOps),
+        tone: colaOps > 0 ? "rojo" : "verde",
+        hint: colaOps
+          ? `${formatNumber(colaFilas)} gestiones · prom. ${Math.round(colaDias / Math.max(colaFilas, 1))} días`
+          : "Sin cola crítica",
       },
     ],
     semaphores: orderSemaphores(sem),
     alerts,
     byLayer: layerBreakdown(rows),
     priorityList: topN(priority, 15),
-    focusLabel: "OP prioritarias por demora",
+    focusLabel: "OP a desbloquear primero",
   };
 }
 
@@ -446,8 +474,10 @@ function buildCarrotanques(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "ct-estancados",
       severity: "alta",
-      title: "Unidades estancadas en estado",
-      detail: `${formatNumber(estancados)} registros con más de 45 días sin cambio de estado operativo.`,
+      title: "Unidades sin avance de estado (>45 días)",
+      detail: `${formatNumber(estancados)} registros llevan más de 45 días en el mismo estado y no están finalizados/operativos.`,
+      action:
+        "Verifique en campo o bitácora las placas de la lista prioritaria y actualice el estado real.",
       count: estancados,
     });
   }
@@ -455,7 +485,8 @@ function buildCarrotanques(rows: RecordRow[]): DecisionBrief {
   return {
     themeId: "carrotanques",
     title: "Tablero de decisión — Carrotanques",
-    subtitle: "Flota · bitácora de estados · suministro (litros/viajes)",
+    subtitle:
+      "Criterio: semáforo por estado de flota · alerta si pasan >45 días sin cambio (clave placa)",
     kpis: [
       {
         id: "flota",
@@ -522,8 +553,10 @@ function buildBanco(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "banco-alertas",
       severity: "critica",
-      title: "Alertas de póliza / SOAT",
-      detail: `${formatNumber(alertaPoliza)} con alerta póliza y ${formatNumber(alertaSoat)} con alerta SOAT.`,
+      title: "Póliza o SOAT en alerta",
+      detail: `${formatNumber(alertaPoliza)} activos con alerta de póliza y ${formatNumber(alertaSoat)} con alerta de SOAT.`,
+      action:
+        "Renueve o regularice documentos de los seriales/placas listados antes de operar o entregar.",
       count: alertaPoliza + alertaSoat,
     });
   }
@@ -531,15 +564,17 @@ function buildBanco(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "banco-entrega",
       severity: "media",
-      title: "Brecha de entrega vs expectativa",
-      detail: `Expectativa ${formatNumber(expectativa)} · entregada ${formatNumber(entregada)}.`,
+      title: "Entregas por debajo de la expectativa",
+      detail: `Se esperaban ${formatNumber(expectativa)} entregas y hay ${formatNumber(entregada)} registradas.`,
+      action: "Cierre pendientes de entrega a beneficiarios en la capa correspondiente.",
     });
   }
 
   return {
     themeId: "banco-de-maquinaria",
     title: "Tablero de decisión — Banco de maquinaria",
-    subtitle: "Inventario · convenios · bitácora · entregas a beneficiarios",
+    subtitle:
+      "Criterio: semáforo por estado · crítico si hay alerta póliza/SOAT en inventario (clave serial/placa)",
     kpis: [
       {
         id: "regs",
@@ -615,8 +650,10 @@ function buildObrasEmergencia(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "obras-pago",
       severity: "alta",
-      title: "Obras con riesgo en estado de pago",
-      detail: `${formatNumber(pagoRiesgo)} registros con estado de pago crítico o pendiente.`,
+      title: "Riesgo en estado de pago",
+      detail: `${formatNumber(pagoRiesgo)} contratos/OP con pago pendiente, en mora o crítico.`,
+      action:
+        "Cruce obra vs pago en la lista prioritaria y desbloqueen el trámite financiero.",
       count: pagoRiesgo,
     });
   }
@@ -624,7 +661,8 @@ function buildObrasEmergencia(rows: RecordRow[]): DecisionBrief {
   return {
     themeId: "obras-de-emergencia",
     title: "Tablero de decisión — Obras de emergencia",
-    subtitle: "Contratos y órdenes de proveeduría · doble lectura obra/pago",
+    subtitle:
+      "Criterio: semáforo combina estado de obra y de pago · alerta si el pago está en riesgo (clave contrato/OP)",
     kpis: [
       { id: "valor", label: "Valor contractual/OP", value: formatCop(valor) },
       {
@@ -689,8 +727,10 @@ function buildObrasImpuestos(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "imp-vencidos",
       severity: "alta",
-      title: "Convenios con fecha de terminación vencida",
-      detail: `${formatNumber(vencidos)} convenios activos/abiertos ya superaron la fecha de fin.`,
+      title: "Convenios con plazo vencido",
+      detail: `${formatNumber(vencidos)} convenios siguen abiertos después de su fecha de terminación.`,
+      action:
+        "Liquidar, prorrogar o cerrar formalmente los convenios de la lista prioritaria.",
       count: vencidos,
     });
   }
@@ -698,7 +738,8 @@ function buildObrasImpuestos(rows: RecordRow[]): DecisionBrief {
   return {
     themeId: "obras-por-impuestos",
     title: "Tablero de decisión — Obras por impuestos",
-    subtitle: "Convenios e interventoría · plazos y estados",
+    subtitle:
+      "Criterio: semáforo por estado del convenio · alerta si la fecha de fin ya pasó y sigue abierto",
     kpis: [
       { id: "valor", label: "Valor convenios", value: formatCop(valor) },
       {
@@ -756,8 +797,10 @@ function buildPuentes(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "puentes-func",
       severity: "alta",
-      title: "Puentes con funcionalidad en riesgo",
-      detail: `${formatNumber(noFuncional)} registros con funcionalidad no plena o crítica.`,
+      title: "Funcionalidad en riesgo",
+      detail: `${formatNumber(noFuncional)} puentes reportan funcionalidad no plena, parcial o crítica.`,
+      action:
+        "Priorice inspección y obras en los IDs de la lista; confirme estado en campo.",
       count: noFuncional,
     });
   }
@@ -767,7 +810,8 @@ function buildPuentes(rows: RecordRow[]): DecisionBrief {
   return {
     themeId: "puentes",
     title: "Tablero de decisión — Puentes",
-    subtitle: "Inventario SMD · avance y funcionalidad",
+    subtitle:
+      "Criterio: semáforo por estado · alerta si la funcionalidad no es plena (clave ID/lugar)",
     kpis: [
       { id: "regs", label: "Puentes / registros", value: formatNumber(rows.length) },
       {
@@ -836,8 +880,10 @@ function buildDeclaratoria(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "dec-vencidas",
       severity: "alta",
-      title: "Declaratorias abiertas con término vencido",
-      detail: `${formatNumber(priority.size)} sin retorno a normalidad y fecha de terminación superada.`,
+      title: "Abiertas con término vencido",
+      detail: `${formatNumber(priority.size)} declaratorias sin retorno a normalidad y con fecha de terminación ya superada.`,
+      action:
+        "Gestione prórroga, cierre o retorno a normalidad en los decretos de la lista.",
       count: priority.size,
     });
   }
@@ -845,7 +891,8 @@ function buildDeclaratoria(rows: RecordRow[]): DecisionBrief {
   return {
     themeId: "declaratoria-de-emergencia",
     title: "Tablero de decisión — Declaratorias",
-    subtitle: "Decretos de calamidad · prórrogas · retorno a normalidad",
+    subtitle:
+      "Criterio: semáforo por estado · alerta si no hay retorno a normalidad y el término ya venció",
     kpis: [
       { id: "regs", label: "Declaratorias", value: formatNumber(rows.length) },
       {
