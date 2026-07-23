@@ -5,6 +5,10 @@
 import assert from "node:assert/strict";
 import { buildNationalBrief } from "../src/lib/analytics/national";
 import { buildCrosswalk } from "../src/lib/analytics/crosswalk";
+import {
+  getThemeMapSemantics,
+  resolveAutoMapMetric,
+} from "../src/lib/geo/themeMapSemantics";
 import type { RecordRow } from "../src/lib/records/types";
 
 let passed = 0;
@@ -64,6 +68,14 @@ test("buildNationalBrief marca brecha declaratoria sin intervención", () => {
   );
   assert.ok(brief.briefing.gapMunicipios >= 1);
   assert.ok(brief.mapAreas.some((a) => a.name === "La Guajira" && a.valor > 0));
+  assert.ok(
+    (brief.municipalities || []).some(
+      (m) => m.departamento === "La Guajira" && m.gapRespuesta,
+    ),
+    "debe indexar municipio con brecha",
+  );
+  assert.equal(brief.themeBriefs.length, 8);
+  assert.ok(brief.alertsAll.length >= brief.alerts.length);
 });
 
 test("buildNationalBrief baja presión si hay intervenciones", () => {
@@ -237,6 +249,29 @@ test("buildCrosswalk declaratoria incluye intervenciones del depto", () => {
   assert.ok(result.events.some((e) => e.themeId === "declaratoria-de-emergencia"));
   assert.ok(result.events.some((e) => e.themeId === "agua-y-saneamiento"));
   assert.ok(result.territorial.some((t) => t.departamento === "Chocó"));
+});
+
+test("mapa Puentes prioriza conteo, no $ genérico", () => {
+  const puentesTheme = {
+    id: "puentes",
+    name: "Puentes",
+    unit: "puentes",
+    valueLabel: "Puentes",
+  };
+  const puentes = getThemeMapSemantics(puentesTheme);
+  assert.equal(resolveAutoMapMetric(puentesTheme, true), "count");
+  assert.match(puentes.legendTitle("count"), /puentes/i);
+  assert.doesNotMatch(puentes.legendTitle("count"), /intensidad/i);
+
+  const ficTheme = {
+    id: "fic",
+    name: "FIC",
+    unit: "transferencias",
+    valueLabel: "Transferencias FIC",
+  };
+  const fic = getThemeMapSemantics(ficTheme);
+  assert.equal(resolveAutoMapMetric(ficTheme, true), "valor");
+  assert.match(fic.legendTitle("valor"), /COP|transferenc/i);
 });
 
 console.log(`\n${passed} pruebas nacionales OK`);

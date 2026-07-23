@@ -98,6 +98,9 @@ export function ColombiaMap({
   onSelect,
   onClearDepartment,
   metricLabel,
+  legendTitle,
+  legendHint,
+  tooltipPrimaryLabel,
   formatValue,
 }: {
   areas: AreaStat[];
@@ -106,8 +109,13 @@ export function ColombiaMap({
   selectedName?: string;
   onSelect?: (point: MapPoint) => void;
   onClearDepartment?: () => void;
-  /** Etiqueta de la métrica (ej. "presión 0–100") */
+  /** Chip de métrica (ej. "Coropleta · Nº puentes") */
   metricLabel?: string;
+  /** Título de la caja de leyenda (reemplaza el genérico "Intensidad") */
+  legendTitle?: string;
+  legendHint?: string;
+  /** Etiqueta del valor principal en tooltip */
+  tooltipPrimaryLabel?: string;
   formatValue?: (value: number, metric: MapMetric) => string;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -225,11 +233,29 @@ export function ColombiaMap({
     const valor = stat?.valor || 0;
     const share = total > 0 && value > 0 ? ((value / total) * 100).toFixed(1) : "0";
 
+    const primaryLabel =
+      tooltipPrimaryLabel ||
+      (metric === "valor" ? "Valor (COP)" : "Registros");
+    const primaryValue = formatValue
+      ? formatValue(value, metric)
+      : metric === "valor"
+        ? formatCop(valor)
+        : formatNumber(count);
+    const secondary = formatValue
+      ? count > 0
+        ? `Registros: ${formatNumber(count)}`
+        : ""
+      : metric === "valor"
+        ? `Registros: ${formatNumber(count)}`
+        : valor > 0
+          ? `Valor (COP): ${formatCop(valor)}`
+          : "";
+
     layer.bindTooltip(
       `<div style="font:12px/1.35 system-ui,sans-serif;min-width:140px">
         <strong style="font-size:13px">${nice}</strong><br/>
-        ${metric === "valor" ? `Valor: <b>${formatCop(valor)}</b>` : `Registros: <b>${formatNumber(count)}</b>`}<br/>
-        ${metric === "valor" ? `Registros: ${formatNumber(count)}` : valor > 0 ? `Valor: ${formatCop(valor)}` : ""}
+        ${primaryLabel}: <b>${primaryValue}</b><br/>
+        ${secondary}
         ${value > 0 ? `<br/>Participación: <b>${share}%</b>` : "<br/><span style='color:#666'>Sin dato en filtro actual</span>"}
         <br/><em style="color:#0a3d6b">Clic para filtrar el tablero</em>
       </div>`,
@@ -268,13 +294,16 @@ export function ColombiaMap({
     );
   }
 
+  const short = (v: number) =>
+    formatValue ? formatValue(v, metric) : shortMetric(v, metric);
+
   const legendItems = breaks.length
     ? breaks.map((b, i) => ({
         color: colorForClass(i),
         label:
           i === 0
-            ? `≤ ${shortMetric(b, metric)}`
-            : `${shortMetric(breaks[i - 1]!, metric)} – ${shortMetric(b, metric)}`,
+            ? `≤ ${short(b)}`
+            : `${short(breaks[i - 1]!)} – ${short(b)}`,
       }))
     : [{ color: "#e8eef4", label: "Sin datos" }];
 
@@ -364,9 +393,10 @@ export function ColombiaMap({
               })}
         </MapContainer>
 
-        <div className="pointer-events-none absolute right-2 bottom-2 z-[500] max-w-[11.5rem] rounded-lg border border-ungrd-border/80 bg-white/95 p-2 shadow-md backdrop-blur-sm">
-          <p className="mb-1.5 text-[10px] font-extrabold tracking-wide text-ungrd-navy uppercase">
-            Intensidad
+        <div className="pointer-events-none absolute right-2 bottom-2 z-[500] max-w-[12.5rem] rounded-lg border border-ungrd-border/80 bg-white/95 p-2 shadow-md backdrop-blur-sm">
+          <p className="mb-1.5 text-[10px] font-extrabold leading-tight tracking-wide text-ungrd-navy uppercase">
+            {legendTitle ||
+              (metric === "valor" ? "Valor (COP)" : "Nº registros")}
           </p>
           <ul className="space-y-1">
             <li className="flex items-center gap-1.5 text-[10px] text-ungrd-muted">
@@ -390,7 +420,10 @@ export function ColombiaMap({
             ))}
           </ul>
           <p className="mt-1.5 text-[9px] leading-tight text-ungrd-muted">
-            Escala por cuantiles · más oscuro/cálido = mayor concentración
+            {legendHint ||
+              (metric === "valor"
+                ? "Cuantiles de valor $ · más cálido = mayor monto"
+                : "Cuantiles de conteo · más cálido = mayor cantidad")}
           </p>
         </div>
       </div>
