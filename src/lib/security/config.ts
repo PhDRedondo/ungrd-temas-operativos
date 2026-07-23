@@ -64,12 +64,13 @@ export function getSecurityConfig(): SecurityConfig {
   return {
     enabled: bool("SECURITY_ENABLED", true),
     trustProxy: bool("SECURITY_TRUST_PROXY", true),
-    apiRpm: num("SECURITY_API_RPM", isProd ? 90 : 180),
-    authRpm: num("SECURITY_AUTH_RPM", isProd ? 12 : 40),
-    uploadRpm: num("SECURITY_UPLOAD_RPM", isProd ? 8 : 20),
-    healthRpm: num("SECURITY_HEALTH_RPM", 30),
+    // Vercel: una sola vista de tema dispara records+analytics+access+assets.
+    apiRpm: num("SECURITY_API_RPM", isProd ? 300 : 180),
+    authRpm: num("SECURITY_AUTH_RPM", isProd ? 30 : 40),
+    uploadRpm: num("SECURITY_UPLOAD_RPM", isProd ? 20 : 20),
+    healthRpm: num("SECURITY_HEALTH_RPM", 60),
     windowMs: num("SECURITY_WINDOW_MS", 60_000),
-    banThreshold: num("SECURITY_BAN_THRESHOLD", isProd ? 8 : 20),
+    banThreshold: num("SECURITY_BAN_THRESHOLD", isProd ? 20 : 20),
     banMs: num("SECURITY_BAN_MS", 15 * 60_000),
     banBackoff: num("SECURITY_BAN_BACKOFF", 2),
     banMaxMs: num("SECURITY_BAN_MAX_MS", 24 * 60 * 60_000),
@@ -100,6 +101,7 @@ export function rpmForClass(cfg: SecurityConfig, cls: RouteClass): number {
     case "api":
       return cfg.apiRpm;
     default:
-      return cfg.apiRpm * 2;
+      // Páginas HTML / navegación: mucho más laxo que API.
+      return Math.max(cfg.apiRpm * 6, 1200);
   }
 }

@@ -114,10 +114,13 @@ export function enforceSecurity(req: NextRequest): GuardResult {
   const rl = hitRateLimit(rlKey, limit, cfg.windowMs);
 
   if (!rl.allowed) {
-    const strikes = addStrike(ip, cfg.windowMs * 10);
-    if (strikes >= cfg.banThreshold) {
-      const prev = getStrikeCount(ip);
-      setBan(ip, banDuration(cfg, prev), `rate_limit_${cls}`, prev);
+    // Solo acumular strikes en API/auth/upload (no por navegar páginas).
+    if (cls !== "page") {
+      const strikes = addStrike(ip, cfg.windowMs * 10);
+      if (strikes >= cfg.banThreshold) {
+        const prev = getStrikeCount(ip);
+        setBan(ip, banDuration(cfg, prev), `rate_limit_${cls}`, prev);
+      }
     }
     return {
       ok: false,

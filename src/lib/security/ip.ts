@@ -8,6 +8,10 @@ import { getSecurityConfig } from "./config";
 export function clientIp(req: NextRequest): string {
   const cfg = getSecurityConfig();
   if (cfg.trustProxy) {
+    // Vercel documenta este header como IP del cliente.
+    const vercel = req.headers.get("x-vercel-forwarded-for");
+    if (vercel?.trim()) return vercel.split(",")[0]!.trim();
+
     const cf = req.headers.get("cf-connecting-ip");
     if (cf?.trim()) return cf.trim();
 
@@ -21,9 +25,5 @@ export function clientIp(req: NextRequest): string {
     }
   }
 
-  // NextRequest no siempre expone socket; fallback estable
-  return (
-    req.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
-    "127.0.0.1"
-  );
+  return "127.0.0.1";
 }
