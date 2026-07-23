@@ -23,11 +23,21 @@ import {
   isSourceTheme,
 } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
+import {
+  applyRecordFilters,
+  capaOf,
+  EMPTY_RECORD_FILTERS,
+  uniqueSorted,
+  type RecordFilterState,
+} from "@/lib/analytics/recordFilters";
 import { aggregateSpatial } from "@/lib/geo/spatial";
+import { RecordFilterBar } from "@/components/RecordFilterBar";
 
 type Props = {
   theme: ThemeConfig;
   records: RecordRow[];
+  filters: RecordFilterState;
+  onFiltersChange: (next: RecordFilterState) => void;
 };
 
 function fmt(n: number, digits = 3) {
@@ -78,15 +88,56 @@ function degreeLevel(d: number) {
   return "Medio";
 }
 
-export function AdvancedAnalysisPanel({ theme, records }: Props) {
+export function AdvancedAnalysisPanel({
+  theme,
+  records,
+  filters,
+  onFiltersChange,
+}: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(true);
   const source = isSourceTheme(theme.id);
 
-  const working = useMemo(
+  const enriched = useMemo(
     () => (source ? enrichRecordsForDecision(records) : records),
     [records, source],
   );
+
+  const thirdKey = theme.fields.some((f) => f.name === "tipo_registro")
+    ? "tipo_registro"
+    : "municipio";
+
+  const working = useMemo(
+    () =>
+      applyRecordFilters(enriched, filters, {
+        themeId: theme.id,
+        thirdKey,
+      }),
+    [enriched, filters, theme.id, thirdKey],
+  );
+
+  const estadoOptions = useMemo(() => {
+    if (source) {
+      return uniqueSorted(enriched.map((r) => String(r.estado || "")));
+    }
+    return ["Programado", "En ejecución", "Finalizado", "Suspendido"];
+  }, [enriched, source]);
+
+  const capaOptions = useMemo(
+    () => uniqueSorted(enriched.map((r) => capaOf(r))),
+    [enriched],
+  );
+
+  const municipioOptions = useMemo(() => {
+    const rows = filters.departamento
+      ? enriched.filter((r) => r.departamento === filters.departamento)
+      : enriched;
+    return uniqueSorted(
+      rows
+        .map((r) => String(r.municipio || ""))
+        .filter((m) => m && !/^sin municipio$/i.test(m)),
+    );
+  }, [enriched, filters.departamento]);
 
   const decision = useMemo(
     () => (source ? buildDecisionBrief(theme.id, working) : null),
@@ -199,6 +250,18 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
 
   return (
     <div className="min-w-0 max-w-full space-y-4 sm:space-y-5" id="vista-avanzada">
+      <RecordFilterBar
+        filters={filters}
+        onChange={onFiltersChange}
+        onClear={() => onFiltersChange({ ...EMPTY_RECORD_FILTERS })}
+        estadoOptions={estadoOptions}
+        capaOptions={capaOptions}
+        municipioOptions={municipioOptions}
+        matched={working.length}
+        total={enriched.length}
+        showDates
+      />
+
       {decision ? (
         <section className="rounded-2xl border border-ungrd-navy/20 bg-[linear-gradient(160deg,#f7fafc_0%,#eef5fb_100%)] p-4 sm:p-5">
           <p className="text-xs font-extrabold tracking-[0.18em] text-ungrd-navy uppercase">

@@ -18,14 +18,22 @@ import {
 } from "recharts";
 import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
-import { departmentNames } from "@/lib/geo";
 import { SankeyFlowDiagram } from "@/components/SankeyFlowDiagram";
 import { DecisionDashboard } from "@/components/DecisionDashboard";
 import { ClaveCapasTimeline } from "@/components/ClaveCapasTimeline";
 import { RecordsDataTable } from "@/components/RecordsDataTable";
+import { RecordFilterBar } from "@/components/RecordFilterBar";
 import type { MapPoint } from "@/components/ColombiaMap";
 import { isSourceTheme } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
+import {
+  applyRecordFilters,
+  capaOf,
+  EMPTY_RECORD_FILTERS,
+  hasActiveFilters,
+  uniqueSorted,
+  type RecordFilterState,
+} from "@/lib/analytics/recordFilters";
 import {
   aggregateSpatial,
   resolveDepartment,
@@ -60,6 +68,8 @@ const COLORS = [
 type Props = {
   theme: ThemeConfig;
   records: RecordRow[];
+  filters: RecordFilterState;
+  onFiltersChange: (next: RecordFilterState) => void;
 };
 
 type SqlAgg = {
@@ -75,17 +85,31 @@ function toggle(current: string, next: string) {
   return current === next ? "" : next;
 }
 
-export function AnalyticsPanel({ theme, records }: Props) {
+export function AnalyticsPanel({
+  theme,
+  records,
+  filters,
+  onFiltersChange,
+}: Props) {
   const sourceTheme = isSourceTheme(theme.id);
   const mapSem = useMemo(() => getThemeMapSemantics(theme), [theme]);
-  const [departamento, setDepartamento] = useState("");
-  const [municipio, setMunicipio] = useState("");
-  const [estado, setEstado] = useState("");
-  const [tercero, setTercero] = useState("");
-  const [periodo, setPeriodo] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const {
+    departamento,
+    municipio,
+    estado,
+    tercero,
+    periodo,
+    from,
+    to,
+  } = filters;
   const [sqlAgg, setSqlAgg] = useState<SqlAgg | null>(null);
+
+  const patchFilters = useCallback(
+    (partial: Partial<RecordFilterState>) => {
+      onFiltersChange({ ...filters, ...partial });
+    },
+    [filters, onFiltersChange],
+  );
   const [mapMetricOverride, setMapMetricOverride] = useState<
     MapMetric | "auto"
   >("auto");
@@ -131,54 +155,43 @@ export function AnalyticsPanel({ theme, records }: Props) {
 
   const estadoOptions = useMemo(() => {
     if (sourceTheme) {
-      const set = new Set<string>();
-      for (const r of workingRecords) {
-        const e = String(r.estado || "").trim();
-        if (e) set.add(e);
-      }
-      return [...set].sort((a, b) => a.localeCompare(b, "es"));
+      return uniqueSorted(
+        workingRecords.map((r) => String(r.estado || "")),
+      );
     }
     return ["Programado", "En ejecución", "Finalizado", "Suspendido"];
   }, [workingRecords, sourceTheme]);
 
-  const filtered = useMemo(() => {
-    return workingRecords.filter((r) => {
-      if (departamento && r.departamento !== departamento) return false;
-      if (municipio && r.municipio !== municipio) return false;
-      if (estado && r.estado !== estado) return false;
-      if (tercero && String(r[thirdKey] || "") !== tercero) return false;
-      const eventDate = resolveEventDate(r, theme.id);
-      if (periodo && !eventDate.startsWith(periodo)) return false;
-      if (!periodo && from && eventDate && eventDate < from) return false;
-      if (!periodo && to && eventDate && eventDate > to) return false;
-      return true;
-    });
-  }, [
-    workingRecords,
-    departamento,
-    municipio,
-    estado,
-    tercero,
-    thirdKey,
-    periodo,
-    from,
-    to,
-    theme.id,
-  ]);
-
-  const hasFilters = Boolean(
-    departamento || municipio || estado || tercero || periodo || from || to,
+  const capaOptions = useMemo(
+    () => uniqueSorted(workingRecords.map((r) => capaOf(r))),
+    [workingRecords],
   );
 
+  const municipioOptions = useMemo(() => {
+    const rows = departamento
+      ? workingRecords.filter((r) => r.departamento === departamento)
+      : workingRecords;
+    return uniqueSorted(
+      rows
+        .map((r) => String(r.municipio || ""))
+        .filter((m) => m && !/^sin municipio$/i.test(m)),
+    );
+  }, [workingRecords, departamento]);
+
+  const filtered = useMemo(
+    () =>
+      applyRecordFilters(workingRecords, filters, {
+        themeId: theme.id,
+        thirdKey,
+      }),
+    [workingRecords, filters, theme.id, thirdKey],
+  );
+
+  const hasFilters = hasActiveFilters(filters);
+
   const clearFilters = useCallback(() => {
-    setDepartamento("");
-    setMunicipio("");
-    setEstado("");
-    setTercero("");
-    setPeriodo("");
-    setFrom("");
-    setTo("");
-  }, []);
+    onFiltersChange({ ...EMPTY_RECORD_FILTERS });
+  }, [onFiltersChange]);
 
   const cards = useMemo(() => {
     const total = filtered.length;
@@ -356,61 +369,78 @@ export function AnalyticsPanel({ theme, records }: Props) {
 
   function onSankeyNodeClick(column: 0 | 1 | 2, name: string) {
     if (column === 0) {
-      setDepartamento((prev) => toggle(prev, name));
-      setMunicipio("");
+      patchFilters({
+        departamento: toggle(departamento, name),
+        municipio: "",
+      });
     } else if (column === 1) {
-      setEstado((prev) => toggle(prev, name));
+      patchFilters({ estado: toggle(estado, name) });
     } else {
-      setTercero((prev) => toggle(prev, name));
+      const next = toggle(tercero, name);
+      const isCapaDim =
+        thirdKey === "tipo_registro" || thirdKey === "capa";
+      patchFilters({
+        tercero: next,
+        capa: isCapaDim ? next : filters.capa,
+      });
     }
   }
 
   function onMapSelect(point: MapPoint) {
     if (point.level === "departamento") {
-      setDepartamento((prev) => {
-        const next = toggle(prev, point.name);
-        if (!next) setMunicipio("");
-        return next;
+      const next = toggle(departamento, point.name);
+      patchFilters({
+        departamento: next,
+        municipio: next === departamento ? municipio : "",
       });
     } else {
-      setMunicipio((prev) => toggle(prev, point.name));
+      patchFilters({ municipio: toggle(municipio, point.name) });
     }
   }
 
   function onPieClick(name: string) {
     if (pieUsesEstado) {
-      setEstado((prev) => toggle(prev, name));
+      patchFilters({ estado: toggle(estado, name) });
     } else {
-      setTercero((prev) => toggle(prev, name));
+      const next = toggle(tercero, name);
+      const isCapaDim =
+        thirdKey === "tipo_registro" || thirdKey === "capa";
+      patchFilters({
+        tercero: next,
+        capa: isCapaDim ? next : filters.capa,
+      });
     }
   }
 
   function onBarClick(name: string) {
-    setDepartamento((prev) => toggle(prev, name));
-    setMunicipio("");
+    patchFilters({
+      departamento: toggle(departamento, name),
+      municipio: "",
+    });
   }
 
   function onPeriodClick(period: string) {
-    setPeriodo((prev) => toggle(prev, period));
-    if (periodo !== period) {
-      setFrom("");
-      setTo("");
-    }
+    const next = toggle(periodo, period);
+    patchFilters({
+      periodo: next,
+      from: next ? "" : from,
+      to: next ? "" : to,
+    });
   }
 
   function onHeatmapCell(dept: string, month: string) {
     const same = departamento === dept && periodo === month;
     if (same) {
-      setDepartamento("");
-      setPeriodo("");
-      setMunicipio("");
+      patchFilters({ departamento: "", periodo: "", municipio: "" });
       return;
     }
-    setDepartamento(dept);
-    setMunicipio("");
-    setPeriodo(month);
-    setFrom("");
-    setTo("");
+    patchFilters({
+      departamento: dept,
+      municipio: "",
+      periodo: month,
+      from: "",
+      to: "",
+    });
   }
 
   const sqlSynced =
@@ -421,6 +451,21 @@ export function AnalyticsPanel({ theme, records }: Props) {
       className="min-w-0 max-w-full space-y-4 sm:space-y-5"
       id="tour-analitica"
     >
+      <RecordFilterBar
+        filters={filters}
+        onChange={onFiltersChange}
+        onClear={clearFilters}
+        estadoOptions={estadoOptions}
+        capaOptions={capaOptions}
+        municipioOptions={municipioOptions}
+        capaLabel={
+          tipoRegistroField?.label || categoryField?.label || "Capa / tipo"
+        }
+        matched={filtered.length}
+        total={workingRecords.length}
+        showDates
+      />
+
       {sourceTheme ? (
         <DecisionDashboard
           themeId={theme.id}
@@ -433,6 +478,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
         <ClaveCapasTimeline
           themeName={theme.name}
           records={hasFilters ? filtered : workingRecords}
+          initialQuery={filters.q}
         />
       ) : null}
 
@@ -495,130 +541,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
         </p>
       ) : null}
 
-      <div className="grid min-w-0 gap-3 rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-4">
-        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
-          Departamento
-          <select
-            value={departamento}
-            onChange={(e) => {
-              setDepartamento(e.target.value);
-              setMunicipio("");
-            }}
-            className="mt-1 w-full max-w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
-          >
-            <option value="">Todos</option>
-            {departmentNames().map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
-          Estado
-          <select
-            value={estado}
-            onChange={(e) => setEstado(e.target.value)}
-            className="mt-1 w-full max-w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
-          >
-            <option value="">Todos</option>
-            {estadoOptions.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
-          Desde
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => {
-              setFrom(e.target.value);
-              setPeriodo("");
-            }}
-            className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
-          />
-        </label>
-        <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
-          Hasta
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => {
-              setTo(e.target.value);
-              setPeriodo("");
-            }}
-            className="mt-1 w-full max-w-full min-w-0 rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
-          />
-        </label>
-      </div>
-
-      <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-        <span className="text-xs text-ungrd-muted sm:text-sm">
-          Clic en cualquier visualización para filtrar cruzado.
-        </span>
-        {hasFilters && (
-          <>
-            {departamento && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDepartamento("");
-                  setMunicipio("");
-                }}
-                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
-              >
-                Depto: {departamento} ×
-              </button>
-            )}
-            {municipio && (
-              <button
-                type="button"
-                onClick={() => setMunicipio("")}
-                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
-              >
-                Mpio: {municipio} ×
-              </button>
-            )}
-            {estado && (
-              <button
-                type="button"
-                onClick={() => setEstado("")}
-                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
-              >
-                Estado: {estado} ×
-              </button>
-            )}
-            {tercero && (
-              <button
-                type="button"
-                onClick={() => setTercero("")}
-                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
-              >
-                {thirdLabel}: {tercero} ×
-              </button>
-            )}
-            {periodo && (
-              <button
-                type="button"
-                onClick={() => setPeriodo("")}
-                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
-              >
-                Periodo: {periodo} ×
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded-full border border-ungrd-border px-3 py-1 text-xs font-bold text-ungrd-heading hover:bg-ungrd-bg"
-            >
-              Limpiar todo
-            </button>
-          </>
-        )}
-      </div>
+      <p className="text-xs text-ungrd-muted">
+        Clic en mapa, barras o diagramas para filtro cruzado adicional.
+      </p>
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((c) => (
@@ -690,8 +615,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
               selectedName={departamento ? municipio : departamento}
               onSelect={onMapSelect}
               onClearDepartment={() => {
-                setDepartamento("");
-                setMunicipio("");
+                patchFilters({ departamento: "", municipio: "" });
               }}
             />
           </div>
@@ -720,14 +644,14 @@ export function AnalyticsPanel({ theme, records }: Props) {
                         type="button"
                         onClick={() => {
                           if (departamento) {
-                            setMunicipio((prev) =>
-                              prev === item.name ? "" : item.name,
-                            );
+                            patchFilters({
+                              municipio: toggle(municipio, item.name),
+                            });
                           } else {
-                            setDepartamento((prev) =>
-                              prev === item.name ? "" : item.name,
-                            );
-                            setMunicipio("");
+                            patchFilters({
+                              departamento: toggle(departamento, item.name),
+                              municipio: "",
+                            });
                           }
                         }}
                         className={`w-full rounded-lg border px-2.5 py-2 text-left transition ${
