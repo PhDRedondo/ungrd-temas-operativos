@@ -21,6 +21,7 @@ import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { departmentNames } from "@/lib/geo";
 import { SankeyFlowDiagram } from "@/components/SankeyFlowDiagram";
 import { DecisionDashboard } from "@/components/DecisionDashboard";
+import { ClaveCapasTimeline } from "@/components/ClaveCapasTimeline";
 import { RecordsDataTable } from "@/components/RecordsDataTable";
 import type { MapPoint } from "@/components/ColombiaMap";
 import { isSourceTheme } from "@/lib/analytics/decision";
@@ -417,6 +418,13 @@ export function AnalyticsPanel({ theme, records }: Props) {
       {sourceTheme ? (
         <DecisionDashboard
           themeId={theme.id}
+          themeName={theme.name}
+          records={hasFilters ? filtered : workingRecords}
+        />
+      ) : null}
+
+      {sourceTheme ? (
+        <ClaveCapasTimeline
           themeName={theme.name}
           records={hasFilters ? filtered : workingRecords}
         />

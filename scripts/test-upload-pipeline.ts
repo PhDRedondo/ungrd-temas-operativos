@@ -17,6 +17,11 @@ import {
 } from "../src/lib/geo/spatial";
 import { buildDecisionBrief } from "../src/lib/analytics/decision";
 import { enrichRecordsForDecision } from "../src/lib/analytics/enrichRecords";
+import {
+  cleanClaveSeguimiento,
+  inferCapaFromHint,
+  prepareTrackingRow,
+} from "../src/lib/uploads/capa-inference";
 import type { RecordRow } from "../src/lib/records/types";
 import type { ValidatedRecord } from "../src/lib/validation/record-schema";
 
@@ -140,6 +145,42 @@ test("enrich completa depto por clave", () => {
   assert.ok(Number(enriched[1]!.valor) >= 1_000_000);
   const brief = buildDecisionBrief("agua-y-saneamiento", enriched);
   assert.ok(brief.kpis.length >= 3);
+});
+
+test("inferCapaFromHint reconoce bitácora Agua sin pisar datos", () => {
+  assert.equal(
+    inferCapaFromHint("agua-y-saneamiento", "Bitacora_estado_Agua.xlsx"),
+    "Bitácora estado",
+  );
+  assert.equal(cleanClaveSeguimiento("SMD-1 / pago 1"), "SMD-1");
+  const theme = getTheme("agua-y-saneamiento");
+  assert.ok(theme);
+  const prepared = prepareTrackingRow(
+    theme!,
+    {
+      orden_de_proveeduria: "SMD-99 / avance",
+      departamento: "Antioquia",
+      municipio: "Medellín",
+      fecha: "2026-01-01",
+      estado: "En ejecución",
+      valor: 1,
+    },
+    { hint: "archivo_bitacora.xlsx" },
+  );
+  assert.equal(prepared.tipo_registro, "Bitácora estado");
+  assert.equal(prepared.capa, "Bitácora estado");
+  assert.equal(prepared.clave_seguimiento, "SMD-99");
+  // No sobrescribe capa si ya viene
+  const kept = prepareTrackingRow(
+    theme!,
+    {
+      tipo_registro: "Maqueta / orden",
+      capa: "Maqueta / orden",
+      clave_seguimiento: "SMD-1",
+    },
+    { hint: "bitacora.xlsx" },
+  );
+  assert.equal(kept.tipo_registro, "Maqueta / orden");
 });
 
 console.log(`\n${passed} pruebas OK`);

@@ -216,6 +216,23 @@ export async function buildThemeTemplate(
     "7. Si corrige datos ya cargados, active «Actualizar por clave de seguimiento» (OP/placa/CDP + capa).",
   ]);
   help.addRow([""]);
+  help.addRow(["SEGUIMIENTO (MAQUETA + BITÁCORA)"]);
+  help.addRow([
+    "• tipo_registro y capa deben ser la misma opción (Maqueta, Bitácora, Pago, etc.).",
+  ]);
+  help.addRow([
+    "• clave_seguimiento = OP / placa / CDP / serial / Nº declaratoria (sin sufijos tipo « / pago 1»).",
+  ]);
+  help.addRow([
+    "• Maqueta = foto actual de la entidad. Bitácora = evento de seguimiento. Misma clave, distinta capa.",
+  ]);
+  help.addRow([
+    "• Si deja capa vacía, la plataforma puede inferirla del nombre del archivo (ej. Bitacora.xlsx).",
+  ]);
+  help.addRow([
+    "• Cargas semanales: use upsert. Actualiza la misma clave+capa; no duplica maqueta.",
+  ]);
+  help.addRow([""]);
   help.addRow(["Campos del tema:"]);
   for (const f of theme.fields) {
     help.addRow([
@@ -233,6 +250,8 @@ export type ParsedExcel = {
     themeId?: string;
     schemaVersion?: number;
     fingerprint?: string;
+    /** Nombre de la hoja de datos (sirve para inferir capa). */
+    sheetName?: string;
   };
 };
 
@@ -261,6 +280,8 @@ export async function parseExcelUpload(
     ) || wb.worksheets[0];
 
   if (!dataSheet) return { rows: [], meta };
+
+  meta.sheetName = dataSheet.name;
 
   const headerRow = dataSheet.getRow(1);
   const headers: string[] = [];

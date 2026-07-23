@@ -15,6 +15,7 @@ import {
   insertValidatedRecords,
   type RecordRow,
 } from "@/lib/records/repository";
+import { prepareTrackingRow } from "@/lib/uploads/capa-inference";
 
 export type UploadMode = "insert" | "upsert";
 
@@ -65,13 +66,15 @@ export function parseBusinessTrackingKey(key: string): {
 export function validateExcelRows(
   theme: ThemeConfig,
   rows: Record<string, unknown>[],
+  opts?: { hint?: string },
 ): { accepted: ValidatedRecord[]; errors: RowValidationError[] } {
   const accepted: ValidatedRecord[] = [];
   const errors: RowValidationError[] = [];
   rows.forEach((raw, idx) => {
     const rowNumber = idx + 2;
     const mapped = remapRowToThemeFields(theme, raw);
-    const result = validateRow(theme, mapped, rowNumber);
+    const prepared = prepareTrackingRow(theme, mapped, { hint: opts?.hint });
+    const result = validateRow(theme, prepared, rowNumber);
     if (result.ok) accepted.push(result.data);
     else errors.push(...result.errors);
   });
@@ -153,8 +156,9 @@ export async function buildValidateBatch(
   theme: ThemeConfig,
   rows: Record<string, unknown>[],
   mode: UploadMode,
+  opts?: { hint?: string },
 ): Promise<ValidateBatchResult> {
-  const { accepted, errors } = validateExcelRows(theme, rows);
+  const { accepted, errors } = validateExcelRows(theme, rows, opts);
   const classified = await classifyForUpsert(theme.id, accepted, mode);
   const withoutTrackingKey = accepted.filter(
     (a) => !businessTrackingKey(a),
