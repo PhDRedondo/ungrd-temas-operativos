@@ -25,6 +25,11 @@ import { RecordsDataTable } from "@/components/RecordsDataTable";
 import type { MapPoint } from "@/components/ColombiaMap";
 import { isSourceTheme } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
+import {
+  aggregateSpatial,
+  resolveDepartment,
+  type MapMetric,
+} from "@/lib/geo/spatial";
 
 const ColombiaMap = dynamic(
   () => import("./ColombiaMap").then((m) => m.ColombiaMap),
@@ -70,6 +75,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sqlAgg, setSqlAgg] = useState<SqlAgg | null>(null);
+  const [mapMetricOverride, setMapMetricOverride] = useState<
+    MapMetric | "auto"
+  >("auto");
 
   const workingRecords = useMemo(
     () => (sourceTheme ? enrichRecordsForDecision(records) : records),
@@ -202,44 +210,40 @@ export function AnalyticsPanel({ theme, records }: Props) {
     return [...map.entries()].map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
-  const byDept = useMemo(() => {
-    const map = new Map<string, { valor: number; count: number }>();
-    for (const r of filtered) {
-      const key = String(r.departamento || "").trim();
-      if (!key || /^sin departamento$/i.test(key)) continue;
-      const cur = map.get(key) || { valor: 0, count: 0 };
-      cur.valor += Number(r.valor || 0);
-      cur.count += 1;
-      map.set(key, cur);
-    }
-    const useValor = [...map.values()].some((v) => v.valor > 0);
-    return [...map.entries()]
-      .map(([name, v]) => ({
-        name,
-        value: useValor ? v.valor : v.count,
-        metric: useValor ? ("valor" as const) : ("count" as const),
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-  }, [filtered]);
+  const spatial = useMemo(
+    () =>
+      aggregateSpatial(filtered, {
+        department: departamento || undefined,
+      }),
+    [filtered, departamento],
+  );
 
-  const mapAgg = useMemo(() => {
-    const map: Record<string, number> = {};
-    let anyValor = false;
-    for (const r of filtered) {
-      if (Number(r.valor || 0) > 0) {
-        anyValor = true;
-        break;
-      }
-    }
-    for (const r of filtered) {
-      const key = departamento ? String(r.municipio) : String(r.departamento);
-      if (!key || /^sin (departamento|municipio)$/i.test(key)) continue;
-      map[key] =
-        (map[key] || 0) + (anyValor ? Number(r.valor || 0) : 1);
-    }
-    return map;
-  }, [filtered, departamento]);
+  const mapMetric: MapMetric =
+    mapMetricOverride === "auto" ? spatial.metric : mapMetricOverride;
+
+  const byDept = useMemo(() => {
+    const useValor = mapMetric === "valor";
+    return spatial.areas
+      .filter((a) => (useValor ? a.valor > 0 : a.count > 0))
+      .slice(0, 10)
+      .map((a) => ({
+        name: a.name,
+        value: useValor ? a.valor : a.count,
+        metric: useValor ? ("valor" as const) : ("count" as const),
+      }));
+  }, [spatial, mapMetric]);
+
+  const mapRank = useMemo(() => {
+    return spatial.areas
+      .map((a) => ({
+        name: a.name,
+        value: mapMetric === "valor" ? a.valor : a.count,
+        count: a.count,
+        valor: a.valor,
+      }))
+      .filter((a) => a.value > 0)
+      .slice(0, 12);
+  }, [spatial.areas, mapMetric]);
 
   const timeSeries = useMemo(() => {
     const map = new Map<string, { valor: number; count: number }>();
@@ -271,8 +275,8 @@ export function AnalyticsPanel({ theme, records }: Props) {
     const depts = Array.from(
       new Set(
         filtered
-          .map((r) => String(r.departamento || "").trim())
-          .filter((d) => d && !/^sin departamento$/i.test(d)),
+          .map((r) => resolveDepartment(String(r.departamento || ""))?.name)
+          .filter((d): d is string => Boolean(d)),
       ),
     ).slice(0, 10);
     let anyValor = false;
@@ -290,7 +294,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
       cells: months.map((m) => {
         const rows = filtered.filter(
           (r) =>
-            String(r.departamento) === dept &&
+            resolveDepartment(String(r.departamento || ""))?.name === dept &&
             String(r.fecha).startsWith(m),
         );
         const value = anyValor
@@ -609,23 +613,137 @@ export function AnalyticsPanel({ theme, records }: Props) {
         ))}
       </div>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
-          <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            Mapa geográfico · {departamento ? "Municipal" : "Departamental"}
-          </h3>
-          <ColombiaMap
-            aggregation={mapAgg}
-            selectedDepartment={departamento}
-            selectedName={departamento ? municipio : departamento}
-            onSelect={onMapSelect}
-          />
-          <p className="mt-2 text-xs text-ungrd-muted">
-            Polígonos MGN DANE 2024 (depto) · puntos DIVIPOLA (municipio). Clic
-            para filtrar el resto de gráficos.
-          </p>
-        </section>
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-navy/20 bg-ungrd-surface p-3 sm:p-4">
+        <div className="mb-3 flex min-w-0 flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-extrabold text-ungrd-heading">
+              Mapa coroplético ·{" "}
+              {departamento ? `${departamento} (municipios)` : "Colombia (departamentos)"}
+            </h3>
+            <p className="mt-1 text-xs text-ungrd-muted">
+              Polígonos MGN DANE 2024 · nombres alineados a DIVIPOLA · clic en
+              territorio filtra todo el tablero
+              {spatial.unmatched
+                ? ` · ${formatNumber(spatial.unmatched)} filas sin geo resoluble`
+                : ""}
+              .
+            </p>
+          </div>
+          <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
+            {(
+              [
+                ["auto", "Auto"],
+                ["valor", "Valor $"],
+                ["count", "Registros"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMapMetricOverride(id)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                  mapMetricOverride === id
+                    ? "bg-ungrd-navy text-white"
+                    : "text-ungrd-muted hover:text-ungrd-heading"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        <div className="grid min-w-0 gap-4 lg:grid-cols-5">
+          <div className="min-w-0 lg:col-span-3">
+            <ColombiaMap
+              areas={spatial.areas}
+              metric={mapMetric}
+              selectedDepartment={departamento}
+              selectedName={departamento ? municipio : departamento}
+              onSelect={onMapSelect}
+              onClearDepartment={() => {
+                setDepartamento("");
+                setMunicipio("");
+              }}
+            />
+          </div>
+          <div className="min-w-0 rounded-xl border border-ungrd-border bg-ungrd-bg/50 p-3 lg:col-span-2">
+            <h4 className="text-xs font-extrabold tracking-[0.14em] text-ungrd-navy uppercase">
+              Ranking espacial ·{" "}
+              {mapMetric === "valor" ? "valor $" : "nº registros"}
+            </h4>
+            <p className="mt-1 mb-3 text-[11px] text-ungrd-muted">
+              Clic en una fila = mismo filtro espacial que el mapa.
+            </p>
+            {mapRank.length === 0 ? (
+              <p className="text-sm text-ungrd-muted">
+                Sin territorios con dato bajo el filtro actual.
+              </p>
+            ) : (
+              <ol className="max-h-[380px] space-y-1.5 overflow-auto pr-1">
+                {mapRank.map((item, idx) => {
+                  const isSelected = departamento
+                    ? municipio === item.name
+                    : departamento === item.name;
+                  const max = mapRank[0]?.value || 1;
+                  const pct = Math.round((item.value / max) * 100);
+                  return (
+                    <li key={item.name}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (departamento) {
+                            setMunicipio((prev) =>
+                              prev === item.name ? "" : item.name,
+                            );
+                          } else {
+                            setDepartamento((prev) =>
+                              prev === item.name ? "" : item.name,
+                            );
+                            setMunicipio("");
+                          }
+                        }}
+                        className={`w-full rounded-lg border px-2.5 py-2 text-left transition ${
+                          isSelected
+                            ? "border-ungrd-yellow bg-ungrd-yellow/20"
+                            : "border-transparent hover:border-ungrd-border hover:bg-ungrd-surface"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span className="min-w-0 truncate font-bold text-ungrd-heading">
+                            <span className="mr-1.5 text-xs text-ungrd-muted">
+                              {idx + 1}.
+                            </span>
+                            {item.name}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-xs font-extrabold text-ungrd-navy">
+                            {mapMetric === "valor"
+                              ? formatCop(item.value)
+                              : formatNumber(item.value)}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ungrd-border/60">
+                          <div
+                            className="h-full rounded-full bg-ungrd-navy"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        {mapMetric === "valor" && item.count > 0 ? (
+                          <p className="mt-1 text-[10px] text-ungrd-muted">
+                            {formatNumber(item.count)} registros
+                          </p>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Distribución · {categoryField?.label || "Estado"}
@@ -673,7 +791,8 @@ export function AnalyticsPanel({ theme, records }: Props) {
 
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            Top departamentos ({deptBarUsesValor ? "valor $" : "nº registros"})
+            Top {departamento ? "municipios" : "departamentos"} (
+            {deptBarUsesValor ? "valor $" : "nº registros"})
           </h3>
           <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
