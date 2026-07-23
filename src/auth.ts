@@ -56,14 +56,15 @@ if (authMode === "keycloak") {
         const email = String(credentials?.email || "")
           .trim()
           .toLowerCase();
-        const password = String(credentials?.password || "");
+        const password = String(credentials?.password || "").trim();
         const allowedEmail = (
           process.env.DEMO_AUTH_EMAIL || "admin@ungrd.gov.co"
         )
           .trim()
           .toLowerCase();
-        const allowedPassword =
-          process.env.DEMO_AUTH_PASSWORD || "UNGRD2026";
+        const allowedPassword = (
+          process.env.DEMO_AUTH_PASSWORD || "UNGRD2026"
+        ).trim();
 
         const ok =
           email === allowedEmail &&
