@@ -23,7 +23,6 @@ type AuthContextValue = {
   login: (
     email: string,
     password: string,
-    role?: AppRole,
   ) => Promise<{ ok: boolean; error?: string }>;
   loginWithKeycloak: () => Promise<void>;
   logout: () => Promise<void>;
@@ -54,7 +53,7 @@ function AuthBridge({ children }: { children: ReactNode }) {
       ready,
       role: user?.role ?? null,
       authMode,
-      async login(email, password, role = "captura") {
+      async login(email, password) {
         if (authMode === "keycloak") {
           await signIn("keycloak", { callbackUrl: "/app" });
           return { ok: true };
@@ -62,13 +61,12 @@ function AuthBridge({ children }: { children: ReactNode }) {
         const res = await signIn("credentials", {
           email,
           password,
-          role,
           redirect: false,
         });
         if (res?.error) {
           return {
             ok: false,
-            error: "Credenciales inválidas (correo + contraseña ≥ 4).",
+            error: "Correo o contraseña incorrectos.",
           };
         }
         return { ok: true };

@@ -44,19 +44,34 @@ if (authMode === "keycloak") {
     }),
   );
 } else {
-  // Modo demo local (sin Keycloak): útil hasta levantar Docker.
+  // Modo demo: un solo usuario autorizado (sin Keycloak todavía).
   providers.push(
     Credentials({
-      name: "Demo UNGRD",
+      name: "UNGRD",
       credentials: {
         email: { label: "Correo", type: "email" },
         password: { label: "Contraseña", type: "password" },
-        role: { label: "Rol", type: "text" },
       },
       async authorize(credentials) {
-        const email = String(credentials?.email || "").trim();
+        const email = String(credentials?.email || "")
+          .trim()
+          .toLowerCase();
         const password = String(credentials?.password || "");
-        if (!email || password.length < 4) {
+        const allowedEmail = (
+          process.env.DEMO_AUTH_EMAIL || "admin@ungrd.gov.co"
+        )
+          .trim()
+          .toLowerCase();
+        const allowedPassword =
+          process.env.DEMO_AUTH_PASSWORD || "UNGRD2026";
+
+        const ok =
+          email === allowedEmail &&
+          password === allowedPassword &&
+          email.length > 0 &&
+          password.length > 0;
+
+        if (!ok) {
           try {
             const { headers } = await import("next/headers");
             const { registerAuthFailure } = await import("@/lib/security");
@@ -73,15 +88,9 @@ if (authMode === "keycloak") {
           }
           return null;
         }
-        const requested = String(credentials?.role || "captura") as AppRole;
-        const role: AppRole = [
-          "captura",
-          "analista",
-          "admin",
-          "auditor",
-        ].includes(requested)
-          ? requested
-          : "captura";
+
+        // Acceso completo por ahora; roles se afinarán después.
+        const role: AppRole = "admin";
         return {
           id: `demo:${email}`,
           email,
