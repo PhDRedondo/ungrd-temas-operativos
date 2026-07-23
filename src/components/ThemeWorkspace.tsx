@@ -18,15 +18,15 @@ const TABS = [
     highlight: false,
   },
   {
-    id: "quickbi",
-    short: "QuickBI",
-    label: "QuickBI",
+    id: "analitica",
+    short: "Decisión",
+    label: "Centro de mando",
     highlight: true,
   },
   {
-    id: "analitica",
-    short: "Descriptiva",
-    label: "Analítica descriptiva",
+    id: "quickbi",
+    short: "QuickBI",
+    label: "QuickBI",
     highlight: false,
   },
   {

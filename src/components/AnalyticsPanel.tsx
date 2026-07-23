@@ -20,8 +20,10 @@ import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { departmentNames } from "@/lib/geo";
 import { SankeyFlowDiagram } from "@/components/SankeyFlowDiagram";
+import { DecisionDashboard } from "@/components/DecisionDashboard";
 import { RecordsDataTable } from "@/components/RecordsDataTable";
 import type { MapPoint } from "@/components/ColombiaMap";
+import { isSourceTheme } from "@/lib/analytics/decision";
 
 const ColombiaMap = dynamic(
   () => import("./ColombiaMap").then((m) => m.ColombiaMap),
@@ -58,6 +60,7 @@ function toggle(current: string, next: string) {
 }
 
 export function AnalyticsPanel({ theme, records }: Props) {
+  const sourceTheme = isSourceTheme(theme.id);
   const [departamento, setDepartamento] = useState("");
   const [municipio, setMunicipio] = useState("");
   const [estado, setEstado] = useState("");
@@ -85,14 +88,29 @@ export function AnalyticsPanel({ theme, records }: Props) {
     };
   }, [theme.id, records.length]);
 
-  const categoryField = theme.fields.find(
-    (f) =>
-      f.type === "select" &&
-      !["departamento", "estado"].includes(f.name),
-  );
+  const tipoRegistroField = theme.fields.find((f) => f.name === "tipo_registro");
+  const categoryField =
+    tipoRegistroField ||
+    theme.fields.find(
+      (f) =>
+        f.type === "select" &&
+        !["departamento", "estado", "municipio"].includes(f.name),
+    );
   const pieUsesEstado = !categoryField;
   const thirdKey = categoryField?.name || "municipio";
   const thirdLabel = categoryField?.label || "Municipio";
+
+  const estadoOptions = useMemo(() => {
+    if (sourceTheme) {
+      const set = new Set<string>();
+      for (const r of records) {
+        const e = String(r.estado || "").trim();
+        if (e) set.add(e);
+      }
+      return [...set].sort((a, b) => a.localeCompare(b, "es"));
+    }
+    return ["Programado", "En ejecución", "Finalizado", "Suspendido"];
+  }, [records, sourceTheme]);
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
@@ -134,7 +152,30 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const cards = useMemo(() => {
     const total = filtered.length;
     const valor = filtered.reduce((s, r) => s + Number(r.valor || 0), 0);
-    const depts = new Set(filtered.map((r) => r.departamento)).size;
+    const depts = new Set(
+      filtered.map((r) => r.departamento).filter(Boolean),
+    ).size;
+    if (sourceTheme) {
+      const capas = new Set(
+        filtered
+          .map((r) => String(r.tipo_registro || r.capa || "").trim())
+          .filter(Boolean),
+      ).size;
+      const claves = new Set(
+        filtered
+          .map((r) => String(r.clave_seguimiento || "").trim())
+          .filter(Boolean),
+      ).size;
+      return [
+        { label: "Registros filtrados", value: formatNumber(total) },
+        { label: theme.valueLabel, value: formatCop(valor) },
+        { label: "Departamentos", value: formatNumber(depts) },
+        {
+          label: capas ? "Capas / tipos" : "Claves seguimiento",
+          value: formatNumber(capas || claves),
+        },
+      ];
+    }
     const finalizados = filtered.filter((r) => r.estado === "Finalizado").length;
     return [
       { label: "Registros", value: formatNumber(total) },
@@ -145,7 +186,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
         value: `${total ? Math.round((finalizados / total) * 100) : 0}%`,
       },
     ];
-  }, [filtered, theme.valueLabel]);
+  }, [filtered, theme.valueLabel, sourceTheme]);
 
   const byEstado = useMemo(() => {
     const map = new Map<string, number>();
@@ -301,9 +342,19 @@ export function AnalyticsPanel({ theme, records }: Props) {
       className="min-w-0 max-w-full space-y-4 sm:space-y-5"
       id="tour-analitica"
     >
+      {sourceTheme ? (
+        <DecisionDashboard
+          themeId={theme.id}
+          themeName={theme.name}
+          records={hasFilters ? filtered : records}
+        />
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ungrd-muted">
         <span>
-          Gráficos y mapa desde PostgreSQL
+          {sourceTheme
+            ? "Exploración geográfica y cortes sobre la base oficial"
+            : "Gráficos y mapa desde PostgreSQL"}
           {sqlAgg
             ? ` · SQL: ${formatNumber(sqlAgg.totals.count)} filas / ${formatCop(sqlAgg.totals.valor)}`
             : ""}
@@ -349,13 +400,11 @@ export function AnalyticsPanel({ theme, records }: Props) {
             className="mt-1 w-full max-w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case"
           >
             <option value="">Todos</option>
-            {["Programado", "En ejecución", "Finalizado", "Suspendido"].map(
-              (s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ),
-            )}
+            {estadoOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
         </label>
         <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
@@ -642,15 +691,18 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </div>
         </section>
 
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
-          <SankeyFlowDiagram
-            records={sankeyRecords}
-            thirdLabel={thirdLabel}
-            onNodeClick={onSankeyNodeClick}
-            activeFilters={{ departamento, estado, tercero }}
-          />
-        </section>
+        {!sourceTheme ? (
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
+            <SankeyFlowDiagram
+              records={sankeyRecords}
+              thirdLabel={thirdLabel}
+              onNodeClick={onSankeyNodeClick}
+              activeFilters={{ departamento, estado, tercero }}
+            />
+          </section>
+        ) : null}
 
+        {heatmap.months.length > 1 ? (
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Tabla de calor · Departamento × Mes
@@ -745,6 +797,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
             </table>
           </div>
         </section>
+        ) : null}
 
         <RecordsDataTable theme={theme} records={filtered} />
       </div>

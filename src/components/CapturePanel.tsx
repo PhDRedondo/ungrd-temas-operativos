@@ -7,6 +7,7 @@ import type { RecordRow } from "@/lib/records/types";
 import { DEPARTMENTS } from "@/lib/geo";
 import { useAuth } from "@/lib/auth";
 import { canWrite } from "@/lib/auth/roles";
+import { groupCaptureFields, isSourceTheme } from "@/lib/analytics/decision";
 
 type Props = {
   theme: ThemeConfig;
@@ -40,8 +41,110 @@ export function CapturePanel({ theme, onSaved }: Props) {
     );
   }, [department]);
 
+  const fieldSections = useMemo(() => {
+    if (!isSourceTheme(theme.id)) {
+      return [
+        {
+          id: "todos",
+          title: "Datos del registro",
+          names: theme.fields.map((f) => f.name),
+        },
+      ];
+    }
+    return groupCaptureFields(theme.fields);
+  }, [theme]);
+
+  const fieldsByName = useMemo(() => {
+    return new Map(theme.fields.map((f) => [f.name, f]));
+  }, [theme.fields]);
+
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function renderField(fieldName: string) {
+    const field = fieldsByName.get(fieldName);
+    if (!field) return null;
+
+    if (field.name === "municipio" && municipalities.length) {
+      return (
+        <label
+          key={field.name}
+          className="block text-sm font-semibold text-ungrd-heading"
+        >
+          {field.label}
+          <select
+            value={form.municipio || ""}
+            onChange={(e) => updateField("municipio", e.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
+            required={field.required}
+            disabled={!writable || busy}
+          >
+            <option value="">Seleccione…</option>
+            {municipalities.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    }
+
+    const common =
+      "mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40";
+
+    return (
+      <label
+        key={field.name}
+        className={`block text-sm font-semibold text-ungrd-heading ${
+          field.type === "textarea" ? "md:col-span-2" : ""
+        }`}
+      >
+        {field.label}
+        {field.required ? (
+          <span className="ml-1 text-ungrd-danger" aria-hidden>
+            *
+          </span>
+        ) : null}
+        {field.type === "select" ? (
+          <select
+            value={form[field.name] || ""}
+            onChange={(e) => updateField(field.name, e.target.value)}
+            className={common}
+            required={field.required}
+            disabled={!writable || busy}
+          >
+            <option value="">Seleccione…</option>
+            {field.options?.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        ) : field.type === "textarea" ? (
+          <textarea
+            value={form[field.name] || ""}
+            onChange={(e) => updateField(field.name, e.target.value)}
+            className={`${common} min-h-24`}
+            placeholder={field.placeholder}
+            disabled={!writable || busy}
+          />
+        ) : (
+          <input
+            type={field.type}
+            value={form[field.name] || ""}
+            onChange={(e) => updateField(field.name, e.target.value)}
+            className={common}
+            required={field.required}
+            placeholder={field.placeholder}
+            min={field.min}
+            max={field.max}
+            disabled={!writable || busy}
+          />
+        )}
+      </label>
+    );
   }
 
   async function onSubmit(e: FormEvent) {
@@ -150,7 +253,8 @@ export function CapturePanel({ theme, onSaved }: Props) {
       {!writable && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Modo lectura: su rol <strong>{role}</strong> no puede crear registros.
-          Use un usuario con rol <strong>captura</strong> o <strong>admin</strong>.
+          Use un usuario con rol <strong>captura</strong> o{" "}
+          <strong>admin</strong>.
         </p>
       )}
 
@@ -191,87 +295,28 @@ export function CapturePanel({ theme, onSaved }: Props) {
       )}
 
       {mode === "form" ? (
-        <form
-          onSubmit={onSubmit}
-          className="grid gap-4 rounded-2xl border border-ungrd-border bg-ungrd-surface p-5 md:grid-cols-2"
-        >
-          {theme.fields.map((field) => {
-            if (field.name === "municipio" && municipalities.length) {
-              return (
-                <label
-                  key={field.name}
-                  className="block text-sm font-semibold text-ungrd-heading"
-                >
-                  {field.label}
-                  <select
-                    value={form.municipio || ""}
-                    onChange={(e) => updateField("municipio", e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
-                    required={field.required}
-                    disabled={!writable || busy}
-                  >
-                    <option value="">Seleccione…</option>
-                    {municipalities.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              );
-            }
-
-            const common =
-              "mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40";
-
-            return (
-              <label
-                key={field.name}
-                className={`block text-sm font-semibold text-ungrd-heading ${
-                  field.type === "textarea" ? "md:col-span-2" : ""
-                }`}
-              >
-                {field.label}
-                {field.type === "select" ? (
-                  <select
-                    value={form[field.name] || ""}
-                    onChange={(e) => updateField(field.name, e.target.value)}
-                    className={common}
-                    required={field.required}
-                    disabled={!writable || busy}
-                  >
-                    <option value="">Seleccione…</option>
-                    {field.options?.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-                ) : field.type === "textarea" ? (
-                  <textarea
-                    value={form[field.name] || ""}
-                    onChange={(e) => updateField(field.name, e.target.value)}
-                    className={`${common} min-h-24`}
-                    placeholder={field.placeholder}
-                    disabled={!writable || busy}
-                  />
-                ) : (
-                  <input
-                    type={field.type}
-                    value={form[field.name] || ""}
-                    onChange={(e) => updateField(field.name, e.target.value)}
-                    className={common}
-                    required={field.required}
-                    placeholder={field.placeholder}
-                    min={field.min}
-                    max={field.max}
-                    disabled={!writable || busy}
-                  />
-                )}
-              </label>
-            );
-          })}
-          <div className="md:col-span-2">
+        <form onSubmit={onSubmit} className="space-y-4">
+          {isSourceTheme(theme.id) ? (
+            <p className="rounded-xl border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-4 py-3 text-sm text-ungrd-muted">
+              Formulario organizado por capas de la base oficial (seguimiento,
+              ubicación, financiero y detalle operativo). Los campos coinciden
+              con la plantilla Excel v{theme.schemaVersion ?? 1}.
+            </p>
+          ) : null}
+          {fieldSections.map((section) => (
+            <fieldset
+              key={section.id}
+              className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5"
+            >
+              <legend className="px-1 text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
+                {section.title}
+              </legend>
+              <div className="mt-3 grid gap-4 md:grid-cols-2">
+                {section.names.map((name) => renderField(name))}
+              </div>
+            </fieldset>
+          ))}
+          <div>
             <button
               type="submit"
               disabled={!writable || busy}
@@ -294,7 +339,9 @@ export function CapturePanel({ theme, onSaved }: Props) {
             </button>
             <label
               className={`inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white hover:bg-ungrd-navy-mid ${
-                !writable || busy ? "pointer-events-none opacity-50" : "cursor-pointer"
+                !writable || busy
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
               }`}
             >
               <Upload className="h-4 w-4" />
