@@ -8,11 +8,14 @@ export function generateStaticParams() {
 
 export default async function ThemePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug } = await params;
+  const { tab } = await searchParams;
   const theme = getTheme(slug);
   if (!theme) notFound();
-  return <ThemeWorkspace theme={theme} />;
+  return <ThemeWorkspace theme={theme} initialTab={tab} />;
 }

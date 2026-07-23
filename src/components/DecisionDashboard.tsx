@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
   CircleDot,
+  Microscope,
   ShieldAlert,
   Siren,
 } from "lucide-react";
@@ -17,12 +18,15 @@ import {
 } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
+import { ThemeBriefDetail } from "@/components/ThemeBriefDetail";
 
 type Props = {
   themeId: string;
   themeName: string;
   records: RecordRow[];
 };
+
+type Scale = "macro" | "micro";
 
 const LEVEL_STYLE: Record<
   SemaphoreLevel,
@@ -69,6 +73,7 @@ function severityMeta(s: DecisionAlert["severity"]) {
 }
 
 export function DecisionDashboard({ themeId, themeName, records }: Props) {
+  const [scale, setScale] = useState<Scale>("macro");
   const brief = useMemo(() => {
     const rows = isSourceTheme(themeId)
       ? enrichRecordsForDecision(records)
@@ -78,6 +83,12 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
 
   const totalSem = brief.semaphores.reduce((a, s) => a + s.count, 0) || 1;
   const source = isSourceTheme(themeId);
+  const visibleAlerts =
+    scale === "macro" ? brief.alerts.slice(0, 5) : brief.alerts;
+  const visibleLayers =
+    scale === "macro" ? brief.byLayer.slice(0, 8) : brief.byLayer;
+  const visiblePriority =
+    scale === "macro" ? brief.priorityList.slice(0, 10) : brief.priorityList;
 
   return (
     <section
@@ -96,11 +107,38 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
             {brief.subtitle}
           </p>
         </div>
-        {source ? (
-          <span className="rounded-full bg-ungrd-yellow px-3 py-1 text-[11px] font-extrabold tracking-wide text-ungrd-navy-deep uppercase">
-            Base oficial conectada
-          </span>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-lg bg-black/30 p-1 ring-1 ring-white/20">
+            <button
+              type="button"
+              onClick={() => setScale("macro")}
+              className={`rounded-md px-3 py-1.5 text-[11px] font-extrabold ${
+                scale === "macro"
+                  ? "bg-ungrd-yellow text-ungrd-navy-deep"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              Macro
+            </button>
+            <button
+              type="button"
+              onClick={() => setScale("micro")}
+              className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[11px] font-extrabold ${
+                scale === "micro"
+                  ? "bg-ungrd-yellow text-ungrd-navy-deep"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              <Microscope className="h-3.5 w-3.5" />
+              Micro
+            </button>
+          </div>
+          {source ? (
+            <span className="rounded-full bg-ungrd-yellow px-3 py-1 text-[11px] font-extrabold tracking-wide text-ungrd-navy-deep uppercase">
+              Base oficial conectada
+            </span>
+          ) : null}
+        </div>
       </header>
 
       {brief.kpis.length > 0 ? (
@@ -184,14 +222,14 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
           <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
             Alertas para el tomador de decisión
           </h3>
-          {brief.alerts.length === 0 ? (
+          {visibleAlerts.length === 0 ? (
             <p className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-white px-3 py-3 text-sm font-semibold text-emerald-900">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               Sin alertas críticas con los datos actuales.
             </p>
           ) : (
             <ul className="space-y-3">
-              {brief.alerts.map((a) => {
+              {visibleAlerts.map((a) => {
                 const meta = severityMeta(a.severity);
                 return (
                   <li
@@ -244,11 +282,15 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
             <CircleDot className="h-3.5 w-3.5" />
             Distribución por capa / tipo de registro
           </h3>
-          {brief.byLayer.length === 0 ? (
+          {visibleLayers.length === 0 ? (
             <p className="text-sm text-white/55">Sin capas.</p>
           ) : (
-            <ul className="max-h-56 space-y-2 overflow-auto pr-1">
-              {brief.byLayer.map((item) => (
+            <ul
+              className={`space-y-2 overflow-auto pr-1 ${
+                scale === "micro" ? "max-h-96" : "max-h-56"
+              }`}
+            >
+              {visibleLayers.map((item) => (
                 <li
                   key={item.key}
                   className="flex items-center justify-between gap-3 border-b border-white/10 py-1.5 text-sm last:border-0"
@@ -268,14 +310,21 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
         <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
           <h3 className="mb-3 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
             {brief.focusLabel}
+            {scale === "micro"
+              ? ` · ${formatNumber(visiblePriority.length)}`
+              : ""}
           </h3>
-          {brief.priorityList.length === 0 ? (
+          {visiblePriority.length === 0 ? (
             <p className="text-sm text-white/55">
               No hay claves prioritarias con los criterios actuales.
             </p>
           ) : (
-            <ul className="max-h-56 space-y-2 overflow-auto pr-1">
-              {brief.priorityList.map((item, idx) => (
+            <ul
+              className={`space-y-2 overflow-auto pr-1 ${
+                scale === "micro" ? "max-h-96" : "max-h-56"
+              }`}
+            >
+              {visiblePriority.map((item, idx) => (
                 <li
                   key={item.key}
                   className="grid grid-cols-[1.5rem_1fr_auto] items-start gap-2 border-b border-white/10 py-1.5 text-sm last:border-0"
@@ -298,6 +347,33 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
           )}
         </div>
       </div>
+
+      {scale === "micro" && source ? (
+        <div className="rounded-xl border border-white/15 bg-white p-3 text-ungrd-heading">
+          <p className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
+            Ficha micro completa de la base
+          </p>
+          <ThemeBriefDetail
+            themeId={themeId}
+            themeLabel={themeName}
+            brief={brief}
+            defaultOpen
+          />
+        </div>
+      ) : null}
+
+      {scale === "macro" &&
+      (brief.alerts.length > 5 ||
+        brief.byLayer.length > 8 ||
+        brief.priorityList.length > 10) ? (
+        <button
+          type="button"
+          onClick={() => setScale("micro")}
+          className="w-full rounded-xl border border-ungrd-yellow/40 bg-ungrd-yellow/15 px-3 py-2.5 text-sm font-extrabold text-ungrd-yellow hover:bg-ungrd-yellow/25"
+        >
+          Hay más detalle — pasar a Micro
+        </button>
+      ) : null}
     </section>
   );
 }

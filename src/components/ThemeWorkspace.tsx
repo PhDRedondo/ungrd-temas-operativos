@@ -45,8 +45,26 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-export function ThemeWorkspace({ theme }: { theme: ThemeConfig }) {
-  const [tab, setTab] = useState<TabId>("analitica");
+function isTabId(v: string | undefined | null): v is TabId {
+  return (
+    v === "captura" ||
+    v === "analitica" ||
+    v === "quickbi" ||
+    v === "avanzado" ||
+    v === "cargas"
+  );
+}
+
+export function ThemeWorkspace({
+  theme,
+  initialTab,
+}: {
+  theme: ThemeConfig;
+  initialTab?: string;
+}) {
+  const [tab, setTab] = useState<TabId>(
+    isTabId(initialTab) ? initialTab : "analitica",
+  );
   const [version, setVersion] = useState(0);
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [loading, setLoading] = useState(true);

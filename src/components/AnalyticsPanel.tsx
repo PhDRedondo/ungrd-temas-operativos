@@ -30,6 +30,10 @@ import {
   resolveDepartment,
   type MapMetric,
 } from "@/lib/geo/spatial";
+import {
+  getThemeMapSemantics,
+  resolveAutoMapMetric,
+} from "@/lib/geo/themeMapSemantics";
 
 const ColombiaMap = dynamic(
   () => import("./ColombiaMap").then((m) => m.ColombiaMap),
@@ -67,6 +71,7 @@ function toggle(current: string, next: string) {
 
 export function AnalyticsPanel({ theme, records }: Props) {
   const sourceTheme = isSourceTheme(theme.id);
+  const mapSem = useMemo(() => getThemeMapSemantics(theme), [theme]);
   const [departamento, setDepartamento] = useState("");
   const [municipio, setMunicipio] = useState("");
   const [estado, setEstado] = useState("");
@@ -219,7 +224,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
   );
 
   const mapMetric: MapMetric =
-    mapMetricOverride === "auto" ? spatial.metric : mapMetricOverride;
+    mapMetricOverride === "auto"
+      ? resolveAutoMapMetric(theme, spatial.metric === "valor")
+      : mapMetricOverride;
 
   const byDept = useMemo(() => {
     const useValor = mapMetric === "valor";
@@ -289,6 +296,8 @@ export function AnalyticsPanel({ theme, records }: Props) {
         break;
       }
     }
+    const heatMetric = resolveAutoMapMetric(theme, anyValor);
+    const useValor = heatMetric === "valor";
     const matrix = depts.map((dept) => ({
       dept,
       cells: months.map((m) => {
@@ -297,7 +306,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
             resolveDepartment(String(r.departamento || ""))?.name === dept &&
             String(r.fecha).startsWith(m),
         );
-        const value = anyValor
+        const value = useValor
           ? rows.reduce((s, r) => s + Number(r.valor || 0), 0)
           : rows.length;
         return { month: m, value };
@@ -311,10 +320,10 @@ export function AnalyticsPanel({ theme, records }: Props) {
       months,
       matrix,
       max,
-      metric: anyValor ? ("valor" as const) : ("count" as const),
+      metric: heatMetric,
       useful: months.length > 1 && depts.length > 0 && max > 0,
     };
-  }, [filtered]);
+  }, [filtered, theme]);
 
   const deptBarUsesValor = byDept[0]?.metric !== "count";
 
@@ -629,19 +638,20 @@ export function AnalyticsPanel({ theme, records }: Props) {
               .
             </p>
           </div>
-          <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
+          <div className="inline-flex max-w-full flex-wrap rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
             {(
               [
                 ["auto", "Auto"],
-                ["valor", "Valor $"],
-                ["count", "Registros"],
+                ["valor", mapSem.toggleValor],
+                ["count", mapSem.toggleCount],
               ] as const
             ).map(([id, label]) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setMapMetricOverride(id)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
+                title={label}
+                className={`max-w-[11rem] truncate rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
                   mapMetricOverride === id
                     ? "bg-ungrd-navy text-white"
                     : "text-ungrd-muted hover:text-ungrd-heading"
@@ -658,6 +668,10 @@ export function AnalyticsPanel({ theme, records }: Props) {
             <ColombiaMap
               areas={spatial.areas}
               metric={mapMetric}
+              metricLabel={mapSem.metricLabel(mapMetric)}
+              legendTitle={mapSem.legendTitle(mapMetric)}
+              legendHint={mapSem.legendHint(mapMetric)}
+              tooltipPrimaryLabel={mapSem.tooltipPrimary(mapMetric)}
               selectedDepartment={departamento}
               selectedName={departamento ? municipio : departamento}
               onSelect={onMapSelect}
@@ -669,8 +683,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
           </div>
           <div className="min-w-0 rounded-xl border border-ungrd-border bg-ungrd-bg/50 p-3 lg:col-span-2">
             <h4 className="text-xs font-extrabold tracking-[0.14em] text-ungrd-navy uppercase">
-              Ranking espacial ·{" "}
-              {mapMetric === "valor" ? "valor $" : "nº registros"}
+              Ranking espacial · {mapSem.legendTitle(mapMetric)}
             </h4>
             <p className="mt-1 mb-3 text-[11px] text-ungrd-muted">
               Clic en una fila = mismo filtro espacial que el mapa.
@@ -925,14 +938,10 @@ export function AnalyticsPanel({ theme, records }: Props) {
         {heatmap.useful ? (
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4 xl:col-span-2">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            {heatmap.metric === "valor"
-              ? "Mapa de calor · valor por departamento × mes"
-              : "Mapa de calor · actividad (registros) por departamento × mes"}
+            {mapSem.heatmapTitle(heatmap.metric)}
           </h3>
           <p className="mb-2 text-xs text-ungrd-muted">
-            {heatmap.metric === "valor"
-              ? "Intensidad = valor en pesos. Clic en celda para filtrar departamento y periodo."
-              : "Intensidad = cantidad de gestiones/registros (útil cuando la capa no trae $). Clic para filtrar."}
+            {mapSem.heatmapHint(heatmap.metric)}
           </p>
           <div className="scroll-thin -mx-1 max-w-full overflow-x-auto px-1">
             <table className="w-max min-w-full text-xs">
