@@ -23,7 +23,7 @@ type AuthContextValue = {
   login: (
     email: string,
     password: string,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{ ok: boolean; error?: string; redirectTo?: string }>;
   loginWithKeycloak: () => Promise<void>;
   logout: () => Promise<void>;
   authMode: "demo" | "keycloak";
@@ -59,17 +59,18 @@ function AuthBridge({ children }: { children: ReactNode }) {
           return { ok: true };
         }
         const res = await signIn("credentials", {
-          email,
+          email: email.trim(),
           password,
           redirect: false,
+          callbackUrl: "/app",
         });
-        if (res?.error) {
+        if (!res || res.error || res.ok === false) {
           return {
             ok: false,
             error: "Correo o contraseña incorrectos.",
           };
         }
-        return { ok: true };
+        return { ok: true, redirectTo: res.url || "/app" };
       },
       async loginWithKeycloak() {
         await signIn("keycloak", { callbackUrl: "/app" });

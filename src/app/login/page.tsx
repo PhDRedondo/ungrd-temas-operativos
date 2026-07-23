@@ -26,12 +26,13 @@ function LoginForm() {
     setLoading(true);
     setError(null);
     const result = await login(email, password);
-    setLoading(false);
     if (!result.ok) {
+      setLoading(false);
       setError(result.error || "No fue posible iniciar sesión.");
       return;
     }
-    router.push(next);
+    // Navegación completa para que la cookie de sesión se aplique (evita quedarse en /login).
+    window.location.assign(result.redirectTo || next);
   }
 
   return (
