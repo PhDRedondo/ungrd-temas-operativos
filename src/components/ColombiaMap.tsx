@@ -73,7 +73,12 @@ function FitBounds({
   return null;
 }
 
-function formatMetric(value: number, metric: MapMetric) {
+function formatMetric(
+  value: number,
+  metric: MapMetric,
+  custom?: (value: number, metric: MapMetric) => string,
+) {
+  if (custom) return custom(value, metric);
   return metric === "valor" ? formatCop(value) : `${formatNumber(value)} reg.`;
 }
 
@@ -92,6 +97,8 @@ export function ColombiaMap({
   selectedName,
   onSelect,
   onClearDepartment,
+  metricLabel,
+  formatValue,
 }: {
   areas: AreaStat[];
   metric: MapMetric;
@@ -99,6 +106,9 @@ export function ColombiaMap({
   selectedName?: string;
   onSelect?: (point: MapPoint) => void;
   onClearDepartment?: () => void;
+  /** Etiqueta de la métrica (ej. "presión 0–100") */
+  metricLabel?: string;
+  formatValue?: (value: number, metric: MapMetric) => string;
 }) {
   const [mounted, setMounted] = useState(false);
   const [geo, setGeo] = useState<FeatureCollection | null>(null);
@@ -275,10 +285,13 @@ export function ColombiaMap({
           {areasConDato} {selectedDepartment ? "municipios" : "deptos"} con dato
         </span>
         <span className="rounded-full bg-ungrd-bg px-2.5 py-1 font-semibold text-ungrd-heading ring-1 ring-ungrd-border">
-          Total: {formatMetric(total, metric)}
+          Total: {formatMetric(total, metric, formatValue)}
         </span>
         <span className="rounded-full bg-ungrd-bg px-2.5 py-1 font-semibold text-ungrd-muted ring-1 ring-ungrd-border">
-          {metric === "valor" ? "Coropleta por valor $" : "Coropleta por nº registros"}
+          {metricLabel ||
+            (metric === "valor"
+              ? "Coropleta por valor $"
+              : "Coropleta por nº registros")}
         </span>
         {selectedDepartment ? (
           <button

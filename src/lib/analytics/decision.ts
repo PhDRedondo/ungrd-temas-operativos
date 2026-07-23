@@ -52,7 +52,7 @@ export type DecisionBrief = {
   focusLabel: string;
 };
 
-const SOURCE_THEMES = new Set([
+export const SOURCE_THEME_IDS = [
   "fic",
   "agua-y-saneamiento",
   "carrotanques",
@@ -61,11 +61,23 @@ const SOURCE_THEMES = new Set([
   "obras-por-impuestos",
   "puentes",
   "declaratoria-de-emergencia",
-]);
+] as const;
+
+export type SourceThemeId = (typeof SOURCE_THEME_IDS)[number];
+
+const SOURCE_THEMES = new Set<string>(SOURCE_THEME_IDS);
 
 export function isSourceTheme(themeId: string) {
   return SOURCE_THEMES.has(themeId);
 }
+
+/** Umbrales documentados en UI nacional (versión de criterios). */
+export const DECISION_THRESHOLDS = {
+  version: "2026.07-nacional-v1",
+  aguaDiasCola: 30,
+  carrotanqueDiasEstancado: 45,
+  ficGapCriticoPct: 15,
+} as const;
 
 function num(r: RecordRow, ...keys: string[]): number {
   for (const k of keys) {

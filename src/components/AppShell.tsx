@@ -12,6 +12,7 @@ import {
   Info,
   LogOut,
   Menu,
+  Radar,
   Route,
   Shield,
   Upload,
@@ -222,6 +223,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               compact ? "mt-2 space-y-1 pt-3" : "mt-2 space-y-0.5 pt-3",
             )}
           >
+            <Link
+              href="/app/mando-nacional"
+              title="Mando nacional"
+              aria-label="Mando nacional"
+              className={linkClass(pathname.startsWith("/app/mando-nacional"))}
+            >
+              <Radar className={compact ? "h-5 w-5" : "h-4 w-4"} />
+              {!compact && "Mando nacional"}
+            </Link>
             <Link
               href="/app/tareas"
               title="Mis tareas"
