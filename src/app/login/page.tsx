@@ -6,16 +6,14 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { AppRole } from "@/themes/shared/types";
 
 function LoginForm() {
   const { login, loginWithKeycloak, user, ready, authMode } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
-  const [email, setEmail] = useState("analista@ungrd.gov.co");
-  const [password, setPassword] = useState("ungrd2026");
-  const [role, setRole] = useState<AppRole>("captura");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,7 +25,7 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const result = await login(email, password, role);
+    const result = await login(email, password);
     setLoading(false);
     if (!result.ok) {
       setError(result.error || "No fue posible iniciar sesión.");
@@ -96,6 +94,7 @@ function LoginForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="Correo autorizado"
                 className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
                 autoComplete="username"
                 required
@@ -107,23 +106,11 @@ function LoginForm() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
                 className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
                 autoComplete="current-password"
                 required
               />
-            </label>
-            <label className="block text-sm font-semibold text-ungrd-heading">
-              Rol (demo)
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as AppRole)}
-                className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
-              >
-                <option value="captura">captura (escritura)</option>
-                <option value="analista">analista (lectura)</option>
-                <option value="admin">admin</option>
-                <option value="auditor">auditor</option>
-              </select>
             </label>
 
             {error && (
@@ -141,9 +128,7 @@ function LoginForm() {
             </button>
 
             <p className="text-center text-xs text-ungrd-muted">
-              Modo demo sin Keycloak. Para OIDC real:{" "}
-              <code className="rounded bg-ungrd-bg px-1">AUTH_MODE=keycloak</code>{" "}
-              + Docker Compose.
+              Acceso restringido. Use las credenciales institucionales asignadas.
             </p>
             <p className="text-center text-sm">
               <Link
