@@ -14,6 +14,7 @@ import {
   type DecisionAlert,
   type SemaphoreLevel,
 } from "@/lib/analytics/decision";
+import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 
 type Props = {
@@ -67,10 +68,12 @@ function severityClass(s: DecisionAlert["severity"]) {
 }
 
 export function DecisionDashboard({ themeId, themeName, records }: Props) {
-  const brief = useMemo(
-    () => buildDecisionBrief(themeId, records),
-    [themeId, records],
-  );
+  const brief = useMemo(() => {
+    const rows = isSourceTheme(themeId)
+      ? enrichRecordsForDecision(records)
+      : records;
+    return buildDecisionBrief(themeId, rows);
+  }, [themeId, records]);
 
   const totalSem = brief.semaphores.reduce((a, s) => a + s.count, 0) || 1;
   const source = isSourceTheme(themeId);
