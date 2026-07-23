@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, records, themes, uploads, users } from "@/db/schema";
 import type { ThemeConfig } from "@/themes/shared/types";
@@ -94,6 +94,27 @@ export async function getRecordsForTheme(themeId: string): Promise<RecordRow[]> 
     .where(and(eq(records.themeId, themeId), isNull(records.deletedAt)))
     .orderBy(desc(records.createdAt));
   return rows.map(dbToRow);
+}
+
+/** Carga registros de varios temas en una consulta (mando nacional / cruces). */
+export async function getRecordsForThemes(
+  themeIds: string[],
+): Promise<Record<string, RecordRow[]>> {
+  const out: Record<string, RecordRow[]> = {};
+  for (const id of themeIds) out[id] = [];
+  if (!themeIds.length) return out;
+
+  const rows = await db
+    .select()
+    .from(records)
+    .where(and(inArray(records.themeId, themeIds), isNull(records.deletedAt)))
+    .orderBy(desc(records.createdAt));
+
+  for (const r of rows) {
+    const list = out[r.themeId];
+    if (list) list.push(dbToRow(r));
+  }
+  return out;
 }
 
 export async function insertValidatedRecords(params: {
