@@ -40,10 +40,10 @@ function fmt(n: number, digits = 3) {
 
 function interpretDensity(d: number) {
   if (d < 0.08)
-    return "La operación está concentrada en pocas combinaciones territorio–estado–capa (poco dispersa).";
+    return "Densidad baja: pocas combinaciones territorio–estado–capa respecto al máximo posible.";
   if (d < 0.2)
-    return "Hay patrones claros: algunos territorios y estados se repiten juntos con frecuencia.";
-  return "La operación está muy repartida entre muchas combinaciones; hay que priorizar con filtros.";
+    return "Densidad media: hay patrones recurrentes de coocurrencia en los registros.";
+  return "Densidad alta: muchas combinaciones distintas; conviene filtrar por territorio o estado.";
 }
 
 function interpretNode(
@@ -52,17 +52,30 @@ function interpretNode(
   betweenness: number,
   label: string,
 ) {
-  const tipo = NETWORK_TYPE_LABELS[type as keyof typeof NETWORK_TYPE_LABELS] || type;
+  const tipo =
+    NETWORK_TYPE_LABELS[type as keyof typeof NETWORK_TYPE_LABELS] || type;
   if (betweenness >= 0.25) {
-    return `${label} (${tipo}) actúa como puente: conecta varios territorios/estados/capas. Si se atrasa aquí, se siente en toda la operación.`;
+    return `${label} (${tipo}): intermediación alta. Aparece en caminos entre muchos pares de nodos; un retraso o ausencia de dato aquí afecta la trazabilidad cruzada.`;
   }
   if (degree >= 15) {
-    return `${label} (${tipo}) es un centro de actividad: aparece junto a muchas otras piezas. Conviene seguimiento cercano.`;
+    return `${label} (${tipo}): grado alto. Coocurre con ${formatNumber(degree)} entidades distintas en la muestra.`;
   }
   if (degree >= 6) {
-    return `${label} (${tipo}) tiene actividad intermedia: revise con qué estados y capas se combina.`;
+    return `${label} (${tipo}): grado intermedio (${formatNumber(degree)} relaciones). Revise con qué estados y capas coocurre.`;
   }
-  return `${label} (${tipo}) tiene pocas conexiones visibles en la muestra actual.`;
+  return `${label} (${tipo}): grado bajo en la muestra actual (${formatNumber(degree)} relaciones).`;
+}
+
+function betweennessLevel(b: number) {
+  if (b >= 0.25) return "Alta";
+  if (b >= 0.1) return "Media";
+  return "Baja";
+}
+
+function degreeLevel(d: number) {
+  if (d >= 15) return "Alto";
+  if (d >= 8) return "Medio-alto";
+  return "Medio";
 }
 
 export function AdvancedAnalysisPanel({ theme, records }: Props) {
@@ -90,90 +103,96 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
   const { metrics } = network;
   const selected = metrics.nodeMetrics.find((n) => n.id === selectedId);
 
-  const topHubs = metrics.nodeMetrics.slice(0, 8);
-  const topBridges = [...metrics.nodeMetrics]
+  const topByDegree = metrics.nodeMetrics.slice(0, 8);
+  const topByBetweenness = [...metrics.nodeMetrics]
     .sort((a, b) => b.betweenness - a.betweenness)
     .slice(0, 8);
 
   const insights = useMemo(() => {
     const out: { title: string; detail: string; action: string }[] = [];
-    const hub = topHubs[0];
+    const hub = topByDegree[0];
     if (hub) {
       out.push({
-        title: `Centro de actividad: ${hub.label}`,
-        detail: `Es el ${NETWORK_TYPE_LABELS[hub.type].toLowerCase()} que más se combina con otros (aparece en ${formatNumber(hub.degree)} relaciones distintas).`,
+        title: `Mayor grado: ${hub.label}`,
+        detail: `${NETWORK_TYPE_LABELS[hub.type]} con ${formatNumber(hub.degree)} relaciones distintas (coocurrencias con otros nodos).`,
         action:
           hub.type === "departamento" || hub.type === "municipio"
-            ? "Priorice visitas, carga de bitácora y verificación en ese territorio."
+            ? "Priorizar seguimiento y verificación de bitácora en ese territorio."
             : hub.type === "estado"
-              ? "Revise el cuello de botella de ese estado y las claves atrapadas ahí."
-              : "Revise esa capa/categoría: concentra buena parte del flujo operativo.",
+              ? "Revisar claves en ese estado y tiempos de gestión asociados."
+              : `Revisar registros de esa ${network.categoryLabel.toLowerCase()}.`,
       });
     }
-    const bridge = topBridges[0];
+    const bridge = topByBetweenness[0];
     if (bridge && bridge.id !== hub?.id && bridge.betweenness > 0.05) {
       out.push({
-        title: `Puente operativo: ${bridge.label}`,
-        detail: `Conecta partes distintas de la operación (territorio ↔ estado ↔ ${network.categoryLabel.toLowerCase()}).`,
+        title: `Mayor intermediación: ${bridge.label}`,
+        detail: `${NETWORK_TYPE_LABELS[bridge.type]} con betweenness ${fmt(bridge.betweenness)}. Une trayectorias entre territorio, estado y ${network.categoryLabel.toLowerCase()}.`,
         action:
-          "Si este nodo falla o se atrasa, impacta a varios frentes a la vez: asígnelo a un responsable.",
+          "Incluir en seguimiento prioritario: su retraso o vacío de dato degrada la lectura cruzada.",
       });
     }
     out.push({
-      title: "Cómo leer el mapa de red",
+      title: "Densidad de la red",
       detail: interpretDensity(metrics.density),
       action:
-        "Use el clic en un nodo para ver con qué se relaciona. Luego filtre ese territorio/estado en el Centro de mando.",
+        "Seleccione un nodo en el grafo y filtre ese territorio o estado en el Centro de mando.",
     });
     if (metrics.giantComponentShare < 0.95) {
       out.push({
-        title: "Hay operaciones desconectadas",
-        detail: `Solo el ${Math.round(metrics.giantComponentShare * 100)}% está en un solo bloque conectado.`,
+        title: "Componente conexa incompleta",
+        detail: `El ${Math.round(metrics.giantComponentShare * 100)}% de nodos está en la componente principal; el resto queda aislado o en subcomponentes.`,
         action:
-          "Revise registros sin departamento/municipio o estados aislados que no se cruzan con el resto.",
+          "Revisar registros sin departamento/municipio o estados que no coocurren con el resto.",
       });
     }
     return out.slice(0, 4);
-  }, [topHubs, topBridges, metrics.density, metrics.giantComponentShare, network.categoryLabel]);
+  }, [
+    topByDegree,
+    topByBetweenness,
+    metrics.density,
+    metrics.giantComponentShare,
+    network.categoryLabel,
+  ]);
 
   const cards = [
     {
       icon: MapPinned,
-      label: "Piezas en juego",
+      label: "Nodos",
       value: formatNumber(metrics.nodes),
-      hint: `Territorios, estados y ${network.categoryLabel.toLowerCase()} que aparecen en los datos`,
+      hint: `Entidades: territorio, estado y ${network.categoryLabel.toLowerCase()}`,
     },
     {
       icon: Waypoints,
-      label: "Cruces detectados",
+      label: "Aristas",
       value: formatNumber(metrics.edges),
-      hint: "Cuántas veces esas piezas aparecen juntas en un mismo registro",
+      hint: "Coocurrencias entre nodos en el mismo registro",
     },
     {
       icon: Target,
-      label: "Concentración",
-      value: metrics.density < 0.1 ? "Alta" : metrics.density < 0.2 ? "Media" : "Baja",
+      label: "Densidad",
+      value: fmt(metrics.density),
       hint: interpretDensity(metrics.density),
     },
     {
       icon: Activity,
-      label: "Conexiones promedio",
+      label: "Grado medio",
       value: fmt(metrics.avgDegree, 1),
-      hint: `Cada pieza se relaciona, en promedio, con ${fmt(metrics.avgDegree, 1)} otras (máx. ${metrics.maxDegree})`,
+      hint: `Promedio de relaciones por nodo (máx. ${metrics.maxDegree})`,
     },
     {
       icon: Network,
-      label: "Operación unida",
+      label: "Componente principal",
       value: `${Math.round(metrics.giantComponentShare * 100)}%`,
       hint:
         metrics.giantComponentShare >= 0.95
-          ? "Todo se conecta en un solo bloque (buena trazabilidad cruzada)"
-          : "Hay islas: algunos registros no se cruzan con el resto",
+          ? "Casi todos los nodos están en una sola componente conexa"
+          : "Existen nodos o subcomponentes desconectados",
     },
     {
       icon: HelpCircle,
-      label: "Modelo",
-      value: "4 capas",
+      label: "Capas del modelo",
+      value: "4",
       hint: `Departamento → municipio → estado → ${network.categoryLabel.toLowerCase()}`,
     },
   ];
@@ -209,12 +228,10 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
               </article>
             ))}
           </div>
-          {/* Alertas a ancho completo; listas densas abajo en 2 cols.
-              Evita el hueco cuando hay 1 alerta frente a 2 bloques altos. */}
           <div className="mt-4 space-y-4">
             <div>
               <h3 className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
-                Alertas accionables
+                Alertas
               </h3>
               {decision.alerts.length === 0 ? (
                 <p className="text-sm text-ungrd-muted">Sin alertas críticas.</p>
@@ -232,7 +249,7 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
                       <p className="mt-1 text-ungrd-muted">{a.detail}</p>
                       {a.action ? (
                         <p className="mt-1 text-xs font-semibold text-ungrd-navy">
-                          Qué hacer: {a.action}
+                          Acción: {a.action}
                         </p>
                       ) : null}
                     </li>
@@ -288,26 +305,26 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
         </section>
       ) : null}
 
-      {/* Guía clara: para qué sirve */}
       <section className="rounded-2xl border border-ungrd-navy/25 bg-ungrd-navy p-4 text-white sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold tracking-[0.2em] text-ungrd-yellow uppercase">
-              Análisis avanzado · {theme.name}
+              Análisis de red · {theme.name}
             </p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight">
-              ¿Qué estamos analizando aquí?
+              Red de coocurrencia operativa
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/80">
-              No es un grafo “por lucirse”. Cruzamos{" "}
-              <strong className="text-white">territorio</strong> (depto/municipio),{" "}
-              <strong className="text-white">estado</strong> del trámite y{" "}
+              Grafo construido a partir de registros: se enlazan{" "}
+              <strong className="text-white">departamento</strong>,{" "}
+              <strong className="text-white">municipio</strong>,{" "}
+              <strong className="text-white">estado</strong> y{" "}
               <strong className="text-white">
                 {network.categoryLabel.toLowerCase()}
               </strong>{" "}
-              (capa/tipo) cuando aparecen juntos en los mismos registros. Sirve
-              para ver <em>dónde se concentra</em> la operación y{" "}
-              <em>qué estados o capas hacen de puente</em> entre territorios.
+              cuando coocurren en la misma fila. Permite medir grado
+              (conectividad local) e intermediación (betweenness) sobre la
+              muestra cargada.
             </p>
           </div>
           <button
@@ -315,29 +332,30 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
             onClick={() => setShowHelp((v) => !v)}
             className="rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-xs font-extrabold text-white hover:bg-white/15"
           >
-            {showHelp ? "Ocultar guía" : "Ver guía"}
+            {showHelp ? "Ocultar método" : "Ver método"}
           </button>
         </div>
         {showHelp ? (
           <ol className="mt-4 grid gap-2 text-sm text-white/85 sm:grid-cols-3">
             <li className="rounded-xl bg-white/10 px-3 py-3">
-              <p className="font-extrabold text-ungrd-yellow">1 · Pregunta</p>
+              <p className="font-extrabold text-ungrd-yellow">1 · Entrada</p>
               <p className="mt-1">
-                ¿Qué departamentos, estados y capas se repiten juntos?
+                Cada registro aporta aristas entre sus valores de territorio,
+                estado y capa.
               </p>
             </li>
             <li className="rounded-xl bg-white/10 px-3 py-3">
-              <p className="font-extrabold text-ungrd-yellow">2 · Hallazgo</p>
+              <p className="font-extrabold text-ungrd-yellow">2 · Métricas</p>
               <p className="mt-1">
-                Centros de actividad (mucho volumen) y puentes (si se traban,
-                afectan a varios frentes).
+                Grado = número de vecinos. Intermediación = fracción de caminos
+                más cortos que pasan por el nodo.
               </p>
             </li>
             <li className="rounded-xl bg-white/10 px-3 py-3">
-              <p className="font-extrabold text-ungrd-yellow">3 · Acción</p>
+              <p className="font-extrabold text-ungrd-yellow">3 · Uso</p>
               <p className="mt-1">
-                Clic en un nodo → vea vecinos → vaya al Centro de mando y filtre
-                ese territorio o estado.
+                Seleccione un nodo, revise vecinos y filtre ese valor en el
+                Centro de mando.
               </p>
             </li>
           </ol>
@@ -346,7 +364,7 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
 
       <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
         <h3 className="text-sm font-extrabold text-ungrd-heading">
-          Lectura rápida (en español claro)
+          Hallazgos (muestra actual)
         </h3>
         <ul className="mt-3 space-y-2">
           {insights.map((ins) => (
@@ -357,7 +375,7 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
               <p className="font-extrabold text-ungrd-heading">{ins.title}</p>
               <p className="mt-1 text-sm text-ungrd-muted">{ins.detail}</p>
               <p className="mt-1.5 text-sm font-semibold text-ungrd-navy">
-                Qué hacer: {ins.action}
+                Acción: {ins.action}
               </p>
             </li>
           ))}
@@ -408,11 +426,11 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-ungrd-heading">
-                Mapa de relaciones operativas
+                Grafo de coocurrencia
               </h3>
               <p className="text-xs text-ungrd-muted">
-                Nodo grande = aparece mucho. Línea gruesa = se combinan seguido.
-                Clic para ver con qué se relaciona.
+                Tamaño del nodo ∝ grado. Grosor de arista ∝ peso de
+                coocurrencia. Clic para inspeccionar.
               </p>
             </div>
             {selected && (
@@ -435,7 +453,7 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
 
         <section className="min-w-0 rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="text-sm font-extrabold text-ungrd-heading">
-            Ficha del elemento seleccionado
+            Nodo seleccionado
           </h3>
           {selected ? (
             <div className="mt-3 space-y-3">
@@ -458,32 +476,24 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
               <dl className="grid grid-cols-2 gap-2 text-sm">
                 {[
                   [
-                    "Con cuántos se relaciona",
+                    "Grado",
                     formatNumber(selected.degree),
-                    "Antes: grado",
+                    "Número de nodos vecinos",
                   ],
                   [
-                    "Fuerza del vínculo",
+                    "Fuerza",
                     formatNumber(selected.strength),
-                    "Suma de veces que aparece junto a otros",
+                    "Suma de pesos de aristas incidentes",
                   ],
                   [
-                    "Rol de puente",
-                    selected.betweenness >= 0.25
-                      ? "Alto"
-                      : selected.betweenness >= 0.1
-                        ? "Medio"
-                        : "Bajo",
-                    `Índice técnico: ${fmt(selected.betweenness)}`,
+                    "Intermediación",
+                    betweennessLevel(selected.betweenness),
+                    `Betweenness: ${fmt(selected.betweenness)}`,
                   ],
                   [
-                    "Grupo local",
-                    selected.clustering >= 0.4
-                      ? "Compacto"
-                      : selected.clustering >= 0.15
-                        ? "Mixto"
-                        : "Abierto",
-                    `Clustering: ${fmt(selected.clustering)}`,
+                    "Clustering",
+                    fmt(selected.clustering),
+                    "Coeficiente de agrupamiento local",
                   ],
                 ].map(([k, v, tip]) => (
                   <div
@@ -503,8 +513,8 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
             </div>
           ) : (
             <p className="mt-4 text-sm text-ungrd-muted">
-              Seleccione un territorio, estado o capa en el mapa. Le diremos en
-              lenguaje claro si es un centro de actividad o un puente operativo.
+              Seleccione un nodo en el grafo para ver grado, fuerza,
+              intermediación y clustering.
             </p>
           )}
         </section>
@@ -513,24 +523,23 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="text-sm font-extrabold text-ungrd-heading">
-            Dónde se concentra la actividad
+            Ranking por grado
           </h3>
           <p className="mt-1 mb-3 text-xs text-ungrd-muted">
-            Piezas que más se combinan con otras (centros). Útil para priorizar
-            territorio, estado o capa.
+            Nodos con más vecinos (mayor coocurrencia con otras entidades).
           </p>
           <div className="scroll-thin overflow-x-auto">
             <table className="w-full min-w-[20rem] text-left text-sm">
               <thead className="text-xs tracking-wide text-ungrd-muted uppercase">
                 <tr>
-                  <th className="px-2 py-2">Elemento</th>
+                  <th className="px-2 py-2">Nodo</th>
                   <th className="px-2 py-2">Tipo</th>
-                  <th className="px-2 py-2 text-right">Relaciones</th>
-                  <th className="px-2 py-2 text-right">Lectura</th>
+                  <th className="px-2 py-2 text-right">Grado</th>
+                  <th className="px-2 py-2 text-right">Nivel</th>
                 </tr>
               </thead>
               <tbody>
-                {topHubs.map((n) => (
+                {topByDegree.map((n) => (
                   <tr
                     key={n.id}
                     className="cursor-pointer border-t border-ungrd-border hover:bg-ungrd-yellow/15"
@@ -546,11 +555,7 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
                       {n.degree}
                     </td>
                     <td className="px-2 py-2 text-right text-xs font-bold text-ungrd-navy">
-                      {n.degree >= 15
-                        ? "Centro"
-                        : n.degree >= 8
-                          ? "Alto"
-                          : "Medio"}
+                      {degreeLevel(n.degree)}
                     </td>
                   </tr>
                 ))}
@@ -561,24 +566,24 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
 
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="text-sm font-extrabold text-ungrd-heading">
-            Qué hace de puente (si se traba, duele)
+            Ranking por intermediación
           </h3>
           <p className="mt-1 mb-3 text-xs text-ungrd-muted">
-            Elementos que unen varios frentes. Si fallan, el impacto se siente en
-            más de un territorio o estado.
+            Nodos con mayor betweenness: aparecen con más frecuencia en caminos
+            cortos entre pares de nodos.
           </p>
           <div className="scroll-thin overflow-x-auto">
             <table className="w-full min-w-[20rem] text-left text-sm">
               <thead className="text-xs tracking-wide text-ungrd-muted uppercase">
                 <tr>
-                  <th className="px-2 py-2">Elemento</th>
+                  <th className="px-2 py-2">Nodo</th>
                   <th className="px-2 py-2">Tipo</th>
-                  <th className="px-2 py-2 text-right">Rol puente</th>
-                  <th className="px-2 py-2 text-right">Acción</th>
+                  <th className="px-2 py-2 text-right">Betweenness</th>
+                  <th className="px-2 py-2 text-right">Nivel</th>
                 </tr>
               </thead>
               <tbody>
-                {topBridges.map((n) => (
+                {topByBetweenness.map((n) => (
                   <tr
                     key={n.id}
                     className="cursor-pointer border-t border-ungrd-border hover:bg-ungrd-yellow/15"
@@ -590,15 +595,11 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
                     <td className="px-2 py-2 text-xs text-ungrd-muted">
                       {NETWORK_TYPE_LABELS[n.type]}
                     </td>
-                    <td className="px-2 py-2 text-right text-xs font-bold text-ungrd-navy">
-                      {n.betweenness >= 0.25
-                        ? "Crítico"
-                        : n.betweenness >= 0.1
-                          ? "Alto"
-                          : "Bajo"}
+                    <td className="px-2 py-2 text-right tabular-nums text-xs">
+                      {fmt(n.betweenness)}
                     </td>
-                    <td className="px-2 py-2 text-right text-[11px] text-ungrd-muted">
-                      Asignar responsable
+                    <td className="px-2 py-2 text-right text-xs font-bold text-ungrd-navy">
+                      {betweennessLevel(n.betweenness)}
                     </td>
                   </tr>
                 ))}
@@ -610,18 +611,16 @@ export function AdvancedAnalysisPanel({ theme, records }: Props) {
 
       <details className="rounded-xl border border-ungrd-border bg-ungrd-bg/40 px-4 py-3 text-xs text-ungrd-muted">
         <summary className="cursor-pointer font-bold text-ungrd-heading">
-          Nota técnica (opcional para analistas)
+          Parámetros del modelo
         </summary>
         <p className="mt-2 leading-relaxed">
-          Debajo usamos un grafo de co-ocurrencia (departamento ↔ municipio ↔
-          estado ↔ {network.categoryLabel.toLowerCase()}). Densidad{" "}
-          {fmt(metrics.density)}, clustering {fmt(metrics.avgClustering)}, camino
-          medio{" "}
-          {metrics.avgPathLength == null ? "—" : fmt(metrics.avgPathLength, 2)},
+          Red no dirigida de coocurrencia: departamento ↔ municipio ↔ estado ↔{" "}
+          {network.categoryLabel.toLowerCase()}. Densidad {fmt(metrics.density)};
+          clustering medio {fmt(metrics.avgClustering)}; camino medio{" "}
+          {metrics.avgPathLength == null ? "—" : fmt(metrics.avgPathLength, 2)};
           diámetro{" "}
-          {metrics.diameter == null ? "—" : formatNumber(metrics.diameter)}. Los
-          rankings de arriba son grado e intermediación (betweenness) traducidos
-          a lenguaje operativo.
+          {metrics.diameter == null ? "—" : formatNumber(metrics.diameter)}.
+          Rankings: grado (degree) e intermediación (betweenness centrality).
         </p>
       </details>
     </div>
