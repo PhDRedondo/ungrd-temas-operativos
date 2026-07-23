@@ -9,6 +9,10 @@ import { UploadsInbox } from "@/components/UploadsInbox";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import type { RecordRow } from "@/lib/records/types";
 import type { ThemeConfig } from "@/lib/themes";
+import {
+  EMPTY_RECORD_FILTERS,
+  type RecordFilterState,
+} from "@/lib/analytics/recordFilters";
 
 const TABS = [
   {
@@ -69,6 +73,9 @@ export function ThemeWorkspace({
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<RecordFilterState>({
+    ...EMPTY_RECORD_FILTERS,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +101,11 @@ export function ThemeWorkspace({
       cancelled = true;
     };
   }, [theme.id, version]);
+
+  // Al cambiar de tema, limpiar filtros.
+  useEffect(() => {
+    setFilters({ ...EMPTY_RECORD_FILTERS });
+  }, [theme.id]);
 
   function bump() {
     setVersion((v) => v + 1);
@@ -196,10 +208,17 @@ export function ThemeWorkspace({
           key={`analytics-${version}`}
           theme={theme}
           records={records}
+          filters={filters}
+          onFiltersChange={setFilters}
         />
       )}
       {tab === "avanzado" && (
-        <AdvancedAnalysisPanel theme={theme} records={records} />
+        <AdvancedAnalysisPanel
+          theme={theme}
+          records={records}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
       )}
       {tab === "quickbi" && <QuickBIPanel theme={theme} />}
       {tab === "cargas" && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { normalizeTrackingKey } from "@/lib/analytics/enrichRecords";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
@@ -23,11 +23,17 @@ type Event = {
 export function ClaveCapasTimeline({
   records,
   themeName,
+  initialQuery = "",
 }: {
   records: RecordRow[];
   themeName: string;
+  initialQuery?: string;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
 
   const events = useMemo(() => {
     const q = normalizeTrackingKey(query);

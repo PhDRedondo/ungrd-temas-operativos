@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   MapPin,
+  Search,
   Table2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -15,6 +16,7 @@ import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/data";
 import { isSourceTheme } from "@/lib/analytics/decision";
 import { previewColumnsForTheme } from "@/lib/analytics/enrichRecords";
+import { matchRecordQuery } from "@/lib/analytics/recordFilters";
 
 const RecordDetailModal = dynamic(
   () =>
@@ -39,6 +41,7 @@ export function RecordsDataTable({ theme, records }: Props) {
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(10);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<RecordRow | null>(null);
+  const [tableQuery, setTableQuery] = useState("");
 
   const columns = useMemo(
     () => previewColumnsForTheme(theme.id),
@@ -46,18 +49,26 @@ export function RecordsDataTable({ theme, records }: Props) {
   );
   const source = isSourceTheme(theme.id);
 
+  const visible = useMemo(
+    () =>
+      tableQuery.trim()
+        ? records.filter((r) => matchRecordQuery(r, tableQuery))
+        : records,
+    [records, tableQuery],
+  );
+
   useEffect(() => {
     setPage(0);
-  }, [records]);
+  }, [records, tableQuery]);
 
-  const total = records.length;
+  const total = visible.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize) || 1);
   const safePage = Math.min(page, pageCount - 1);
 
   const pageRows = useMemo(() => {
     const start = safePage * pageSize;
-    return records.slice(start, start + pageSize);
-  }, [records, safePage, pageSize]);
+    return visible.slice(start, start + pageSize);
+  }, [visible, safePage, pageSize]);
 
   function changePageSize(n: (typeof PAGE_SIZES)[number]) {
     setPageSize(n);
@@ -67,7 +78,7 @@ export function RecordsDataTable({ theme, records }: Props) {
   function downloadExcel() {
     const headers = theme.fields.map((f) => f.name);
     const withId = ["id", ...headers.filter((h) => h !== "id")];
-    const rows = records.map((r) =>
+    const rows = visible.map((r) =>
       withId.map((h) => (r[h] === undefined ? "" : r[h])),
     );
     const ws = XLSX.utils.aoa_to_sheet([withId, ...rows]);
@@ -112,7 +123,11 @@ export function RecordsDataTable({ theme, records }: Props) {
             </span>
           </h3>
           <p className="mt-1 text-xs text-ungrd-muted">
-            {formatNumber(total)} registro{total === 1 ? "" : "s"} según filtros.
+            {formatNumber(total)} registro{total === 1 ? "" : "s"}
+            {tableQuery.trim()
+              ? ` (de ${formatNumber(records.length)} en filtro del panel)`
+              : " según filtros del panel"}
+            .
             {source
               ? " Columnas del tema oficial; toque Detalle para ver el expediente completo."
               : " Toca un ítem para ver detalle y ubicación."}
@@ -128,6 +143,20 @@ export function RecordsDataTable({ theme, records }: Props) {
           Descargar Excel
         </button>
       </div>
+
+      <label className="mb-4 block min-w-0">
+        <span className="sr-only">Buscar en la tabla</span>
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ungrd-muted" />
+          <input
+            type="search"
+            value={tableQuery}
+            onChange={(e) => setTableQuery(e.target.value)}
+            placeholder="Buscar en esta tabla (clave, OP, placa, municipio…)"
+            className="w-full rounded-lg border border-ungrd-border bg-ungrd-input py-2 pr-3 pl-9 text-sm font-semibold text-ungrd-text"
+          />
+        </div>
+      </label>
 
       <div className="space-y-2 lg:hidden">
         {pageRows.map((row) => {
