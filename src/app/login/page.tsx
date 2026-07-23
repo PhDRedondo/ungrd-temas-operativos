@@ -54,9 +54,6 @@ function LoginForm() {
           <p className="mt-1 text-sm text-white/70">
             Gestión de Temas Operativos
           </p>
-          <p className="mt-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-ungrd-yellow uppercase">
-            Auth: {authMode === "keycloak" ? "Keycloak OIDC" : "Demo local"}
-          </p>
         </div>
 
         {authMode === "keycloak" ? (
