@@ -48,6 +48,11 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET || "ungrd-dev-secret-change-me",
+    // En HTTPS (Vercel) la cookie es `__Secure-authjs.session-token`.
+    // Sin esto getToken no la encuentra y redirige siempre a /login.
+    secureCookie:
+      process.env.NODE_ENV === "production" ||
+      req.nextUrl.protocol === "https:",
   });
 
   if (!token) {
