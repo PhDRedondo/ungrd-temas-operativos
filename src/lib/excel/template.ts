@@ -189,23 +189,34 @@ export async function buildThemeTemplate(
   meta.addRow(["geo", "DIVIPOLA+MGN2024"]);
 
   const help = wb.addWorksheet("Instrucciones");
-  help.getColumn(1).width = 92;
-  help.addRow(["Plantilla UNGRD — carga masiva"]);
+  help.getColumn(1).width = 96;
+  help.addRow(["Plantilla UNGRD — carga masiva (paso a paso)"]);
   help.addRow([`Tema: ${theme.name} (${theme.id})`]);
   help.addRow([`Versión de schema: ${version}`]);
   help.addRow([`Huella: ${fingerprint}`]);
   help.addRow([""]);
-  help.addRow(["1. No renombre columnas ni elimine _meta / _listas / _catalogos."]);
-  help.addRow(["2. Departamento: lista DIVIPOLA oficial."]);
+  help.addRow(["CÓMO LLENAR (recomendado)"]);
   help.addRow([
-    "3. Municipio: escriba un municipio válido del departamento (hoja _catalogos).",
+    "1. Descargue SIEMPRE esta plantilla desde la plataforma (no reutilice archivos viejos).",
   ]);
-  help.addRow(["4. Fechas en YYYY-MM-DD (ej. 2026-07-15)."]);
   help.addRow([
-    "5. El servidor valida cada fila; inválidas/duplicados se reportan en la bandeja.",
+    "2. No renombre columnas ni elimine hojas _meta / _listas / _catalogos / Instrucciones.",
+  ]);
+  help.addRow([
+    "3. Borre la fila de ejemplo y pegue sus datos debajo del encabezado (fila 1).",
+  ]);
+  help.addRow([
+    "4. Departamento/municipio: use las listas DIVIPOLA (hoja _catalogos).",
+  ]);
+  help.addRow(["5. Fechas en formato YYYY-MM-DD (ej. 2026-07-15)."]);
+  help.addRow([
+    "6. En la plataforma: primero «Validar sin guardar», revise el resumen, luego «Subir y guardar».",
+  ]);
+  help.addRow([
+    "7. Si corrige datos ya cargados, active «Actualizar por clave de seguimiento» (OP/placa/CDP + capa).",
   ]);
   help.addRow([""]);
-  help.addRow(["Campos:"]);
+  help.addRow(["Campos del tema:"]);
   for (const f of theme.fields) {
     help.addRow([
       `- ${f.name} (${f.label}) · ${f.type}${f.required ? " · obligatorio" : ""}`,

@@ -4,24 +4,31 @@ import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { getTheme } from "@/themes";
 import { requireThemeWrite } from "@/lib/auth/session";
-import { parseExcelUpload, remapRowToThemeFields } from "@/lib/excel/template";
+import { parseExcelUpload } from "@/lib/excel/template";
 import {
   createUpload,
   finishUpload,
-  insertValidatedRecords,
   upsertThemeCatalog,
   writeAudit,
 } from "@/lib/records/repository";
+import { schemaFingerprint } from "@/lib/validation/record-schema";
 import {
-  schemaFingerprint,
-  validateRow,
-  type RowValidationError,
-  type ValidatedRecord,
-} from "@/lib/validation/record-schema";
+  buildValidateBatch,
+  upsertValidatedRecords,
+  type UploadMode,
+} from "@/lib/uploads/process-excel";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
 const ASYNC_THRESHOLD = 500;
+
+function parseMode(raw: FormDataEntryValue | null): UploadMode {
+  return raw === "upsert" ? "upsert" : "insert";
+}
+
+function parseDryRun(raw: FormDataEntryValue | null): boolean {
+  return raw === "1" || raw === "true" || raw === "yes";
+}
 
 async function processRows(params: {
   themeId: string;
@@ -29,34 +36,30 @@ async function processRows(params: {
   userId: string;
   rows: Record<string, unknown>[];
   theme: NonNullable<ReturnType<typeof getTheme>>;
+  mode: UploadMode;
 }) {
-  const accepted: ValidatedRecord[] = [];
-  const errors: RowValidationError[] = [];
-
-  params.rows.forEach((raw, idx) => {
-    const rowNumber = idx + 2;
-    const mapped = remapRowToThemeFields(params.theme, raw);
-    const result = validateRow(params.theme, mapped, rowNumber);
-    if (result.ok) accepted.push(result.data);
-    else errors.push(...result.errors);
-  });
+  const batch = await buildValidateBatch(params.theme, params.rows, params.mode);
 
   try {
-    const { inserted, duplicates } = await insertValidatedRecords({
+    const { inserted, updated, duplicates } = await upsertValidatedRecords({
       themeId: params.themeId,
-      items: accepted,
+      classified: batch.classified,
       source: "excel",
       uploadId: params.uploadId,
       userId: params.userId,
     });
 
+    const acceptedTotal = inserted.length + updated;
     await finishUpload({
       uploadId: params.uploadId,
-      status: errors.length && !inserted.length && !duplicates ? "failed" : "done",
-      accepted: inserted.length,
-      rejected: params.rows.length - accepted.length,
+      status:
+        batch.errors.length && !acceptedTotal && !duplicates
+          ? "failed"
+          : "done",
+      accepted: acceptedTotal,
+      rejected: batch.summary.invalid,
       duplicates,
-      errors,
+      errors: batch.errors,
     });
 
     await writeAudit({
@@ -65,13 +68,21 @@ async function processRows(params: {
       entity: "uploads",
       entityId: params.uploadId,
       after: {
-        accepted: inserted.length,
-        rejected: params.rows.length - accepted.length,
+        mode: params.mode,
+        inserted: inserted.length,
+        updated,
+        rejected: batch.summary.invalid,
         duplicates,
       },
     });
 
-    return { inserted, duplicates, errors, acceptedCount: accepted.length };
+    return {
+      inserted,
+      updated,
+      duplicates,
+      errors: batch.errors,
+      summary: batch.summary,
+    };
   } catch (err) {
     await finishUpload({
       uploadId: params.uploadId,
@@ -106,6 +117,9 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const form = await req.formData();
   const file = form.get("file");
+  const dryRun = parseDryRun(form.get("dryRun"));
+  const mode = parseMode(form.get("mode"));
+
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
   }
@@ -133,7 +147,10 @@ export async function POST(req: Request, ctx: Ctx) {
   const buf = Buffer.from(await file.arrayBuffer());
   if (buf.byteLength > maxBytes) {
     return NextResponse.json(
-      { error: `Archivo demasiado grande (máx ${maxMb} MB)`, code: "PAYLOAD_TOO_LARGE" },
+      {
+        error: `Archivo demasiado grande (máx ${maxMb} MB)`,
+        code: "PAYLOAD_TOO_LARGE",
+      },
       { status: 413 },
     );
   }
@@ -180,6 +197,32 @@ export async function POST(req: Request, ctx: Ctx) {
     );
   }
 
+  // Dry-run: valida y clasifica sin escribir en BD ni disco
+  if (dryRun) {
+    const batch = await buildValidateBatch(theme, parsed.rows, mode);
+    return NextResponse.json({
+      ok: true,
+      dryRun: true,
+      mode,
+      uploadId: null,
+      ...batch.summary,
+      accepted: batch.summary.valid,
+      rejected: batch.summary.invalid,
+      duplicates: batch.summary.wouldSkipDuplicate,
+      wouldInsert: batch.summary.wouldInsert,
+      wouldUpdate: batch.summary.wouldUpdate,
+      errors: batch.errors.slice(0, 80),
+      preview: batch.accepted.slice(0, 8).map((r) => ({
+        ...r.raw,
+        id: "(preview)",
+      })),
+      tip:
+        mode === "upsert"
+          ? "Modo actualizar: filas con la misma clave de seguimiento + capa se actualizarán."
+          : "Modo solo altas: no se actualizarán registros existentes (solo hash idéntico se omite).",
+    });
+  }
+
   const uploadsDir = path.join(process.cwd(), "uploads");
   await mkdir(uploadsDir, { recursive: true });
   const safeName = file.name.replace(/[^\w.\-]+/g, "_");
@@ -207,6 +250,7 @@ export async function POST(req: Request, ctx: Ctx) {
           userId: authz.actor.userId,
           rows: parsed.rows,
           theme,
+          mode,
         });
       } catch (err) {
         console.error("[upload async]", err);
@@ -216,9 +260,11 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({
       ok: true,
       async: true,
+      dryRun: false,
+      mode,
       uploadId: upload.id,
       queued: parsed.rows.length,
-      message: `Carga en cola (${parsed.rows.length} filas). Consulte la bandeja.`,
+      message: `Carga en cola (${parsed.rows.length} filas, modo ${mode}). Consulte la bandeja.`,
     });
   }
 
@@ -228,15 +274,22 @@ export async function POST(req: Request, ctx: Ctx) {
     userId: authz.actor.userId,
     rows: parsed.rows,
     theme,
+    mode,
   });
 
   return NextResponse.json({
     ok: true,
     async: false,
+    dryRun: false,
+    mode,
     uploadId: upload.id,
-    accepted: result.inserted.length,
-    rejected: parsed.rows.length - result.acceptedCount,
+    accepted: result.inserted.length + result.updated,
+    inserted: result.inserted.length,
+    updated: result.updated,
+    rejected: result.summary.invalid,
     duplicates: result.duplicates,
+    wouldInsert: result.summary.wouldInsert,
+    wouldUpdate: result.summary.wouldUpdate,
     errors: result.errors,
     preview: result.inserted.slice(0, 8),
   });
