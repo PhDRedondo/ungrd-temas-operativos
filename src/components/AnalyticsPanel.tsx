@@ -35,6 +35,10 @@ import {
   getThemeMapSemantics,
   resolveAutoMapMetric,
 } from "@/lib/geo/themeMapSemantics";
+import {
+  buildThemeTimeSeries,
+  resolveEventDate,
+} from "@/lib/analytics/timeSeries";
 
 const ColombiaMap = dynamic(
   () => import("./ColombiaMap").then((m) => m.ColombiaMap),
@@ -82,6 +86,9 @@ export function AnalyticsPanel({ theme, records }: Props) {
   const [to, setTo] = useState("");
   const [sqlAgg, setSqlAgg] = useState<SqlAgg | null>(null);
   const [mapMetricOverride, setMapMetricOverride] = useState<
+    MapMetric | "auto"
+  >("auto");
+  const [seriesMetricOverride, setSeriesMetricOverride] = useState<
     MapMetric | "auto"
   >("auto");
 
@@ -138,9 +145,10 @@ export function AnalyticsPanel({ theme, records }: Props) {
       if (municipio && r.municipio !== municipio) return false;
       if (estado && r.estado !== estado) return false;
       if (tercero && String(r[thirdKey] || "") !== tercero) return false;
-      if (periodo && !String(r.fecha).startsWith(periodo)) return false;
-      if (!periodo && from && String(r.fecha) < from) return false;
-      if (!periodo && to && String(r.fecha) > to) return false;
+      const eventDate = resolveEventDate(r, theme.id);
+      if (periodo && !eventDate.startsWith(periodo)) return false;
+      if (!periodo && from && eventDate && eventDate < from) return false;
+      if (!periodo && to && eventDate && eventDate > to) return false;
       return true;
     });
   }, [
@@ -153,6 +161,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
     periodo,
     from,
     to,
+    theme.id,
   ]);
 
   const hasFilters = Boolean(
@@ -253,30 +262,16 @@ export function AnalyticsPanel({ theme, records }: Props) {
       .slice(0, 12);
   }, [spatial.areas, mapMetric]);
 
-  const timeSeries = useMemo(() => {
-    const map = new Map<string, { valor: number; count: number }>();
-    for (const r of filtered) {
-      const key = String(r.fecha).slice(0, 7);
-      if (!/^\d{4}-\d{2}/.test(key)) continue;
-      const cur = map.get(key) || { valor: 0, count: 0 };
-      cur.valor += Number(r.valor || 0);
-      cur.count += 1;
-      map.set(key, cur);
-    }
-    const useValor = [...map.values()].some((v) => v.valor > 0);
-    return [...map.entries()]
-      .map(([period, v]) => ({
-        period,
-        value: useValor ? v.valor : v.count,
-      }))
-      .sort((a, b) => a.period.localeCompare(b.period));
-  }, [filtered]);
+  const timeSeries = useMemo(
+    () => buildThemeTimeSeries(filtered, theme, seriesMetricOverride),
+    [filtered, theme, seriesMetricOverride],
+  );
 
   const heatmap = useMemo(() => {
     const months = Array.from(
       new Set(
         filtered
-          .map((r) => String(r.fecha).slice(0, 7))
+          .map((r) => resolveEventDate(r, theme.id).slice(0, 7))
           .filter((m) => /^\d{4}-\d{2}/.test(m)),
       ),
     ).sort();
@@ -305,7 +300,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
         const rows = filtered.filter(
           (r) =>
             resolveDepartment(String(r.departamento || ""))?.name === dept &&
-            String(r.fecha).startsWith(m),
+            resolveEventDate(r, theme.id).startsWith(m),
         );
         const value = useValor
           ? rows.reduce((s, r) => s + Number(r.valor || 0), 0)
@@ -813,7 +808,7 @@ export function AnalyticsPanel({ theme, records }: Props) {
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
             Top {departamento ? "municipios" : "departamentos"} (
-            {deptBarUsesValor ? "valor $" : "nº registros"})
+            {mapSem.legendTitle(deptBarUsesValor ? "valor" : "count")})
           </h3>
           <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -867,69 +862,149 @@ export function AnalyticsPanel({ theme, records }: Props) {
         </section>
 
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
-          <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            Serie de tiempo
-          </h3>
-          <div className="h-64 min-w-0 w-full sm:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={timeSeries}
-                margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                onClick={(state) => {
-                  const label = state?.activeLabel;
-                  if (typeof label === "string") onPeriodClick(label);
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5ebf1" />
-                <XAxis
-                  dataKey="period"
-                  tick={{ fontSize: 10 }}
-                  interval="preserveStartEnd"
-                  minTickGap={28}
-                />
-                <YAxis
-                  tick={{ fontSize: 10 }}
-                  width={44}
-                  tickFormatter={(v: number) =>
-                    v >= 1_000_000
-                      ? `${Math.round(v / 1_000_000)}M`
-                      : String(v)
-                  }
-                />
-                <Tooltip formatter={(v) => formatCop(Number(v))} />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#ffd100"
-                  strokeWidth={3}
-                  cursor="pointer"
-                  activeDot={{
-                    r: 7,
-                    onClick: (_, payload) => {
-                      const p = payload as { payload?: { period?: string } };
-                      if (p?.payload?.period) onPeriodClick(p.payload.period);
-                    },
-                  }}
-                  dot={(props) => {
-                    const { cx, cy, payload } = props;
-                    const active = periodo === payload.period;
-                    return (
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={active ? 6 : 3}
-                        fill={active ? "#ffd100" : "#002d5a"}
-                        stroke={active ? "#002d5a" : "none"}
-                        strokeWidth={active ? 2 : 0}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => onPeriodClick(payload.period)}
-                      />
-                    );
-                  }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm font-extrabold text-ungrd-heading">
+                {timeSeries.title}
+              </h3>
+              <p className="mt-1 text-xs text-ungrd-muted">
+                {timeSeries.subtitle}
+                {timeSeries.unmatchedDates > 0
+                  ? ` · ${formatNumber(timeSeries.unmatchedDates)} filas sin fecha usable`
+                  : ""}
+              </p>
+            </div>
+            <div className="inline-flex max-w-full flex-wrap rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
+              {(
+                [
+                  ["auto", "Auto"],
+                  ["valor", mapSem.toggleValor],
+                  ["count", mapSem.toggleCount],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  title={label}
+                  onClick={() => setSeriesMetricOverride(id)}
+                  className={`max-w-[10rem] truncate rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
+                    seriesMetricOverride === id
+                      ? "bg-ungrd-navy text-white"
+                      : "text-ungrd-muted hover:text-ungrd-heading"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+          {timeSeries.points.length === 0 ? (
+            <p className="rounded-xl bg-ungrd-bg/60 px-3 py-6 text-center text-sm text-ungrd-muted">
+              Sin fechas válidas para armar la serie en {theme.name}. Revise el
+              campo fecha / fechas de capa en la carga.
+            </p>
+          ) : (
+            <div className="h-64 min-w-0 w-full sm:h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={timeSeries.points}
+                  margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                  onClick={(state) => {
+                    const label = state?.activeLabel;
+                    if (typeof label === "string") onPeriodClick(label);
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5ebf1" />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fontSize: 10 }}
+                    interval="preserveStartEnd"
+                    minTickGap={28}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    width={48}
+                    tickFormatter={(v: number) => {
+                      if (timeSeries.metric === "valor") {
+                        if (v >= 1_000_000_000)
+                          return `${(v / 1_000_000_000).toFixed(1)}B`;
+                        if (v >= 1_000_000)
+                          return `${Math.round(v / 1_000_000)}M`;
+                        if (v >= 1_000) return `${Math.round(v / 1_000)}k`;
+                      }
+                      return formatNumber(v);
+                    }}
+                  />
+                  <Tooltip
+                    formatter={(v, _n, item) => {
+                      const payload = item?.payload as
+                        | { count?: number; valor?: number }
+                        | undefined;
+                      const main =
+                        timeSeries.metric === "valor"
+                          ? formatCop(Number(v))
+                          : `${formatNumber(Number(v))} ${theme.unit || "reg."}`;
+                      const extra =
+                        timeSeries.metric === "valor"
+                          ? ` · ${formatNumber(payload?.count || 0)} reg.`
+                          : payload?.valor
+                            ? ` · ${formatCop(payload.valor)}`
+                            : "";
+                      return [`${main}${extra}`, timeSeries.yLabel];
+                    }}
+                    labelFormatter={(label) =>
+                      `${timeSeries.dateLabel}: ${label}`
+                    }
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    name={timeSeries.yLabel}
+                    stroke="#ffd100"
+                    strokeWidth={3}
+                    connectNulls
+                    cursor="pointer"
+                    activeDot={{
+                      r: 7,
+                      onClick: (_, payload) => {
+                        const p = payload as { payload?: { period?: string } };
+                        if (p?.payload?.period) onPeriodClick(p.payload.period);
+                      },
+                    }}
+                    dot={(props) => {
+                      const { cx, cy, payload } = props;
+                      const active = periodo === payload.period;
+                      const hasData =
+                        (payload.count || 0) > 0 || (payload.valor || 0) > 0;
+                      if (!hasData) {
+                        return (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={2}
+                            fill="#cbd5e1"
+                            stroke="none"
+                          />
+                        );
+                      }
+                      return (
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={active ? 6 : 3.5}
+                          fill={active ? "#ffd100" : "#002d5a"}
+                          stroke={active ? "#002d5a" : "none"}
+                          strokeWidth={active ? 2 : 0}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => onPeriodClick(payload.period)}
+                        />
+                      );
+                    }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </section>
 
         {!sourceTheme ? (

@@ -9,6 +9,11 @@ import {
   getThemeMapSemantics,
   resolveAutoMapMetric,
 } from "../src/lib/geo/themeMapSemantics";
+import {
+  buildThemeTimeSeries,
+  fillMonthGaps,
+  resolveEventDate,
+} from "../src/lib/analytics/timeSeries";
 import type { RecordRow } from "../src/lib/records/types";
 
 let passed = 0;
@@ -249,6 +254,56 @@ test("buildCrosswalk declaratoria incluye intervenciones del depto", () => {
   assert.ok(result.events.some((e) => e.themeId === "declaratoria-de-emergencia"));
   assert.ok(result.events.some((e) => e.themeId === "agua-y-saneamiento"));
   assert.ok(result.territorial.some((t) => t.departamento === "Chocó"));
+});
+
+test("serie temporal Puentes usa conteo y fechas de instalación", () => {
+  const theme = {
+    id: "puentes",
+    name: "Puentes",
+    unit: "puentes",
+    valueLabel: "Puentes",
+  };
+  const rows = [
+    row({
+      id: "1",
+      departamento: "Cundinamarca",
+      fecha: "",
+      fecha_de_instalacion: "2024-03-15",
+      valor: 500_000_000,
+    }),
+    row({
+      id: "2",
+      departamento: "Cundinamarca",
+      fecha: "",
+      fecha_de_instalacion: "2024-03-20",
+      valor: 100_000_000,
+    }),
+    row({
+      id: "3",
+      departamento: "Boyacá",
+      fecha: "2024-05-01",
+      valor: 0,
+    }),
+  ] as RecordRow[];
+  assert.equal(resolveEventDate(rows[0]!, "puentes"), "2024-03-15");
+  const series = buildThemeTimeSeries(rows, theme, "auto", { fillGaps: true });
+  assert.equal(series.metric, "count");
+  assert.match(series.title, /puentes/i);
+  assert.doesNotMatch(series.title, /intensidad/i);
+  const mar = series.points.find((p) => p.period === "2024-03");
+  assert.ok(mar);
+  assert.equal(mar!.value, 2);
+  assert.ok(series.points.some((p) => p.period === "2024-04" && p.value === 0));
+});
+
+test("fillMonthGaps completa huecos", () => {
+  const filled = fillMonthGaps([
+    { period: "2024-01", value: 1, count: 1, valor: 0 },
+    { period: "2024-03", value: 2, count: 2, valor: 0 },
+  ]);
+  assert.equal(filled.length, 3);
+  assert.equal(filled[1]!.period, "2024-02");
+  assert.equal(filled[1]!.value, 0);
 });
 
 test("mapa Puentes prioriza conteo, no $ genérico", () => {
