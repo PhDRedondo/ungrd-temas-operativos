@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import type { DecisionBrief } from "@/lib/analytics/decision";
+import { buildThemeHref } from "@/lib/analytics/recordFilters";
 import { formatCop, formatNumber } from "@/lib/records/types";
 
 /** Detalle desplegable de una base (micro) reutilizable en mando nacional y tema. */
@@ -160,7 +161,7 @@ export function ThemeBriefDetail({
         </div>
 
         <Link
-          href={`/app/temas/${themeId}?tab=analitica`}
+          href={buildThemeHref(themeId, { tab: "analitica" })}
           className="inline-flex items-center gap-1 text-sm font-extrabold text-ungrd-navy underline-offset-2 hover:underline"
         >
           Abrir centro de mando del tema <ArrowRight className="h-3.5 w-3.5" />

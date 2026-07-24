@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ThemeWorkspace } from "@/components/ThemeWorkspace";
+import { parseFiltersFromParams } from "@/lib/analytics/recordFilters";
 import { getTheme, THEMES } from "@/lib/themes";
 
 export function generateStaticParams() {
@@ -11,11 +12,21 @@ export default async function ThemePage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const { tab } = await searchParams;
+  const sp = await searchParams;
   const theme = getTheme(slug);
   if (!theme) notFound();
-  return <ThemeWorkspace theme={theme} initialTab={tab} />;
+
+  const tab = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;
+  const initialFilters = parseFiltersFromParams(sp);
+
+  return (
+    <ThemeWorkspace
+      theme={theme}
+      initialTab={tab}
+      initialFilters={initialFilters}
+    />
+  );
 }

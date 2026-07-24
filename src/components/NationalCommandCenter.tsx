@@ -20,6 +20,7 @@ import type { NationalBrief } from "@/lib/analytics/national";
 import { downloadNationalBriefingPdf } from "@/lib/analytics/nationalBriefingPdf";
 import { downloadNationalBriefingExcel } from "@/lib/analytics/nationalBriefingExcel";
 import { DECISION_THRESHOLDS } from "@/lib/analytics/decision";
+import { buildThemeHref } from "@/lib/analytics/recordFilters";
 import { formatCop, formatNumber } from "@/lib/records/types";
 import { ExpedienteTimeline } from "@/components/ExpedienteTimeline";
 import { ThemeBriefDetail } from "@/components/ThemeBriefDetail";
@@ -73,10 +74,13 @@ function severityMeta(s: NationalBrief["alerts"][number]["severity"]) {
   };
 }
 
-function themeHrefFromAlertId(id: string) {
+function themeHrefFromAlertId(id: string, departamento?: string) {
   const themeId = id.includes(":") ? id.split(":")[0]! : "";
   if (!themeId || themeId.startsWith("nat-")) return null;
-  return `/app/temas/${themeId}?tab=analitica`;
+  return buildThemeHref(themeId, {
+    tab: "analitica",
+    departamento: departamento || "",
+  });
 }
 
 export function NationalCommandCenter() {
@@ -388,7 +392,11 @@ export function NationalCommandCenter() {
                           {formatNumber(v.count)} · {formatCop(v.valor)}
                         </span>
                         <Link
-                          href={`/app/temas/${id}?tab=analitica`}
+                          href={buildThemeHref(id, {
+                            tab: "analitica",
+                            departamento: selectedCell.departamento,
+                            municipio: selectedMuni || "",
+                          })}
                           className="text-ungrd-muted hover:text-ungrd-navy"
                         >
                           abrir →
@@ -528,7 +536,7 @@ export function NationalCommandCenter() {
               <ul className="mt-3 space-y-3">
                 {visibleAlerts.map((a) => {
                   const meta = severityMeta(a.severity);
-                  const href = themeHrefFromAlertId(a.id);
+                  const href = themeHrefFromAlertId(a.id, selectedDept);
                   return (
                     <li
                       key={a.id}
