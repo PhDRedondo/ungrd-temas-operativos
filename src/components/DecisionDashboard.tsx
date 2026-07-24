@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleDot,
+  Download,
   Microscope,
   ShieldAlert,
   Siren,
@@ -17,6 +18,7 @@ import {
   type SemaphoreLevel,
 } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
+import { downloadThemeBriefingPdf } from "@/lib/analytics/themeBriefingPdf";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { ThemeBriefDetail } from "@/components/ThemeBriefDetail";
 
@@ -24,6 +26,8 @@ type Props = {
   themeId: string;
   themeName: string;
   records: RecordRow[];
+  /** Resumen de filtros activos (para el PDF). */
+  filterSummary?: string;
 };
 
 type Scale = "macro" | "micro";
@@ -72,8 +76,14 @@ function severityMeta(s: DecisionAlert["severity"]) {
   };
 }
 
-export function DecisionDashboard({ themeId, themeName, records }: Props) {
+export function DecisionDashboard({
+  themeId,
+  themeName,
+  records,
+  filterSummary = "Sin filtros · base completa",
+}: Props) {
   const [scale, setScale] = useState<Scale>("macro");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const brief = useMemo(() => {
     const rows = isSourceTheme(themeId)
       ? enrichRecordsForDecision(records)
@@ -89,6 +99,22 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
     scale === "macro" ? brief.byLayer.slice(0, 8) : brief.byLayer;
   const visiblePriority =
     scale === "macro" ? brief.priorityList.slice(0, 10) : brief.priorityList;
+
+  async function onDownloadPdf() {
+    if (records.length === 0 || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await downloadThemeBriefingPdf({
+        themeId,
+        themeName,
+        brief,
+        filterSummary,
+        recordCount: records.length,
+      });
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
     <section
@@ -108,6 +134,16 @@ export function DecisionDashboard({ themeId, themeName, records }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void onDownloadPdf()}
+            disabled={records.length === 0 || pdfBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-ungrd-yellow px-3 py-1.5 text-[11px] font-extrabold text-ungrd-navy-deep hover:brightness-105 disabled:opacity-50"
+            title="Descargar briefing PDF con identidad UNGRD (respeta filtros)"
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            {pdfBusy ? "Generando…" : "Briefing PDF"}
+          </button>
           <div className="inline-flex rounded-lg bg-black/30 p-1 ring-1 ring-white/20">
             <button
               type="button"

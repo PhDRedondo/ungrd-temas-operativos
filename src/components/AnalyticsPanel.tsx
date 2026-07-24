@@ -32,6 +32,7 @@ import {
   EMPTY_RECORD_FILTERS,
   hasActiveFilters,
   uniqueSorted,
+  summarizeFilters,
   type RecordFilterState,
 } from "@/lib/analytics/recordFilters";
 import {
@@ -471,6 +472,7 @@ export function AnalyticsPanel({
           themeId={theme.id}
           themeName={theme.name}
           records={hasFilters ? filtered : workingRecords}
+          filterSummary={summarizeFilters(filters)}
         />
       ) : null}
 

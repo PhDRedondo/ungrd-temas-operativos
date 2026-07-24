@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx scripts/test-upload-pipeline.ts && tsx scripts/test-national-analytics.ts && tsx scripts/test-record-filters.ts",
+    "test:unit": "tsx scripts/test-upload-pipeline.ts && tsx scripts/test-national-analytics.ts && tsx scripts/test-record-filters.ts && tsx scripts/test-theme-briefing-pdf.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
