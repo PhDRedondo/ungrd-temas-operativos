@@ -10,6 +10,7 @@ import {
   type DecisionKpi,
 } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
+import { buildThemeHref } from "@/lib/analytics/recordFilters";
 import { resolveDepartment, type AreaStat } from "@/lib/geo/spatial";
 import type { RecordRow } from "@/lib/records/types";
 
@@ -307,7 +308,7 @@ export function buildNationalBrief(bundle: ThemeBundle): NationalBrief {
         label: `${THEME_LABEL[themeId]} · ${p.label}`,
         extra: p.extra,
         valor: p.valor,
-        href: `/app/temas/${themeId}?tab=analitica`,
+        href: buildThemeHref(themeId, { q: p.key, tab: "analitica" }),
       });
     }
   }

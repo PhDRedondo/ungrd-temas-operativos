@@ -11,6 +11,8 @@ import type { RecordRow } from "@/lib/records/types";
 import type { ThemeConfig } from "@/lib/themes";
 import {
   EMPTY_RECORD_FILTERS,
+  parseFiltersFromParams,
+  writeFiltersToParams,
   type RecordFilterState,
 } from "@/lib/analytics/recordFilters";
 
@@ -62,9 +64,11 @@ function isTabId(v: string | undefined | null): v is TabId {
 export function ThemeWorkspace({
   theme,
   initialTab,
+  initialFilters,
 }: {
   theme: ThemeConfig;
   initialTab?: string;
+  initialFilters?: Partial<RecordFilterState>;
 }) {
   const [tab, setTab] = useState<TabId>(
     isTabId(initialTab) ? initialTab : "analitica",
@@ -73,9 +77,10 @@ export function ThemeWorkspace({
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<RecordFilterState>({
+  const [filters, setFilters] = useState<RecordFilterState>(() => ({
     ...EMPTY_RECORD_FILTERS,
-  });
+    ...initialFilters,
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -102,10 +107,30 @@ export function ThemeWorkspace({
     };
   }, [theme.id, version]);
 
-  // Al cambiar de tema, limpiar filtros.
+  // Sync tab + filtros a la URL (compartible / deep-link).
   useEffect(() => {
-    setFilters({ ...EMPTY_RECORD_FILTERS });
-  }, [theme.id]);
+    if (typeof window === "undefined") return;
+    const params = writeFiltersToParams(filters, tab);
+    const next = params.toString();
+    const current = window.location.search.replace(/^\?/, "");
+    if (next === current) return;
+    const url = next
+      ? `${window.location.pathname}?${next}`
+      : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [filters, tab]);
+
+  // Si el usuario navega atrás/adelante, rehidratar filtros/tab.
+  useEffect(() => {
+    function onPopState() {
+      const sp = new URLSearchParams(window.location.search);
+      const nextTab = sp.get("tab");
+      if (isTabId(nextTab)) setTab(nextTab);
+      setFilters(parseFiltersFromParams(sp));
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   function bump() {
     setVersion((v) => v + 1);
