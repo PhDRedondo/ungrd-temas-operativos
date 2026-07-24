@@ -60,6 +60,23 @@ export function hasActiveFilters(f: RecordFilterState): boolean {
   );
 }
 
+/** Resumen legible de filtros para encabezados de PDF / UI. */
+export function summarizeFilters(f: RecordFilterState): string {
+  if (!hasActiveFilters(f)) return "Sin filtros · base completa";
+  const parts: string[] = [];
+  if (f.q.trim()) parts.push(`Búsqueda: ${f.q.trim()}`);
+  if (f.departamento) parts.push(`Depto: ${f.departamento}`);
+  if (f.municipio) parts.push(`Mpio: ${f.municipio}`);
+  if (f.estado) parts.push(`Estado: ${f.estado}`);
+  if (f.capa) parts.push(`Capa: ${f.capa}`);
+  if (f.tercero) parts.push(`Corte: ${f.tercero}`);
+  if (f.periodo) parts.push(`Periodo: ${f.periodo}`);
+  if (f.from || f.to) {
+    parts.push(`Fechas: ${f.from || "…"} → ${f.to || "…"}`);
+  }
+  return parts.join(" · ");
+}
+
 function trackingCandidates(r: RecordRow): string[] {
   return [
     r.clave_seguimiento,

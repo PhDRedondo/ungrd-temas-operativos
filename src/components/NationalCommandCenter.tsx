@@ -214,7 +214,7 @@ export function NationalCommandCenter() {
             <button
               type="button"
               disabled={!brief}
-              onClick={() => brief && downloadNationalBriefingPdf(brief)}
+              onClick={() => brief && void downloadNationalBriefingPdf(brief)}
               className="inline-flex items-center gap-2 rounded-lg bg-ungrd-yellow px-3 py-2 text-sm font-extrabold text-ungrd-navy-deep disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
