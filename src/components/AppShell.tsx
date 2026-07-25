@@ -261,13 +261,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
             {admin && (
               <Link
-                href="/app/admin/permisos"
-                title="Permisos por tema"
-                aria-label="Permisos por tema"
-                className={linkClass(pathname.startsWith("/app/admin"))}
+                href="/app/cuentas"
+                title="Cuentas y permisos"
+                aria-label="Cuentas y permisos"
+                className={linkClass(
+                  pathname.startsWith("/app/cuentas") ||
+                    pathname.startsWith("/app/admin"),
+                )}
               >
                 <Shield className={compact ? "h-5 w-5" : "h-4 w-4"} />
-                {!compact && "Permisos"}
+                {!compact && "Cuentas y permisos"}
               </Link>
             )}
             <button

@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 import Credentials from "next-auth/providers/credentials";
 import { extractKeycloakRoles, pickPrimaryRole } from "@/lib/auth/roles";
+import { resolveLoginEmail, type AccountRole } from "@/lib/accounts";
+import { findAccountOnServer } from "@/lib/accountsServer";
 import type { AppRole } from "@/themes/shared/types";
 
 declare module "next-auth" {
@@ -33,6 +35,18 @@ declare module "next-auth/jwt" {
 
 const authMode = process.env.AUTH_MODE || "demo";
 
+function asAppRole(role: AccountRole | string | undefined): AppRole {
+  if (
+    role === "admin" ||
+    role === "analista" ||
+    role === "captura" ||
+    role === "auditor"
+  ) {
+    return role;
+  }
+  return "analista";
+}
+
 const providers = [];
 
 if (authMode === "keycloak") {
@@ -44,31 +58,21 @@ if (authMode === "keycloak") {
     }),
   );
 } else {
-  // Modo demo: un solo usuario autorizado (sin Keycloak todavía).
   providers.push(
     Credentials({
       name: "UNGRD",
       credentials: {
-        email: { label: "Correo", type: "email" },
+        email: { label: "Usuario o correo", type: "text" },
         password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
-        const email = String(credentials?.email || "")
-          .trim()
-          .toLowerCase();
+        const email = resolveLoginEmail(String(credentials?.email || ""));
         const password = String(credentials?.password || "").trim();
-        const allowedEmail = (
-          process.env.DEMO_AUTH_EMAIL || "admin@ungrd.gov.co"
-        )
-          .trim()
-          .toLowerCase();
-        const allowedPassword = (
-          process.env.DEMO_AUTH_PASSWORD || "UNGRD2026"
-        ).trim();
+        const account = findAccountOnServer(email);
 
         const ok =
-          email === allowedEmail &&
-          password === allowedPassword &&
+          Boolean(account?.active) &&
+          account!.password === password &&
           email.length > 0 &&
           password.length > 0;
 
@@ -90,13 +94,11 @@ if (authMode === "keycloak") {
           return null;
         }
 
-        // Acceso completo por ahora; roles se afinarán después.
-        const role: AppRole = "admin";
+        const role = asAppRole(account!.role);
         return {
-          id: `demo:${email}`,
-          email,
-          name:
-            email.split("@")[0]?.replace(/[._]/g, " ") || "Usuario UNGRD",
+          id: `demo:${account!.email}`,
+          email: account!.email,
+          name: account!.name,
           role,
           roles: [role],
         };
