@@ -217,7 +217,7 @@ export function ThemePermissionsPanel() {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-ungrd-border bg-ungrd-card px-3 py-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-ungrd-border bg-ungrd-surface px-3 py-3">
         <span className="mr-1 text-xs font-bold uppercase tracking-wide text-ungrd-muted">
           Acciones masivas
         </span>
