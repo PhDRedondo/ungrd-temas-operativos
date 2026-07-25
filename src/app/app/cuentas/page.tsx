@@ -22,7 +22,6 @@ import {
   type AccountRecord,
   type AccountRole,
   canAccessAccountsPage,
-  createAccount,
   isPlatformAdmin,
   loadAccounts,
   saveAccounts,
@@ -74,6 +73,8 @@ function CuentasContent() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   function reload() {
     setAccounts(loadAccounts());
@@ -124,6 +125,8 @@ function CuentasContent() {
     setInviteUrl(null);
     setCopied(false);
     setFlash(null);
+    setEmailSent(false);
+    setCreating(true);
 
     ensureActorInDirectory(
       user.email,
@@ -131,33 +134,74 @@ function CuentasContent() {
       (role as AccountRole) || "admin",
     );
 
-    const result = createAccount({
-      username,
-      name,
-      role: roleForm,
-      canCreateAccounts: isAdmin ? grantCreate : false,
-      createdBy: user.email,
-    });
+    try {
+      const res = await fetch("/api/accounts/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          name,
+          role: roleForm,
+          canCreateAccounts: isAdmin ? grantCreate : false,
+        }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        account?: AccountRecord;
+        inviteUrl?: string;
+        emailSent?: boolean;
+        emailError?: string;
+        emailConfigured?: boolean;
+      };
 
-    if (!result.ok) {
-      setError(result.error);
-      return;
+      if (!res.ok || !data.account || !data.inviteUrl) {
+        setError(data.error || "No se pudo crear la cuenta.");
+        return;
+      }
+
+      const local = loadAccounts();
+      if (
+        !local.some(
+          (a) => a.email.toLowerCase() === data.account!.email.toLowerCase(),
+        )
+      ) {
+        local.push(data.account);
+        saveAccounts(local);
+      } else {
+        const idx = local.findIndex(
+          (a) => a.email.toLowerCase() === data.account!.email.toLowerCase(),
+        );
+        if (idx >= 0) local[idx] = data.account;
+        saveAccounts(local);
+      }
+
+      setInviteUrl(data.inviteUrl);
+      setEmailSent(Boolean(data.emailSent));
+
+      if (data.emailSent) {
+        setFlash(
+          `Cuenta creada y correo enviado a ${data.account.email}.`,
+        );
+      } else if (!data.emailConfigured) {
+        setFlash(
+          `Cuenta creada: ${data.account.email}. Configure RESEND_API_KEY y EMAIL_FROM en Vercel para envío real. Mientras tanto, copie el enlace.`,
+        );
+      } else {
+        setFlash(
+          `Cuenta creada: ${data.account.email}. El correo no se pudo enviar (${data.emailError || "error"}). Copie el enlace.`,
+        );
+      }
+
+      setUsername("");
+      setName("");
+      setRoleForm("operativo");
+      setGrantCreate(false);
+      reload();
+    } catch {
+      setError("Error de red al crear la cuenta.");
+    } finally {
+      setCreating(false);
     }
-
-    const absolute =
-      typeof window !== "undefined"
-        ? `${window.location.origin}${result.inviteUrl}`
-        : result.inviteUrl;
-
-    setInviteUrl(absolute);
-    setFlash(
-      `Cuenta creada: ${result.account.email}. Copie el enlace de invitación.`,
-    );
-    setUsername("");
-    setName("");
-    setRoleForm("operativo");
-    setGrantCreate(false);
-    reload();
   }
 
   function toggleCreatePermission(account: AccountRecord, value: boolean) {
@@ -300,7 +344,8 @@ function CuentasContent() {
               <code className="rounded bg-ungrd-bg px-1">
                 usuario@{STAFF_DOMAIN}
               </code>
-              . Se genera un enlace de invitación para cambiar la contraseña.
+              . Se enviará un correo real con el enlace para definir la
+              contraseña.
             </p>
 
             <form onSubmit={onCreate} className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -369,10 +414,11 @@ function CuentasContent() {
               <div className="sm:col-span-2">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-5 py-3 text-sm font-extrabold text-white hover:bg-ungrd-navy-mid"
+                  disabled={creating}
+                  className="inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-5 py-3 text-sm font-extrabold text-white hover:bg-ungrd-navy-mid disabled:opacity-60"
                 >
                   <Mail className="h-4 w-4 text-ungrd-yellow" />
-                  Crear y enviar invitación
+                  {creating ? "Enviando…" : "Crear y enviar invitación"}
                 </button>
               </div>
             </form>
@@ -381,11 +427,14 @@ function CuentasContent() {
               <div className="mt-4 rounded-xl border border-ungrd-yellow/50 bg-[color-mix(in_srgb,#ffd100_18%,transparent)] p-4">
                 <p className="flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
                   <KeyRound className="h-4 w-4" />
-                  Correo de invitación (simulado)
+                  {emailSent
+                    ? "Invitación enviada por correo"
+                    : "Enlace de invitación"}
                 </p>
                 <p className="mt-1 text-xs text-ungrd-muted">
-                  En producción este enlace iría al buzón institucional. En la
-                  demo, cópielo y ábralo para completar el cambio de contraseña.
+                  {emailSent
+                    ? "El usuario recibió el enlace en su buzón institucional. Puede copiarlo aquí si necesita reenviarlo."
+                    : "Conserve este enlace por si el correo no llega o falta configuración de Resend."}
                 </p>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="block min-w-0 flex-1 truncate rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-2 text-xs text-ungrd-heading">

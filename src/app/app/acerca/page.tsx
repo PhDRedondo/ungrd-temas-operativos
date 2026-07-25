@@ -53,7 +53,7 @@ const MODULES = [
 const CURRENT_LIMITS = [
   "Sin API backend ni base de datos persistente (datos sintéticos / en cliente).",
   "Auth demo en localStorage (sin IdP/OIDC ni MFA reales).",
-  "Invitación por correo simulada (enlace copiable en demo).",
+  "Invitación por correo real vía Resend (enlace de activación).",
   "Sin almacenamiento de archivos en objeto (Excel se procesa en el navegador).",
   "Mapa por centroides departamentales/municipales (no GeoJSON oficial).",
   "Sin CI/CD, observabilidad ni entornos (dev/test/prod) formalizados.",

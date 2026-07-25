@@ -14,7 +14,9 @@ export async function sendBriefingPdfEmail(opts: {
   htmlBody: string;
 }): Promise<SendBriefingResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.REPORT_EMAIL_FROM?.trim();
+  const from =
+    process.env.REPORT_EMAIL_FROM?.trim() ||
+    process.env.EMAIL_FROM?.trim();
   const toRaw = process.env.REPORT_EMAIL_TO?.trim();
 
   if (!apiKey || !from || !toRaw) {
@@ -22,7 +24,7 @@ export async function sendBriefingPdfEmail(opts: {
       ok: true,
       skipped: true,
       reason:
-        "Faltan RESEND_API_KEY, REPORT_EMAIL_FROM o REPORT_EMAIL_TO — PDF generado sin envío",
+        "Faltan RESEND_API_KEY, EMAIL_FROM/REPORT_EMAIL_FROM o REPORT_EMAIL_TO — PDF generado sin envío",
     };
   }
 
