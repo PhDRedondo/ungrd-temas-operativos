@@ -34,7 +34,7 @@ export const users = pgTable(
     keycloakSub: text("keycloak_sub").notNull(),
     email: text("email").notNull(),
     name: text("name").notNull().default(""),
-    role: text("role").notNull().default("analista"),
+    role: text("role").notNull().default("operativo"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -124,7 +124,7 @@ export const auditLog = pgTable(
 
 /**
  * ACL por tema.
- * - admin / auditor: bypass (todos los temas).
+ * - admin / subdirector: bypass (todos los temas).
  * - Si el usuario no tiene filas ACL: acceso completo según su rol (local-friendly).
  * - Si tiene ≥1 fila: solo esos temas.
  * - ACL_STRICT=true: sin filas = sin acceso (modo producción).

@@ -44,7 +44,7 @@ function AuthBridge({ children }: { children: ReactNode }) {
           id: data.user.id,
           name: data.user.name || "Usuario UNGRD",
           email: data.user.email || "",
-          role: data.user.role || "analista",
+          role: data.user.role || "operativo",
         }
       : null;
 

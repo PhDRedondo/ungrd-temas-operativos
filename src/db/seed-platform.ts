@@ -55,7 +55,7 @@ const PILOT_WORKFLOW: WorkflowConfigJson = {
       type: "capture",
       mode: "serial",
       assigneeDependencyCode: "LOGISTICA",
-      assigneeRole: "captura",
+      assigneeRole: "operativo",
     },
     {
       code: "TECH_REVIEW",
@@ -64,7 +64,7 @@ const PILOT_WORKFLOW: WorkflowConfigJson = {
       mode: "parallel",
       parallelGroup: "REVIEW",
       assigneeDependencyCode: "TECNICA",
-      assigneeRole: "analista",
+      assigneeRole: "coordinador",
     },
     {
       code: "LEGAL_REVIEW",
@@ -73,7 +73,7 @@ const PILOT_WORKFLOW: WorkflowConfigJson = {
       mode: "parallel",
       parallelGroup: "REVIEW",
       assigneeDependencyCode: "JURIDICA",
-      assigneeRole: "analista",
+      assigneeRole: "coordinador",
     },
     {
       code: "DIR_APPROVAL",
@@ -91,8 +91,8 @@ const PILOT_WORKFLOW: WorkflowConfigJson = {
     },
   ],
   transitions: [
-    { from: "DRAFT", action: "submit", to: "UNDER_REVIEW", roles: ["captura"] },
-    { from: "RETURNED", action: "resubmit", to: "UNDER_REVIEW", roles: ["captura"] },
+    { from: "DRAFT", action: "submit", to: "UNDER_REVIEW", roles: ["operativo"] },
+    { from: "RETURNED", action: "resubmit", to: "UNDER_REVIEW", roles: ["operativo"] },
     { from: "UNDER_REVIEW", action: "approve", to: "STEP_APPROVED" },
     { from: "UNDER_REVIEW", action: "return", to: "RETURNED" },
     { from: "UNDER_REVIEW", action: "reject", to: "REJECTED" },
@@ -144,9 +144,9 @@ async function main() {
   console.log("✓ Workflow piloto: WF_ASSET_CARROTANQUE v1");
 
   const USER_DEPS: Array<{ email: string; dependencyId: string }> = [
-    { email: "captura@ungrd.gov.co", dependencyId: "dep-logistica" },
+    { email: "operativo@ungrd.gov.co", dependencyId: "dep-logistica" },
     { email: "harness@ungrd.gov.co", dependencyId: "dep-logistica" },
-    { email: "analista@ungrd.gov.co", dependencyId: "dep-tecnica" },
+    { email: "coordinador@ungrd.gov.co", dependencyId: "dep-tecnica" },
     { email: "admin@ungrd.gov.co", dependencyId: "dep-direccion" },
   ];
 

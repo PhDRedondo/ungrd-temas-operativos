@@ -32,7 +32,7 @@ async function main() {
   }
 
   {
-    const user = await loginDemo(jar, "captura");
+    const user = await loginDemo(jar, "operativo");
     ok(`login demo · ${user.email} · ${user.role}`);
   }
 

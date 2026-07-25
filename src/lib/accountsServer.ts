@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "fs";
 import path from "path";
 import {
   ADMIN_EMAIL,
+  normalizeAccountRole,
   type AccountRecord,
   type AccountRole,
   staffEmailFromUsername,
@@ -28,10 +29,10 @@ function seed(): AccountRecord[] {
       createdBy: null,
     },
     {
-      email: staffEmailFromUsername("analista"),
-      name: "Analista demo",
+      email: staffEmailFromUsername("operativo"),
+      name: "Operativo demo",
       password: "ungrd2026",
-      role: "analista",
+      role: "operativo",
       canCreateAccounts: false,
       mustChangePassword: false,
       inviteToken: null,
@@ -40,6 +41,13 @@ function seed(): AccountRecord[] {
       createdBy: ADMIN_EMAIL,
     },
   ];
+}
+
+function normalizeList(accounts: AccountRecord[]): AccountRecord[] {
+  return accounts.map((a) => ({
+    ...a,
+    role: normalizeAccountRole(a.role),
+  }));
 }
 
 export function readAccountsFile(): AccountRecord[] {
@@ -56,12 +64,12 @@ export function readAccountsFile(): AccountRecord[] {
       writeAccountsFile(initial);
       return initial;
     }
-    if (!parsed.some((a) => a.email === ADMIN_EMAIL)) {
-      const next = [...seed().slice(0, 1), ...parsed];
-      writeAccountsFile(next);
-      return next;
+    let next = normalizeList(parsed);
+    if (!next.some((a) => a.email === ADMIN_EMAIL)) {
+      next = [...seed().slice(0, 1), ...next];
     }
-    return parsed;
+    writeAccountsFile(next);
+    return next;
   } catch {
     const initial = seed();
     try {
@@ -75,7 +83,11 @@ export function readAccountsFile(): AccountRecord[] {
 
 export function writeAccountsFile(accounts: AccountRecord[]) {
   mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(DATA_FILE, JSON.stringify(accounts, null, 2), "utf8");
+  writeFileSync(
+    DATA_FILE,
+    JSON.stringify(normalizeList(accounts), null, 2),
+    "utf8",
+  );
 }
 
 export function findAccountOnServer(email: string) {

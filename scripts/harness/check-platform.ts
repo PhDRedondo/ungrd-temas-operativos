@@ -8,8 +8,8 @@ async function main() {
   section("Harness PLATFORM · /api/v1");
   const jar: Jar = new Map();
 
-  await loginDemo(jar, "captura");
-  ok("login captura");
+  await loginDemo(jar, "operativo");
+  ok("login operativo");
 
   let caseId: string;
 
@@ -54,19 +54,19 @@ async function main() {
 
   {
     const { res, json } = await req(jar, "/api/v1/me/tasks");
-    assert(res.ok, `tasks captura ${res.status}`);
+    assert(res.ok, `tasks operativo ${res.status}`);
     const tasks = (json as { tasks: unknown[] }).tasks || [];
-    ok(`tareas captura · ${tasks.length} (esperado 0 tras envío)`);
+    ok(`tareas operativo · ${tasks.length} (esperado 0 tras envío)`);
   }
 
-  await loginDemo(jar, "analista");
-  ok("login analista");
+  await loginDemo(jar, "coordinador");
+  ok("login coordinador");
 
   {
     const { res, json } = await req(jar, "/api/v1/me/tasks");
-    assert(res.ok, `tasks analista ${res.status}`);
+    assert(res.ok, `tasks coordinador ${res.status}`);
     const tasks = (json as { tasks: { id: string; stepCode: string }[] }).tasks;
-    assert(tasks.length >= 1, "analista sin tareas de revisión");
+    assert(tasks.length >= 1, "coordinador sin tareas de revisión");
     const tech = tasks.find((t) => t.stepCode === "TECH_REVIEW");
     assert(tech, "falta TECH_REVIEW");
     const { res: r2 } = await req(jar, `/api/v1/tasks/${tech!.id}/complete`, {

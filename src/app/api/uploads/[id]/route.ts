@@ -18,7 +18,7 @@ export async function GET(req: Request, ctx: Ctx) {
 
   const isOwner = upload.createdBy === authz.actor.userId;
   const isPriv =
-    canAdmin(authz.actor.role) || authz.actor.role === "auditor";
+    canAdmin(authz.actor.role) || authz.actor.role === "subdirector";
   if (!isOwner && !isPriv) {
     return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
   }
