@@ -22,11 +22,11 @@ const MODULES = [
   ],
   [
     "Login (/login)",
-    "Autenticación demo en cliente (localStorage). Objetivo prod: IdP / OIDC.",
+    "Cuentas demo: usuario @gestiondelriesgo.gov.co o admin@ungrd.gov.co. Objetivo prod: IdP / OIDC.",
   ],
   [
     "Shell (/app)",
-    "Sidebar plegable (iconos), visita guiada, tema claro/oscuro, 19 temas + plantilla.",
+    "Sidebar plegable (iconos), visita guiada, tema claro/oscuro, 19 temas + plantilla; Cuentas y permisos (admin).",
   ],
   [
     "Captura",
@@ -44,11 +44,16 @@ const MODULES = [
     "QuickBI",
     "Pestaña por tema para el tablero ejecutivo Quick BI (Alibaba); embed opcional vía quickBiUrl en la config del tema.",
   ],
+  [
+    "Cuentas y permisos",
+    "Solo admin@ungrd.gov.co. Cuentas @gestiondelriesgo.gov.co (usuario sin dominio); invitación demo para cambiar contraseña; permiso delegable de crear cuentas.",
+  ],
 ];
 
 const CURRENT_LIMITS = [
   "Sin API backend ni base de datos persistente (datos sintéticos / en cliente).",
-  "Auth demo sin tokens, roles ni MFA.",
+  "Auth demo en localStorage (sin IdP/OIDC ni MFA reales).",
+  "Invitación por correo simulada (enlace copiable en demo).",
   "Sin almacenamiento de archivos en objeto (Excel se procesa en el navegador).",
   "Mapa por centroides departamentales/municipales (no GeoJSON oficial).",
   "Sin CI/CD, observabilidad ni entornos (dev/test/prod) formalizados.",

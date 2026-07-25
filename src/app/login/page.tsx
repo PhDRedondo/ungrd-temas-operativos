@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { ADMIN_EMAIL, STAFF_DOMAIN, resolveLoginEmail } from "@/lib/accounts";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -12,8 +13,8 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admin2026");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,15 +26,20 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const email = resolveLoginEmail(username);
     const result = await login(email, password);
     if (!result.ok) {
       setLoading(false);
       setError(result.error || "No fue posible iniciar sesión.");
       return;
     }
-    // Navegación completa para que la cookie de sesión se aplique (evita quedarse en /login).
     window.location.assign(result.redirectTo || next);
   }
+
+  const looksLikeAdmin =
+    username.trim().toLowerCase() === "admin" ||
+    username.trim().toLowerCase() === ADMIN_EMAIL ||
+    username.includes("@ungrd.gov.co");
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ungrd-bg px-4 py-10">
@@ -87,16 +93,27 @@ function LoginForm() {
         ) : (
           <form onSubmit={onSubmit} className="space-y-4 px-6 py-6">
             <label className="block text-sm font-semibold text-ungrd-heading">
-              Correo institucional
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Correo autorizado"
-                className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
-                autoComplete="username"
-                required
-              />
+              Usuario institucional
+              <div className="mt-1.5 flex min-w-0 overflow-hidden rounded-lg border border-ungrd-border bg-ungrd-input focus-within:border-ungrd-navy focus-within:ring-2 focus-within:ring-ungrd-yellow/40">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="usuario"
+                  className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ungrd-text outline-none"
+                  autoComplete="username"
+                  required
+                />
+                {!looksLikeAdmin && !username.includes("@") && (
+                  <span className="hidden shrink-0 border-l border-ungrd-border bg-ungrd-bg px-2 py-2.5 text-[11px] font-bold text-ungrd-muted sm:block">
+                    @{STAFF_DOMAIN}
+                  </span>
+                )}
+              </div>
+              <span className="mt-1 block text-xs font-normal text-ungrd-muted">
+                Escriba solo el usuario; se completa con @{STAFF_DOMAIN}. Admin:{" "}
+                {ADMIN_EMAIL}.
+              </span>
             </label>
             <label className="block text-sm font-semibold text-ungrd-heading">
               Contraseña
@@ -125,9 +142,15 @@ function LoginForm() {
               {loading ? "Validando…" : "Ingresar"}
             </button>
 
-            <p className="text-center text-xs text-ungrd-muted">
-              Acceso restringido. Use las credenciales institucionales asignadas.
-            </p>
+            <div className="rounded-lg bg-ungrd-bg px-3 py-2 text-xs text-ungrd-muted">
+              <p className="font-bold text-ungrd-heading">Demo</p>
+              <p>
+                Admin: <code>admin</code> / <code>admin2026</code>
+              </p>
+              <p>
+                Analista: <code>analista</code> / <code>ungrd2026</code>
+              </p>
+            </div>
             <p className="text-center text-sm">
               <Link
                 href="/"
