@@ -179,7 +179,7 @@ export function CapturePanel({ theme, onSaved }: Props) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!writable) {
-      setError("Su rol no permite captura (requiere captura o admin).");
+      setError("Su rol no permite captura (requiere operativo, coordinador, subdirector o admin).");
       return;
     }
     setError(null);
@@ -320,7 +320,8 @@ export function CapturePanel({ theme, onSaved }: Props) {
       {!writable && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Modo lectura: su rol <strong>{role}</strong> no puede crear registros.
-          Use un usuario con rol <strong>captura</strong> o{" "}
+          Use un usuario con rol <strong>operativo</strong>,{" "}
+          <strong>coordinador</strong>, <strong>subdirector</strong> o{" "}
           <strong>admin</strong>.
         </p>
       )}

@@ -24,7 +24,7 @@ export async function requireSession(): Promise<
     };
   }
 
-  const role = (session.user.role || "analista") as AppRole;
+  const role = (session.user.role || "operativo") as AppRole;
   if (!canRead(role)) {
     return {
       ok: false,
@@ -58,7 +58,7 @@ export async function requireWrite() {
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "Rol sin permiso de escritura (requiere captura o admin)" },
+        { error: "Rol sin permiso de escritura (requiere operativo, coordinador, subdirector o admin)" },
         { status: 403 },
       ),
     };

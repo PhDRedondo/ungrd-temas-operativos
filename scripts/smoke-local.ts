@@ -94,7 +94,7 @@ async function main() {
       csrfToken: csrf,
       email: "smoke@ungrd.gov.co",
       password: "ungrd2026",
-      role: "captura",
+      role: "operativo",
       callbackUrl: "/app",
       json: "true",
     });

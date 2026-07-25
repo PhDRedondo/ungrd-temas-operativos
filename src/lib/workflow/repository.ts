@@ -104,7 +104,7 @@ export async function getWorkflowConfig(
 }
 
 export async function listCasesForUser(userId: string, role: string) {
-  if (role === "admin" || role === "auditor") {
+  if (role === "admin" || role === "subdirector") {
     return db.select().from(cases).orderBy(desc(cases.updatedAt)).limit(100);
   }
   const deps = await db

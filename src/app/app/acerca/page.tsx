@@ -136,7 +136,7 @@ const TARGET_ARCH = [
   "API Gateway → microservicios BFF (Node/TS) en FC/SAE",
   "RDS PostgreSQL (transaccional) + Tair (caché)",
   "OSS (plantillas Excel, cargas, evidencias)",
-  "IDaaS/OIDC (SSO) → roles: captura, analista, admin",
+  "IDaaS/OIDC (SSO) → roles: operativo, coordinador, subdirector, admin",
   "SLS + ARMS para auditoría y desempeño",
   "VPC privada, Security Groups, NAS opcional para jobs",
 ];
@@ -304,7 +304,7 @@ records (
   created_by, created_at, source: form|excel|api
 )
 uploads (id, theme_id, oss_key, status, errors JSONB)
-users / roles (captura | analista | admin | auditor)
+users / roles (operativo | coordinador | subdirector | admin)
 audit_log (quién, qué, cuándo, before/after)`}
         </pre>
         <p className="mt-3 text-sm text-ungrd-text">

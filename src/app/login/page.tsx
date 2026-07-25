@@ -68,7 +68,7 @@ function LoginForm() {
             <p className="text-sm text-ungrd-muted">
               Autenticación institucional vía{" "}
               <strong className="text-ungrd-heading">Keycloak</strong> (open
-              source). Roles: captura, analista, admin, auditor.
+              source). Roles: operativo, coordinador, subdirector, admin.
             </p>
             <button
               type="button"
@@ -148,7 +148,7 @@ function LoginForm() {
                 Admin: <code>admin</code> / <code>admin2026</code>
               </p>
               <p>
-                Analista: <code>analista</code> / <code>ungrd2026</code>
+                Operativo: <code>operativo</code> / <code>ungrd2026</code>
               </p>
             </div>
             <p className="text-center text-sm">

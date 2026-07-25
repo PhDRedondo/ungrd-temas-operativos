@@ -34,4 +34,8 @@ export type ThemeModule = {
   config: ThemeConfig;
 };
 
-export type AppRole = "captura" | "analista" | "admin" | "auditor";
+export type AppRole =
+  | "admin"
+  | "subdirector"
+  | "coordinador"
+  | "operativo";

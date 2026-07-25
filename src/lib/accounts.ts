@@ -7,7 +7,26 @@ export const STAFF_DOMAIN = "gestiondelriesgo.gov.co";
 export const ADMIN_EMAIL = "admin@ungrd.gov.co";
 export const ACCOUNTS_KEY = "ungrd-demo-accounts";
 
-export type AccountRole = "admin" | "analista" | "captura" | "auditor";
+export type AccountRole =
+  | "admin"
+  | "subdirector"
+  | "coordinador"
+  | "operativo";
+
+/** Migra roles legacy (analista/captura/auditor) al modelo institucional. */
+export function normalizeAccountRole(role: string | undefined): AccountRole {
+  if (role === "admin") return "admin";
+  if (role === "subdirector" || role === "auditor") return "subdirector";
+  if (role === "coordinador" || role === "analista") return "coordinador";
+  if (role === "operativo" || role === "captura") return "operativo";
+  return "operativo";
+}
+
+export const ASSIGNABLE_ACCOUNT_ROLES: Exclude<AccountRole, "admin">[] = [
+  "subdirector",
+  "coordinador",
+  "operativo",
+];
 
 export type AccountRecord = {
   email: string;
@@ -69,10 +88,10 @@ function seedAccounts(): AccountRecord[] {
       createdBy: null,
     },
     {
-      email: staffEmailFromUsername("analista"),
-      name: "Analista demo",
+      email: staffEmailFromUsername("operativo"),
+      name: "Operativo demo",
       password: "ungrd2026",
-      role: "analista",
+      role: "operativo",
       canCreateAccounts: false,
       mustChangePassword: false,
       inviteToken: null,
@@ -113,7 +132,10 @@ export function loadAccounts(): AccountRecord[] {
   const g = globalThis as GlobalAccounts;
   const client = readClientStore();
   if (client && client.length) {
-    const withAdmin = ensureAdmin(client);
+    const withAdmin = ensureAdmin(client).map((a) => ({
+      ...a,
+      role: normalizeAccountRole(a.role),
+    }));
     g.__ungrdDemoAccounts = withAdmin;
     return withAdmin;
   }
@@ -213,7 +235,7 @@ export function createAccount(input: CreateAccountInput): CreateAccountResult {
     email,
     name: input.name.trim() || username,
     password: tempPassword,
-    role: input.role === "admin" ? "analista" : input.role,
+    role: input.role === "admin" ? "operativo" : normalizeAccountRole(input.role),
     canCreateAccounts: canCreate,
     mustChangePassword: true,
     inviteToken: token,
@@ -264,7 +286,12 @@ export function updateAccountFlags(
   accounts[idx] = {
     ...current,
     ...patch,
-    role: patch.role === "admin" ? current.role : (patch.role ?? current.role),
+    role:
+      patch.role === "admin"
+        ? current.role
+        : patch.role !== undefined
+          ? normalizeAccountRole(patch.role)
+          : current.role,
   };
   saveAccounts(accounts);
   return { ok: true };
@@ -348,7 +375,7 @@ export function canCreateAccountsPermission(email: string): boolean {
 
 export const ROLE_LABELS: Record<AccountRole, string> = {
   admin: "Administrador",
-  analista: "Analista",
-  captura: "Captura",
-  auditor: "Auditor",
+  subdirector: "Subdirector",
+  coordinador: "Coordinador",
+  operativo: "Operativo",
 };

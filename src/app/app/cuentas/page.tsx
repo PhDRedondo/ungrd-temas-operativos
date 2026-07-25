@@ -16,6 +16,7 @@ import { canAdmin } from "@/lib/auth/roles";
 import { ThemePermissionsPanel } from "@/components/ThemePermissionsPanel";
 import {
   ADMIN_EMAIL,
+  ASSIGNABLE_ACCOUNT_ROLES,
   ROLE_LABELS,
   STAFF_DOMAIN,
   type AccountRecord,
@@ -67,7 +68,7 @@ function CuentasContent() {
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
-  const [roleForm, setRoleForm] = useState<AccountRole>("analista");
+  const [roleForm, setRoleForm] = useState<AccountRole>("operativo");
   const [grantCreate, setGrantCreate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -154,7 +155,7 @@ function CuentasContent() {
     );
     setUsername("");
     setName("");
-    setRoleForm("analista");
+    setRoleForm("operativo");
     setGrantCreate(false);
     reload();
   }
@@ -338,7 +339,7 @@ function CuentasContent() {
                   onChange={(e) => setRoleForm(e.target.value as AccountRole)}
                   className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-semibold text-ungrd-text"
                 >
-                  {(["analista", "captura", "auditor"] as AccountRole[]).map(
+                  {ASSIGNABLE_ACCOUNT_ROLES.map(
                     (r) => (
                       <option key={r} value={r}>
                         {ROLE_LABELS[r]}
@@ -455,9 +456,7 @@ function CuentasContent() {
                               }
                               className="rounded-lg border border-ungrd-border bg-ungrd-input px-2 py-1.5 text-xs font-semibold"
                             >
-                              {(
-                                ["analista", "captura", "auditor"] as AccountRole[]
-                              ).map((r) => (
+                              {ASSIGNABLE_ACCOUNT_ROLES.map((r) => (
                                 <option key={r} value={r}>
                                   {ROLE_LABELS[r]}
                                 </option>

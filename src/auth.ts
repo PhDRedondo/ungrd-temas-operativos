@@ -2,7 +2,11 @@ import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 import Credentials from "next-auth/providers/credentials";
 import { extractKeycloakRoles, pickPrimaryRole } from "@/lib/auth/roles";
-import { resolveLoginEmail, type AccountRole } from "@/lib/accounts";
+import {
+  normalizeAccountRole,
+  resolveLoginEmail,
+  type AccountRole,
+} from "@/lib/accounts";
 import { findAccountOnServer } from "@/lib/accountsServer";
 import type { AppRole } from "@/themes/shared/types";
 
@@ -36,15 +40,7 @@ declare module "next-auth/jwt" {
 const authMode = process.env.AUTH_MODE || "demo";
 
 function asAppRole(role: AccountRole | string | undefined): AppRole {
-  if (
-    role === "admin" ||
-    role === "analista" ||
-    role === "captura" ||
-    role === "auditor"
-  ) {
-    return role;
-  }
-  return "analista";
+  return normalizeAccountRole(role);
 }
 
 const providers = [];
@@ -117,12 +113,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, account, profile }) {
       if (user) {
         token.sub = user.id;
-        token.role = user.role || "analista";
+        token.role = user.role || "operativo";
         token.roles = user.roles || [token.role];
       }
       if (account?.provider === "keycloak" && profile) {
         const roles = extractKeycloakRoles(profile as Record<string, unknown>);
-        const role = pickPrimaryRole(roles.length ? roles : ["analista"]);
+        const role = pickPrimaryRole(roles.length ? roles : ["operativo"]);
         token.roles = roles.length ? roles : [role];
         token.role = role;
         token.accessToken = account.access_token;
@@ -133,7 +129,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = String(token.sub || "");
-        session.user.role = (token.role as AppRole) || "analista";
+        session.user.role = (token.role as AppRole) || "operativo";
         session.user.roles = (token.roles as AppRole[]) || [
           session.user.role,
         ];

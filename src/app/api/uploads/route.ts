@@ -29,8 +29,8 @@ export async function GET(req: Request) {
     limit: 100,
   });
 
-  // Filtrar uploads a temas legibles si no es admin/auditor
-  if (!canAdmin(authz.actor.role) && authz.actor.role !== "auditor") {
+  // Filtrar uploads a temas legibles si no es admin/subdirector
+  if (!canAdmin(authz.actor.role) && authz.actor.role !== "subdirector") {
     const allowed = new Set(
       (await listThemeAccess(authz.actor)).map((a) => a.themeId),
     );

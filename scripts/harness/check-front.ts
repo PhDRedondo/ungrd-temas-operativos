@@ -51,7 +51,7 @@ async function main() {
     ok(`/app sin sesión → ${res.status}`);
   }
 
-  await loginDemo(jar, "captura");
+  await loginDemo(jar, "operativo");
 
   await expectStatus(jar, "/app", [200], "/app autenticado");
   await expectStatus(

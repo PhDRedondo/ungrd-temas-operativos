@@ -56,7 +56,7 @@ export async function req(
 
 export async function loginDemo(
   jar: Jar,
-  role = "captura",
+  role = "operativo",
 ): Promise<{ email: string; role: string }> {
   const { res, json } = await req(jar, "/api/auth/csrf");
   assert(res.ok, `csrf ${res.status}`);

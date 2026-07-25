@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { userThemeAccess } from "@/db/schema";
 import { THEMES } from "@/themes";
-import { canAdmin, canWrite as roleCanWrite } from "@/lib/auth/roles";
+import { canAdmin, canBypassThemeAcl, canWrite as roleCanWrite } from "@/lib/auth/roles";
 import type { AppRole } from "@/themes/shared/types";
 import type { SessionActor } from "@/lib/auth/session";
 
@@ -20,11 +20,11 @@ function strictAcl(): boolean {
 export async function listThemeAccess(
   actor: SessionActor,
 ): Promise<ThemeAccess[]> {
-  if (canAdmin(actor.role) || actor.role === "auditor") {
+  if (canBypassThemeAcl(actor.role)) {
     return THEMES.map((t) => ({
       themeId: t.id,
       canRead: true,
-      canWrite: canAdmin(actor.role),
+      canWrite: canAdmin(actor.role) || actor.role === "subdirector",
     }));
   }
 
@@ -81,7 +81,7 @@ export async function assertThemeWrite(actor: SessionActor, themeId: string) {
   if (!roleCanWrite(actor.role)) {
     return {
       ok: false as const,
-      error: "Rol sin permiso de escritura (requiere captura o admin)",
+      error: "Rol sin permiso de escritura (requiere operativo, coordinador, subdirector o admin)",
     };
   }
   const access = await getThemeAccess(actor, themeId);

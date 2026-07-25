@@ -1,27 +1,44 @@
 import type { AppRole } from "@/themes/shared/types";
 
 export const APP_ROLES: AppRole[] = [
-  "captura",
-  "analista",
   "admin",
-  "auditor",
+  "subdirector",
+  "coordinador",
+  "operativo",
+];
+
+/** Roles asignables al crear/editar cuentas (sin admin). */
+export const ASSIGNABLE_ROLES: Exclude<AppRole, "admin">[] = [
+  "subdirector",
+  "coordinador",
+  "operativo",
 ];
 
 export function canWrite(role: AppRole | string | undefined): boolean {
-  return role === "captura" || role === "admin";
+  return (
+    role === "operativo" ||
+    role === "coordinador" ||
+    role === "subdirector" ||
+    role === "admin"
+  );
 }
 
 export function canRead(role: AppRole | string | undefined): boolean {
   return (
-    role === "captura" ||
-    role === "analista" ||
-    role === "admin" ||
-    role === "auditor"
+    role === "operativo" ||
+    role === "coordinador" ||
+    role === "subdirector" ||
+    role === "admin"
   );
 }
 
 export function canAdmin(role: AppRole | string | undefined): boolean {
   return role === "admin";
+}
+
+/** Subdirector ve todos los temas (bypass ACL de lectura). */
+export function canBypassThemeAcl(role: AppRole | string | undefined): boolean {
+  return role === "admin" || role === "subdirector";
 }
 
 /** Extrae roles de realm/client desde el token Keycloak. */
@@ -41,7 +58,7 @@ export function extractKeycloakRoles(profile: Record<string, unknown>): AppRole[
 
 export function pickPrimaryRole(roles: AppRole[]): AppRole {
   if (roles.includes("admin")) return "admin";
-  if (roles.includes("captura")) return "captura";
-  if (roles.includes("auditor")) return "auditor";
-  return "analista";
+  if (roles.includes("subdirector")) return "subdirector";
+  if (roles.includes("coordinador")) return "coordinador";
+  return "operativo";
 }
