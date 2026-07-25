@@ -266,7 +266,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-label="Cuentas y permisos"
                 className={linkClass(
                   pathname.startsWith("/app/cuentas") ||
-                    pathname.startsWith("/app/admin"),
+                    pathname.startsWith("/app/admin/permisos"),
                 )}
               >
                 <Shield className={compact ? "h-5 w-5" : "h-4 w-4"} />

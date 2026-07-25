@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check,
   Copy,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { canAdmin } from "@/lib/auth/roles";
+import { ThemePermissionsPanel } from "@/components/ThemePermissionsPanel";
 import {
   ADMIN_EMAIL,
   ROLE_LABELS,
@@ -23,16 +24,46 @@ import {
   createAccount,
   isPlatformAdmin,
   loadAccounts,
+  saveAccounts,
   updateAccountFlags,
 } from "@/lib/accounts";
 
-export default function CuentasPermisosPage() {
+type TabId = "cuentas" | "permisos";
+
+function ensureActorInDirectory(email: string, name: string, role: AccountRole) {
+  const accounts = loadAccounts();
+  if (accounts.some((a) => a.email.toLowerCase() === email.toLowerCase())) {
+    return;
+  }
+  accounts.unshift({
+    email: email.toLowerCase(),
+    name: name || email.split("@")[0] || "Admin",
+    password: "admin2026",
+    role: role === "admin" ? "admin" : role,
+    canCreateAccounts: role === "admin",
+    mustChangePassword: false,
+    inviteToken: null,
+    active: true,
+    createdAt: new Date().toISOString(),
+    createdBy: null,
+  });
+  saveAccounts(accounts);
+}
+
+function CuentasContent() {
   const { user, ready, role } = useAuth();
   const router = useRouter();
-  const isAdmin = canAdmin(role || undefined) || isPlatformAdmin(user?.email || "");
-  const canManage = Boolean(
-    user?.email && canAccessAccountsPage(user.email),
-  );
+  const params = useSearchParams();
+  const initialTab = (params.get("tab") === "permisos" ? "permisos" : "cuentas") as TabId;
+  const [tab, setTab] = useState<TabId>(initialTab);
+
+  const isAdmin =
+    canAdmin(role || undefined) ||
+    isPlatformAdmin(user?.email || "") ||
+    user?.email?.toLowerCase() === ADMIN_EMAIL;
+  const canManage =
+    isAdmin || Boolean(user?.email && canAccessAccountsPage(user.email));
+
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
@@ -53,12 +84,27 @@ export default function CuentasPermisosPage() {
       router.replace("/login?next=/app/cuentas");
       return;
     }
-    if (!canManage && !isAdmin) {
+    if (!canManage) {
       router.replace("/app");
       return;
     }
+    ensureActorInDirectory(
+      user.email,
+      user.name,
+      (role as AccountRole) || "admin",
+    );
     reload();
-  }, [ready, user, canManage, isAdmin, router]);
+  }, [ready, user, canManage, router, role]);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
+
+  function selectTab(next: TabId) {
+    setTab(next);
+    const url = next === "permisos" ? "/app/cuentas?tab=permisos" : "/app/cuentas";
+    router.replace(url);
+  }
 
   const sorted = useMemo(
     () =>
@@ -76,6 +122,13 @@ export default function CuentasPermisosPage() {
     setError(null);
     setInviteUrl(null);
     setCopied(false);
+    setFlash(null);
+
+    ensureActorInDirectory(
+      user.email,
+      user.name,
+      (role as AccountRole) || "admin",
+    );
 
     const result = createAccount({
       username,
@@ -97,7 +150,7 @@ export default function CuentasPermisosPage() {
 
     setInviteUrl(absolute);
     setFlash(
-      `Cuenta creada. Se simuló el envío de correo a ${result.account.email}.`,
+      `Cuenta creada: ${result.account.email}. Copie el enlace de invitación.`,
     );
     setUsername("");
     setName("");
@@ -155,7 +208,7 @@ export default function CuentasPermisosPage() {
     }
   }
 
-  if (!ready || !user || (!canManage && !isAdmin)) {
+  if (!ready || !user || !canManage) {
     return (
       <div className="py-16 text-center text-sm text-ungrd-muted">
         Verificando permisos…
@@ -174,270 +227,322 @@ export default function CuentasPermisosPage() {
           Cuentas y permisos
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-ungrd-muted">
-          Solo el administrador ({ADMIN_EMAIL}) gestiona este módulo y decide quién
-          puede crear cuentas. Las cuentas institucionales usan el dominio{" "}
-          <strong className="text-ungrd-heading">@{STAFF_DOMAIN}</strong>: al
-          crear, indique únicamente el usuario (sin el correo completo). Se
-          simula un correo de invitación para cambiar la contraseña. Los
-          permisos por tema siguen en{" "}
-          <a
-            href="/app/admin/permisos"
-            className="font-bold text-ungrd-navy underline-offset-2 hover:underline"
-          >
-            Permisos por tema
-          </a>
-          .
+          Cree cuentas institucionales (@{STAFF_DOMAIN}) e invite a definir
+          contraseña. En la otra pestaña asigne permisos de lectura/escritura por
+          tema.
         </p>
       </div>
 
-      {flash && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100">
-          {flash}
-        </div>
-      )}
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-ungrd-danger dark:border-red-900/40 dark:bg-red-950/30">
-          {error}
-        </div>
-      )}
-
-      <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
-        <h2 className="flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
-          <UserPlus className="h-4 w-4 text-ungrd-navy" />
-          Crear cuenta
-        </h2>
-        <p className="mt-1 text-xs text-ungrd-muted">
-          El usuario recibirá un enlace (demo) para definir su contraseña antes de
-          usar la plataforma.
-        </p>
-
-        <form
-          onSubmit={onCreate}
-          className="mt-4 grid gap-3 sm:grid-cols-2"
+      <div
+        className="flex gap-1 border-b border-ungrd-border"
+        role="tablist"
+        aria-label="Secciones de cuentas y permisos"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "cuentas"}
+          onClick={() => selectTab("cuentas")}
+          className={`relative px-4 py-3 text-sm font-extrabold transition ${
+            tab === "cuentas"
+              ? "text-ungrd-heading"
+              : "text-ungrd-muted hover:text-ungrd-heading"
+          }`}
         >
-          <label className="text-sm font-semibold text-ungrd-heading sm:col-span-1">
-            Usuario
-            <div className="mt-1.5 flex min-w-0 overflow-hidden rounded-lg border border-ungrd-border bg-ungrd-input focus-within:ring-2 focus-within:ring-ungrd-yellow/40">
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="nombre.apellido"
-                className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ungrd-text outline-none"
-                required
-                autoComplete="off"
-              />
-              <span className="shrink-0 border-l border-ungrd-border bg-ungrd-bg px-2 py-2.5 text-xs font-bold text-ungrd-muted">
-                @{STAFF_DOMAIN}
-              </span>
+          Crear cuentas
+          {tab === "cuentas" && (
+            <span className="absolute inset-x-2 -bottom-px h-1 rounded-full bg-ungrd-yellow" />
+          )}
+        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "permisos"}
+            onClick={() => selectTab("permisos")}
+            className={`relative px-4 py-3 text-sm font-extrabold transition ${
+              tab === "permisos"
+                ? "text-ungrd-heading"
+                : "text-ungrd-muted hover:text-ungrd-heading"
+            }`}
+          >
+            Permisos por tema
+            {tab === "permisos" && (
+              <span className="absolute inset-x-2 -bottom-px h-1 rounded-full bg-ungrd-yellow" />
+            )}
+          </button>
+        )}
+      </div>
+
+      {tab === "permisos" ? (
+        <ThemePermissionsPanel />
+      ) : (
+        <>
+          {flash && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+              {flash}
             </div>
-          </label>
-
-          <label className="text-sm font-semibold text-ungrd-heading">
-            Nombre completo
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none focus:ring-2 focus:ring-ungrd-yellow/40"
-              placeholder="Nombre para mostrar"
-              required
-            />
-          </label>
-
-          <label className="text-sm font-semibold text-ungrd-heading">
-            Rol
-            <select
-              value={roleForm}
-              onChange={(e) => setRoleForm(e.target.value as AccountRole)}
-              className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-semibold text-ungrd-text"
-            >
-              {(["analista", "captura", "auditor"] as AccountRole[]).map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {isAdmin && (
-            <label className="flex items-end gap-2 pb-2 text-sm font-semibold text-ungrd-heading">
-              <input
-                type="checkbox"
-                checked={grantCreate}
-                onChange={(e) => setGrantCreate(e.target.checked)}
-                className="mt-1 h-4 w-4 accent-ungrd-navy"
-              />
-              <span>
-                Permitir crear cuentas
-                <span className="block text-xs font-normal text-ungrd-muted">
-                  Solo el administrador puede otorgar este permiso.
-                </span>
-              </span>
-            </label>
+          )}
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-ungrd-danger dark:border-red-900/40 dark:bg-red-950/30">
+              {error}
+            </div>
           )}
 
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-extrabold text-white hover:bg-ungrd-navy-mid"
-            >
-              <Mail className="h-4 w-4 text-ungrd-yellow" />
-              Crear y enviar invitación
-            </button>
-          </div>
-        </form>
-
-        {inviteUrl && (
-          <div className="mt-4 rounded-xl border border-ungrd-yellow/50 bg-[color-mix(in_srgb,#ffd100_18%,transparent)] p-4">
-            <p className="flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
-              <KeyRound className="h-4 w-4" />
-              Correo de invitación (simulado)
-            </p>
-            <p className="mt-1 text-xs text-ungrd-muted">
-              En producción este enlace iría al buzón institucional. En la demo,
-              cópielo y ábralo para completar el cambio de contraseña.
-            </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <code className="block min-w-0 flex-1 truncate rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-2 text-xs text-ungrd-heading">
-                {inviteUrl}
+          <section className="rounded-2xl border-2 border-ungrd-navy/20 bg-ungrd-surface p-4 sm:p-5 shadow-[0_8px_30px_rgba(0,45,90,0.06)]">
+            <h2 className="flex items-center gap-2 text-base font-extrabold text-ungrd-heading">
+              <UserPlus className="h-5 w-5 text-ungrd-navy" />
+              Crear cuenta
+            </h2>
+            <p className="mt-1 text-sm text-ungrd-muted">
+              Solo indique el usuario. El correo será{" "}
+              <code className="rounded bg-ungrd-bg px-1">
+                usuario@{STAFF_DOMAIN}
               </code>
-              <button
-                type="button"
-                onClick={copyInvite}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-2 text-xs font-bold text-ungrd-heading"
-              >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-                {copied ? "Copiado" : "Copiar enlace"}
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
+              . Se genera un enlace de invitación para cambiar la contraseña.
+            </p>
 
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
-          <Users className="h-4 w-4 text-ungrd-navy" />
-          Directorio de cuentas
-        </h2>
-        <div className="scroll-thin overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-left text-sm">
-            <thead className="text-xs tracking-wide text-ungrd-muted uppercase">
-              <tr>
-                <th className="px-2 py-2">Cuenta</th>
-                <th className="px-2 py-2">Rol</th>
-                <th className="px-2 py-2">Crear cuentas</th>
-                <th className="px-2 py-2">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((account) => {
-                const isSeedAdmin = account.email === ADMIN_EMAIL;
-                return (
-                  <tr
-                    key={account.email}
-                    className="border-t border-ungrd-border"
+            <form onSubmit={onCreate} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-sm font-semibold text-ungrd-heading sm:col-span-1">
+                Usuario
+                <div className="mt-1.5 flex min-w-0 overflow-hidden rounded-lg border border-ungrd-border bg-ungrd-input focus-within:ring-2 focus-within:ring-ungrd-yellow/40">
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="nombre.apellido"
+                    className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ungrd-text outline-none"
+                    required
+                    autoComplete="off"
+                  />
+                  <span className="shrink-0 border-l border-ungrd-border bg-ungrd-bg px-2 py-2.5 text-xs font-bold text-ungrd-muted">
+                    @{STAFF_DOMAIN}
+                  </span>
+                </div>
+              </label>
+
+              <label className="text-sm font-semibold text-ungrd-heading">
+                Nombre completo
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none focus:ring-2 focus:ring-ungrd-yellow/40"
+                  placeholder="Nombre para mostrar"
+                  required
+                />
+              </label>
+
+              <label className="text-sm font-semibold text-ungrd-heading">
+                Rol
+                <select
+                  value={roleForm}
+                  onChange={(e) => setRoleForm(e.target.value as AccountRole)}
+                  className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-semibold text-ungrd-text"
+                >
+                  {(["analista", "captura", "auditor"] as AccountRole[]).map(
+                    (r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+
+              {isAdmin && (
+                <label className="flex items-end gap-2 pb-2 text-sm font-semibold text-ungrd-heading">
+                  <input
+                    type="checkbox"
+                    checked={grantCreate}
+                    onChange={(e) => setGrantCreate(e.target.checked)}
+                    className="mt-1 h-4 w-4 accent-ungrd-navy"
+                  />
+                  <span>
+                    Permitir crear cuentas
+                    <span className="block text-xs font-normal text-ungrd-muted">
+                      Solo el administrador puede otorgar este permiso.
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-lg bg-ungrd-navy px-5 py-3 text-sm font-extrabold text-white hover:bg-ungrd-navy-mid"
+                >
+                  <Mail className="h-4 w-4 text-ungrd-yellow" />
+                  Crear y enviar invitación
+                </button>
+              </div>
+            </form>
+
+            {inviteUrl && (
+              <div className="mt-4 rounded-xl border border-ungrd-yellow/50 bg-[color-mix(in_srgb,#ffd100_18%,transparent)] p-4">
+                <p className="flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
+                  <KeyRound className="h-4 w-4" />
+                  Correo de invitación (simulado)
+                </p>
+                <p className="mt-1 text-xs text-ungrd-muted">
+                  En producción este enlace iría al buzón institucional. En la
+                  demo, cópielo y ábralo para completar el cambio de contraseña.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <code className="block min-w-0 flex-1 truncate rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-2 text-xs text-ungrd-heading">
+                    {inviteUrl}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyInvite}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-2 text-xs font-bold text-ungrd-heading"
                   >
-                    <td className="px-2 py-3">
-                      <p className="font-semibold text-ungrd-heading">
-                        {account.name}
-                      </p>
-                      <p className="font-mono text-xs text-ungrd-muted">
-                        {account.email}
-                      </p>
-                      {account.mustChangePassword && (
-                        <p className="mt-1 text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                          Pendiente cambiar contraseña
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-2 py-3">
-                      {isAdmin && !isSeedAdmin ? (
-                        <select
-                          value={account.role}
-                          onChange={(e) =>
-                            changeRole(
-                              account,
-                              e.target.value as AccountRole,
-                            )
-                          }
-                          className="rounded-lg border border-ungrd-border bg-ungrd-input px-2 py-1.5 text-xs font-semibold"
-                        >
-                          {(["analista", "captura", "auditor"] as AccountRole[]).map(
-                            (r) => (
-                              <option key={r} value={r}>
-                                {ROLE_LABELS[r]}
-                              </option>
-                            ),
-                          )}
-                        </select>
-                      ) : (
-                        <span className="text-xs font-bold text-ungrd-heading">
-                          {ROLE_LABELS[account.role]}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-3">
-                      {isSeedAdmin ? (
-                        <span className="text-xs font-bold text-ungrd-muted">
-                          Sí (admin)
-                        </span>
-                      ) : isAdmin ? (
-                        <label className="inline-flex items-center gap-2 text-xs font-semibold">
-                          <input
-                            type="checkbox"
-                            checked={account.canCreateAccounts}
-                            onChange={(e) =>
-                              toggleCreatePermission(account, e.target.checked)
-                            }
-                            className="accent-ungrd-navy"
-                          />
-                          {account.canCreateAccounts ? "Permitido" : "No"}
-                        </label>
-                      ) : (
-                        <span className="text-xs text-ungrd-muted">
-                          {account.canCreateAccounts ? "Permitido" : "No"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-3">
-                      {isSeedAdmin ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                          Activa
-                        </span>
-                      ) : isAdmin ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleActive(account, !account.active)}
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                            account.active
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                              : "bg-ungrd-bg text-ungrd-muted"
-                          }`}
-                        >
-                          {account.active ? "Activa" : "Inactiva"}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-ungrd-muted">
-                          {account.active ? "Activa" : "Inactiva"}
-                        </span>
-                      )}
-                    </td>
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                    {copied ? "Copiado" : "Copiar enlace"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
+              <Users className="h-4 w-4 text-ungrd-navy" />
+              Directorio de cuentas
+            </h2>
+            <div className="scroll-thin overflow-x-auto">
+              <table className="w-full min-w-[40rem] text-left text-sm">
+                <thead className="text-xs tracking-wide text-ungrd-muted uppercase">
+                  <tr>
+                    <th className="px-2 py-2">Cuenta</th>
+                    <th className="px-2 py-2">Rol</th>
+                    <th className="px-2 py-2">Crear cuentas</th>
+                    <th className="px-2 py-2">Estado</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {!isAdmin && (
-          <p className="mt-3 text-xs text-ungrd-muted">
-            Tiene permiso delegado para crear cuentas. La asignación de quién
-            puede crear cuentas la define únicamente {ADMIN_EMAIL}.
-          </p>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {sorted.map((account) => {
+                    const isSeedAdmin = account.email === ADMIN_EMAIL;
+                    return (
+                      <tr
+                        key={account.email}
+                        className="border-t border-ungrd-border"
+                      >
+                        <td className="px-2 py-3">
+                          <p className="font-semibold text-ungrd-heading">
+                            {account.name}
+                          </p>
+                          <p className="font-mono text-xs text-ungrd-muted">
+                            {account.email}
+                          </p>
+                          {account.mustChangePassword && (
+                            <p className="mt-1 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                              Pendiente cambiar contraseña
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-2 py-3">
+                          {isAdmin && !isSeedAdmin ? (
+                            <select
+                              value={account.role}
+                              onChange={(e) =>
+                                changeRole(
+                                  account,
+                                  e.target.value as AccountRole,
+                                )
+                              }
+                              className="rounded-lg border border-ungrd-border bg-ungrd-input px-2 py-1.5 text-xs font-semibold"
+                            >
+                              {(
+                                ["analista", "captura", "auditor"] as AccountRole[]
+                              ).map((r) => (
+                                <option key={r} value={r}>
+                                  {ROLE_LABELS[r]}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-xs font-bold text-ungrd-heading">
+                              {ROLE_LABELS[account.role]}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-3">
+                          {isSeedAdmin ? (
+                            <span className="text-xs font-bold text-ungrd-muted">
+                              Sí (admin)
+                            </span>
+                          ) : isAdmin ? (
+                            <label className="inline-flex items-center gap-2 text-xs font-semibold">
+                              <input
+                                type="checkbox"
+                                checked={account.canCreateAccounts}
+                                onChange={(e) =>
+                                  toggleCreatePermission(
+                                    account,
+                                    e.target.checked,
+                                  )
+                                }
+                                className="accent-ungrd-navy"
+                              />
+                              {account.canCreateAccounts ? "Permitido" : "No"}
+                            </label>
+                          ) : (
+                            <span className="text-xs text-ungrd-muted">
+                              {account.canCreateAccounts ? "Permitido" : "No"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2 py-3">
+                          {isSeedAdmin ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+                              Activa
+                            </span>
+                          ) : isAdmin ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleActive(account, !account.active)
+                              }
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                account.active
+                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                                  : "bg-ungrd-bg text-ungrd-muted"
+                              }`}
+                            >
+                              {account.active ? "Activa" : "Inactiva"}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-ungrd-muted">
+                              {account.active ? "Activa" : "Inactiva"}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
     </div>
+  );
+}
+
+export default function CuentasPermisosPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-16 text-center text-sm text-ungrd-muted">
+          Cargando…
+        </div>
+      }
+    >
+      <CuentasContent />
+    </Suspense>
   );
 }
