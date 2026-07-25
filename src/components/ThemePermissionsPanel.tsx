@@ -34,6 +34,11 @@ export function ThemePermissionsPanel() {
     [users, selectedUserId],
   );
 
+  const allRead = access.length > 0 && access.every((a) => a.canRead);
+  const someRead = access.some((a) => a.canRead);
+  const allWrite = access.length > 0 && access.every((a) => a.canWrite);
+  const someWrite = access.some((a) => a.canWrite);
+
   const loadUsers = useCallback(async () => {
     const res = await fetch("/api/admin/access");
     const data = await res.json();
@@ -87,6 +92,44 @@ export function ThemePermissionsPanel() {
     );
   }
 
+  function setAllRead(value: boolean) {
+    setAccess((prev) =>
+      prev.map((a) => ({
+        themeId: a.themeId,
+        canRead: value,
+        canWrite: value ? a.canWrite : false,
+      })),
+    );
+  }
+
+  function setAllWrite(value: boolean) {
+    setAccess((prev) =>
+      prev.map((a) => ({
+        themeId: a.themeId,
+        canRead: value ? true : a.canRead,
+        canWrite: value,
+      })),
+    );
+  }
+
+  function selectAllWrite() {
+    setAccess(
+      THEMES.map((t) => ({ themeId: t.id, canRead: true, canWrite: true })),
+    );
+  }
+
+  function selectAllReadOnly() {
+    setAccess(
+      THEMES.map((t) => ({ themeId: t.id, canRead: true, canWrite: false })),
+    );
+  }
+
+  function clearAll() {
+    setAccess(
+      THEMES.map((t) => ({ themeId: t.id, canRead: false, canWrite: false })),
+    );
+  }
+
   async function save() {
     if (!selectedUserId) return;
     setBusy(true);
@@ -113,18 +156,6 @@ export function ThemePermissionsPanel() {
     }
   }
 
-  function selectAllWrite() {
-    setAccess(
-      THEMES.map((t) => ({ themeId: t.id, canRead: true, canWrite: true })),
-    );
-  }
-
-  function clearAll() {
-    setAccess(
-      THEMES.map((t) => ({ themeId: t.id, canRead: false, canWrite: false })),
-    );
-  }
-
   if (!isAdmin) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-950">
@@ -140,7 +171,8 @@ export function ThemePermissionsPanel() {
           Permisos por tema
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-ungrd-muted">
-          Asigne qué temas puede leer/escribir cada usuario. Si un usuario no
+          Asigne qué temas puede leer/escribir cada usuario. Use los botones o
+          los checkboxes del encabezado para marcar todos. Si un usuario no
           tiene ACL, en local ve todos los temas (según su rol). Con{" "}
           <code className="rounded bg-ungrd-bg px-1">ACL_STRICT=true</code> sin
           ACL = sin acceso.
@@ -183,25 +215,41 @@ export function ThemePermissionsPanel() {
             {selected.name} ({selected.role})
           </p>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-ungrd-border bg-ungrd-card px-3 py-3">
+        <span className="mr-1 text-xs font-bold uppercase tracking-wide text-ungrd-muted">
+          Acciones masivas
+        </span>
         <button
           type="button"
           onClick={selectAllWrite}
-          className="rounded-lg border border-ungrd-border px-3 py-2 text-sm font-bold"
+          disabled={!selectedUserId}
+          className="rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-bold disabled:opacity-50"
         >
-          Todos escritura
+          Todos lectura + escritura
+        </button>
+        <button
+          type="button"
+          onClick={selectAllReadOnly}
+          disabled={!selectedUserId}
+          className="rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-bold disabled:opacity-50"
+        >
+          Solo lectura (todos)
         </button>
         <button
           type="button"
           onClick={clearAll}
-          className="rounded-lg border border-ungrd-border px-3 py-2 text-sm font-bold"
+          disabled={!selectedUserId}
+          className="rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-bold disabled:opacity-50"
         >
-          Limpiar ACL
+          Limpiar todos
         </button>
         <button
           type="button"
           disabled={busy || !selectedUserId}
           onClick={() => void save()}
-          className="rounded-lg bg-ungrd-yellow px-4 py-2 text-sm font-extrabold text-ungrd-navy-deep disabled:opacity-50"
+          className="ml-auto rounded-lg bg-ungrd-yellow px-4 py-2 text-sm font-extrabold text-ungrd-navy-deep disabled:opacity-50"
         >
           {busy ? "Guardando…" : "Guardar permisos"}
         </button>
@@ -212,8 +260,36 @@ export function ThemePermissionsPanel() {
           <thead className="bg-ungrd-bg text-ungrd-heading">
             <tr>
               <th className="px-3 py-2 font-bold">Tema</th>
-              <th className="px-3 py-2 font-bold">Lectura</th>
-              <th className="px-3 py-2 font-bold">Escritura</th>
+              <th className="px-3 py-2 font-bold">
+                <label className="inline-flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={allRead}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someRead && !allRead;
+                    }}
+                    onChange={(e) => setAllRead(e.target.checked)}
+                    disabled={!selectedUserId}
+                    aria-label="Marcar o desmarcar toda la lectura"
+                  />
+                  Lectura
+                </label>
+              </th>
+              <th className="px-3 py-2 font-bold">
+                <label className="inline-flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={allWrite}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someWrite && !allWrite;
+                    }}
+                    onChange={(e) => setAllWrite(e.target.checked)}
+                    disabled={!selectedUserId}
+                    aria-label="Marcar o desmarcar toda la escritura"
+                  />
+                  Escritura
+                </label>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -229,6 +305,7 @@ export function ThemePermissionsPanel() {
                       type="checkbox"
                       checked={a.canRead}
                       onChange={() => toggle(a.themeId, "canRead")}
+                      aria-label={`Lectura ${theme?.name || a.themeId}`}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -236,6 +313,7 @@ export function ThemePermissionsPanel() {
                       type="checkbox"
                       checked={a.canWrite}
                       onChange={() => toggle(a.themeId, "canWrite")}
+                      aria-label={`Escritura ${theme?.name || a.themeId}`}
                     />
                   </td>
                 </tr>
