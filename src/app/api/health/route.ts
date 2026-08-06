@@ -71,13 +71,34 @@ export async function GET() {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "db error";
+    const cause =
+      err instanceof Error && err.cause instanceof Error
+        ? err.cause.message
+        : err instanceof Error && typeof err.cause === "string"
+          ? err.cause
+          : null;
+    const full = [msg, cause].filter(Boolean).join(" | ");
+    const lower = full.toLowerCase();
+    let likely = "revisar password y que el env sea Production + Redeploy";
+    if (lower.includes("password") || lower.includes("auth")) {
+      likely =
+        "Password incorrecto: use el Database password de Supabase (Settings → Database), no el de medallion_reader";
+    } else if (lower.includes("enotfound") || lower.includes("econnrefused")) {
+      likely = "Host inalcanzable desde Vercel";
+    } else if (lower.includes("timeout") || lower.includes("connect")) {
+      likely = "Timeout de conexión; pruebe puerto 5432 (Session) no 6543";
+    } else if (probe.port === "6543") {
+      likely =
+        "Está en puerto 6543 (Transaction). Cambie a 5432 (Session mode) y Redeploy";
+    }
     return NextResponse.json(
       {
         ok: false,
         db: "down",
         database: probe,
-        error: msg,
-        fix: "Vercel → Settings → Environment Variables → DATABASE_URL (Production) = pooler Session, luego Redeploy",
+        error: full,
+        likely,
+        fix: "Vercel → Settings → Environment Variables → DATABASE_URL (Production) → pooler Session :5432 → Redeploy",
         example:
           "postgresql://postgres.vbxvqctdemtnmkifrxeo:PASSWORD@aws-1-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require",
         ts: new Date().toISOString(),
