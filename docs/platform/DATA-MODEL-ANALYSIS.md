@@ -65,9 +65,23 @@ Al importar, `fillFixedAliases` copia la mejor clave disponible a `clave_seguimi
 | Bitácora convenio | `BITACORA CONVENIOS` | Cambios de estado del convenio |
 | Entrega a beneficiario | `BASE ENTREGA BOMBEROS` | Acta, pólizas, SOAT, tras entrega física |
 
+### Puentes — schemaVersion 4 (multi-capa)
+| Capa | Fuente Excel | Llave | Modo |
+|------|--------------|-------|------|
+| Inventario puente | `Base General Puentes` | `id_puente` → `clave_seguimiento` | Alta única |
+| Bitácora estado | `bitacora` | `id_puente` (lookup facetado) | Append |
+| Contrato estructuración | `Contratos Estructuracion` | `clave_proceso` (contrato/donación) | Append |
+
+- **Activo vs proceso:** muchos puentes comparten un contrato; estructuración es por `clave_proceso`, no por puente.
+- **Llaves derivadas (`asset-keys.ts`):** `origen_adquisicion` (donación EEUU / contrato…), `proceso_sigla` (`DON-EEUU`), `numero_unidad` y `codigo_operativo` (`DON-EEUU-03`). Alias legible del activo dentro de su proceso; se calculan, no se capturan. Backfill: `npx tsx scripts/backfill-puentes-llaves.ts --apply`.
+- **Lookup facetado:** `GET /api/themes/puentes/puentes?facets=1&origen=…&proceso=…` devuelve opciones disponibles con conteos (cascada) más los resultados.
+- **Sync:** tras bitácora, inventario refleja último `ubicacion_actual`, `estado_puente`, `situacion_prestamo`.
+- **Reimport:** `npx tsx scripts/reimport-puentes.ts`
+
 ### ArcGIS (una capa inventario + geo)
-- **Puentes**, **Obras emergencia** (contrato+OP), **Obras por impuestos**, **Declaratorias**  
+- **Obras emergencia** (contrato+OP), **Obras por impuestos**, **Declaratorias**  
 - Traen `DIVIPOLA` + lat/long → base del análisis espacial.
+- **Puentes** migró a multi-capa (v4); el ArcGIS legacy queda como alias de columnas en import.
 
 ## Cómo se hace el seguimiento (operativo)
 

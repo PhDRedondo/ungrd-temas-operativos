@@ -4,5 +4,8 @@ export type {
   ThemeConfig,
   ThemeModule,
   AppRole,
+  CaptureFormConfig,
+  CaptureFormMode,
+  ComputedFieldRule,
 } from "./types";
-export { GEO_FIELDS, BASE_DATE_FIELDS, buildTheme, buildThemeFromSource } from "./buildTheme";
+export { GEO_FIELDS, BASE_DATE_FIELDS, buildTheme, buildThemeFromSource, ensureDivipolaGeoFields } from "./buildTheme";

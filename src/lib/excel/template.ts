@@ -39,6 +39,16 @@ export function remapRowToThemeFields(
     if (field) out[field.name] = value;
     else out[k] = value;
   }
+  // Alias frecuentes Agua: ValorOP / valorop → valor canónico
+  if (
+    (out.valor === undefined || out.valor === null || out.valor === "") &&
+    (out.valorop !== undefined || out.ValorOP !== undefined)
+  ) {
+    out.valor = out.valorop ?? out.ValorOP;
+  }
+  if (out.valorop !== undefined && out.valor === undefined) {
+    out.valor = out.valorop;
+  }
   return out;
 }
 

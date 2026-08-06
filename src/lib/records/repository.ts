@@ -5,22 +5,12 @@ import type { ThemeConfig } from "@/themes/shared/types";
 import type { ValidatedRecord } from "@/lib/validation/record-schema";
 import type { AppRole } from "@/themes/shared/types";
 import type { RecordRow } from "@/lib/records/types";
+import { dbToRow } from "@/lib/records/db-to-row";
 
 export type { RecordRow } from "@/lib/records/types";
 export { formatCop, formatNumber } from "@/lib/records/types";
 
-function dbToRow(r: typeof records.$inferSelect): RecordRow {
-  const payload = (r.payload || {}) as Record<string, string | number>;
-  return {
-    id: r.id,
-    departamento: r.departamento,
-    municipio: r.municipio,
-    fecha: String(r.fecha),
-    estado: r.estado,
-    valor: Number(r.valor),
-    ...payload,
-  };
-}
+export { dbToRow };
 
 export async function upsertThemeCatalog(theme: ThemeConfig) {
   const version = theme.schemaVersion ?? 1;

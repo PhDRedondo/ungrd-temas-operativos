@@ -28,7 +28,15 @@ import declaratoriaDeEmergenciaTheme from "./declaratoria-de-emergencia";
 import plantillaTheme from "./plantilla";
 import type { ThemeConfig, ThemeModule } from "./shared";
 
-export type { FieldType, FormField, ThemeConfig, ThemeModule } from "./shared";
+export type {
+  FieldType,
+  FormField,
+  ThemeConfig,
+  ThemeModule,
+  CaptureFormConfig,
+  CaptureFormMode,
+  ComputedFieldRule,
+} from "./shared";
 export { buildTheme, GEO_FIELDS, BASE_DATE_FIELDS } from "./shared";
 
 export const THEME_MODULES: ThemeModule[] = [

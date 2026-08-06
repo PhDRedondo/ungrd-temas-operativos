@@ -1,21 +1,26 @@
 import { buildThemeFromSource, type ThemeModule } from "../shared";
 import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
+import { PUENTES_CAPTURE_FORMS } from "./capture-forms";
 
 /**
- * Puentes — Consolidado de Puentes SMD ArcGIS (todos los campos).
+ * Puentes — inventario + bitácora + estructuración contractual.
+ * Llave activo: id_puente · Llave proceso: clave_proceso
  */
-export const config = buildThemeFromSource({
-  id: "puentes",
-  name: "Puentes",
-  shortName: "Puentes",
-  description:
-    "Inventario e intervención de puentes modulares SMD (Acrow/Bailey) desde consolidado ArcGIS.",
-  icon: "bridge",
-  unit: "puentes",
-  valueLabel: "Puentes",
-  schemaVersion: SCHEMA_VERSION,
-  sourceFields: SOURCE_FIELDS,
-});
+export const config = {
+  ...buildThemeFromSource({
+    id: "puentes",
+    name: "Puentes",
+    shortName: "Puentes",
+    description:
+      "Inventario de puentes modulares SMD, bitácora de movimientos y seguimiento de contratos/convenios.",
+    icon: "bridge",
+    unit: "puentes",
+    valueLabel: "Puentes",
+    schemaVersion: SCHEMA_VERSION,
+    sourceFields: SOURCE_FIELDS,
+  }),
+  captureForms: PUENTES_CAPTURE_FORMS,
+};
 
 const themeModule: ThemeModule = { config };
 export default themeModule;

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { CapturePanel } from "@/components/CapturePanel";
+import { TrackingGrid } from "@/components/TrackingGrid";
+import { MaquetaExcelView } from "@/components/MaquetaExcelView";
 import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { AdvancedAnalysisPanel } from "@/components/AdvancedAnalysisPanel";
 import { QuickBIPanel } from "@/components/QuickBIPanel";
@@ -24,10 +26,16 @@ const TABS = [
     highlight: false,
   },
   {
+    id: "seguimiento",
+    short: "Excel",
+    label: "Base Excel",
+    highlight: true,
+  },
+  {
     id: "analitica",
     short: "Decisión",
     label: "Centro de mando",
-    highlight: true,
+    highlight: false,
   },
   {
     id: "quickbi",
@@ -54,6 +62,7 @@ type TabId = (typeof TABS)[number]["id"];
 function isTabId(v: string | undefined | null): v is TabId {
   return (
     v === "captura" ||
+    v === "seguimiento" ||
     v === "analitica" ||
     v === "quickbi" ||
     v === "avanzado" ||
@@ -81,6 +90,10 @@ export function ThemeWorkspace({
     ...EMPTY_RECORD_FILTERS,
     ...initialFilters,
   }));
+
+  const [seguimientoMode, setSeguimientoMode] = useState<"excel" | "capas">(
+    "excel",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -183,6 +196,7 @@ export function ThemeWorkspace({
               if (
                 switching &&
                 (t.id === "analitica" ||
+                  t.id === "seguimiento" ||
                   t.id === "cargas" ||
                   t.id === "avanzado")
               ) {
@@ -227,8 +241,70 @@ export function ThemeWorkspace({
         </p>
       )}
 
-      {tab === "captura" && <CapturePanel theme={theme} onSaved={bump} />}
-      {tab === "analitica" && (
+      {loading ? (
+        <p className="flex items-center gap-2 rounded-xl border border-ungrd-border bg-ungrd-surface px-4 py-6 text-sm text-ungrd-muted">
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-ungrd-navy border-t-transparent" />
+          Cargando registros de la base…
+        </p>
+      ) : null}
+
+      {!loading && tab === "captura" && (
+        <CapturePanel
+          theme={theme}
+          records={records}
+          onSaved={bump}
+        />
+      )}
+      {!loading && tab === "seguimiento" && theme.captureForms?.length ? (
+        <div className="space-y-3">
+          <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-surface p-1">
+            <button
+              type="button"
+              onClick={() => setSeguimientoMode("excel")}
+              className={`rounded-lg px-4 py-2 text-sm font-bold ${
+                seguimientoMode === "excel"
+                  ? "bg-ungrd-navy text-white"
+                  : "text-ungrd-muted hover:text-ungrd-heading"
+              }`}
+            >
+              Base completa (Excel)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSeguimientoMode("capas")}
+              className={`rounded-lg px-4 py-2 text-sm font-bold ${
+                seguimientoMode === "capas"
+                  ? "bg-ungrd-navy text-white"
+                  : "text-ungrd-muted hover:text-ungrd-heading"
+              }`}
+            >
+              Por tabla / capa
+            </button>
+          </div>
+          {seguimientoMode === "excel" ? (
+            <MaquetaExcelView
+              key={`excel-${version}`}
+              theme={theme}
+              records={records}
+              onChanged={bump}
+            />
+          ) : (
+            <TrackingGrid
+              key={`tracking-${version}`}
+              theme={theme}
+              records={records}
+              onChanged={bump}
+            />
+          )}
+        </div>
+      ) : null}
+      {!loading && tab === "seguimiento" && !theme.captureForms?.length ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          La vista Excel de seguimiento está disponible en temas con
+          formularios por capa (p. ej. Agua y Saneamiento).
+        </p>
+      ) : null}
+      {!loading && tab === "analitica" && (
         <AnalyticsPanel
           key={`analytics-${version}`}
           theme={theme}
@@ -237,7 +313,7 @@ export function ThemeWorkspace({
           onFiltersChange={setFilters}
         />
       )}
-      {tab === "avanzado" && (
+      {!loading && tab === "avanzado" && (
         <AdvancedAnalysisPanel
           theme={theme}
           records={records}
@@ -245,8 +321,8 @@ export function ThemeWorkspace({
           onFiltersChange={setFilters}
         />
       )}
-      {tab === "quickbi" && <QuickBIPanel theme={theme} />}
-      {tab === "cargas" && (
+      {!loading && tab === "quickbi" && <QuickBIPanel theme={theme} />}
+      {!loading && tab === "cargas" && (
         <UploadsInbox key={`inbox-${version}`} themeId={theme.id} compact />
       )}
     </div>

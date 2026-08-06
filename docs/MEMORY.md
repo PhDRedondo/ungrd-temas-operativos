@@ -3,122 +3,168 @@
 Documento vivo para socios, desarrolladores y agentes de IA.  
 Actualizar cuando cambie una decisión de arquitectura o el estado del MVP.
 
+**Grafo de arquitectura (Graphify):** `graphify-out/graph.html` · `GRAPH_REPORT.md` · `graph.json`  
+Rebuild: `graphify update .` (sin LLM). Commit indexado: `19ccb2c`.
+
 ---
 
 ## 1. Antes → ahora
 
-| Dimensión | Antes (prototipo) | Ahora (MVP local) |
-|-----------|-------------------|-------------------|
-| Datos | Memoria / `localStorage` | PostgreSQL + Drizzle |
-| Auth | Demo débil en cliente | Auth.js · demo o Keycloak |
-| Excel | Headers SheetJS | ExcelJS + Zod + DIVIPOLA + bandeja |
-| Analítica | Solo cliente sobre demo | Records DB + SQL aggregates |
-| Mapa | Demo | MGN 2024 + puntos DIVIPOLA |
-| Temas | UI + seed sintético | Mismos módulos + persistencia real |
-| Calidad | Manual | `harness` + `smoke` |
+| Dimensión | Antes (prototipo) | Ahora (MVP operable + cloud) |
+|-----------|-------------------|------------------------------|
+| Datos | Memoria / `localStorage` | PostgreSQL + Drizzle (+ Supabase en prod) |
+| Auth | Demo débil en cliente | Auth.js · demo o Keycloak · cookie HTTPS/Vercel |
+| Excel | Headers SheetJS | ExcelJS + Zod + DIVIPOLA + dry-run + upsert por clave+capa |
+| Analítica | Solo cliente sobre demo | Records DB + SQL + Centro de Mando + decisión + red |
+| Mapa | Demo | MGN 2024 + puntos DIVIPOLA + leyendas por base |
+| Temas | UI + seed sintético | Temas cableados desde Excel oficiales (schema v3) |
+| Reportes | — | PDF branding UNGRD + cron daily briefing |
+| Calidad | Manual | `harness` + `smoke` + tests unitarios de pipeline |
+| Deploy | Solo local | Vercel prod piloto Agua: `ungrd-manejo-phi.vercel.app` |
 
-**Frase de producto:** de demo visual a MVP operable en local.
+**Frase de producto:** de demo visual a plataforma operativa con ETL de bases oficiales, mando nacional y evidencias de contrato.
 
 ---
 
 ## 2. Decisiones (ADR ligero)
 
 ### ADR-001 · Sin Clerk
-
-- **Decisión:** Auth open source (Auth.js + Keycloak).
-- **Motivo:** requisito explícito del producto; evitar SaaS de auth de pago.
-- **Consecuencia:** modo `demo` para DX sin Docker; Keycloak cuando haya contenedores.
+Auth open source (Auth.js + Keycloak). Modo `demo` para DX; Keycloak con Docker.
 
 ### ADR-002 · Temas como carpetas autónomas
-
-- **Decisión:** `src/themes/<slug>/theme.ts` es el contrato de campos.
-- **Motivo:** PRs por desarrollador sin pisar núcleo.
-- **Consecuencia:** cambios de `ThemeConfig` / componentes compartidos = PR de arquitectura.
+`src/themes/<slug>/theme.ts` es el contrato. PRs por tema sin pisar núcleo.
 
 ### ADR-003 · Geo solo oficial
-
-- **Decisión:** DIVIPOLA (datos.gov.co) + MGN DANE 2024; no inventar municipios.
-- **Consecuencia:** seed antiguo con nombres no DIVIPOLA puede fallar re-validación.
+DIVIPOLA + MGN DANE 2024; no inventar municipios.
 
 ### ADR-004 · Mapa vía `public/geo`
-
-- **Decisión:** servir JSON estático; fetch en cliente.
-- **Motivo:** Turbopack no resuelve bien imports de `.geojson` / JSON fuera de bundling esperado.
-- **Fuente canónica:** `data/geo/` → copiar a `public/geo/` al actualizar.
+JSON estático (Turbopack). Fuente: `data/geo/` → copiar a `public/geo/`.
 
 ### ADR-005 · ACL_STRICT
-
-- **Local:** `false` → sin filas ACL, acceso amplio según rol.
-- **Prod:** `true` → sin filas ACL, sin acceso (fuerza asignación explícita).
+Local `false` (acceso amplio por rol). Prod `true` (ACL explícita).
 
 ### ADR-006 · Monolito Next (BFF)
-
-- **Decisión:** API en Route Handlers del mismo repo, no microservicio aparte (v0.1).
-- **Motivo:** velocidad de entrega local; un solo deploy path futuro.
+Route Handlers en el mismo repo (v0.1). Platform API v1 (`/api/v1/cases|tasks`) coexistiendo con legacy `/api/themes/*`.
 
 ### ADR-007 · Protocolo de seguridad en middleware
+Rate limit + ban IP + path inspection + headers + body limit (`src/lib/security`).
 
-- **Decisión:** Rate limit + ban IP progresivo + inspección de path + headers + límite de body en `src/lib/security`, aplicado en middleware global.
-- **Motivo:** Mitigar abuso / fuerza bruta / sondas antes del deploy.
-- **Consecuencia:** Almacén en memoria por proceso (Redis opcional a futuro). Localhost allowlist en desarrollo.
+### ADR-008 · Clave de seguimiento + capa
+Todo registro lleva `tipo_registro`, `capa`, `clave_seguimiento` para cruces, upsert y mando nacional.
+
+### ADR-009 · Piloto contractual Agua y Saneamiento
+Contrato 9677: foco en maqueta como matriz + satélites (bitácora, pagos, mods, CDP/RC) con inferencia de capa.
 
 ---
 
 ## 3. Inventario técnico actual
 
-### Front
+### Front (UI)
+- `ThemeWorkspace` — captura / analítica / cargas / QuickBI / análisis avanzado
+- `CapturePanel` + multi-form por capa (`capture-forms.ts`) + lookup OP (`OrdenLookup`)
+- `MaquetaExcelView` — vista tipo Excel, badge versión, resaltado de cambios
+- `AnalyticsPanel` + `ColombiaMap` + `SankeyFlowDiagram` + `AdvancedAnalysisPanel` (red)
+- `NationalCommandCenter` — semáforos, alertas, deep-links a temas, PDF/Excel briefing
+- `DecisionDashboard` · `RecordFilterBar` (URL compartible) · `TrackingGrid` · `ClaveCapasTimeline`
+- Branding UNGRD (navy + amarillo institucional)
 
-- `ThemeWorkspace` orquesta captura / analítica / cargas.
-- `AnalyticsPanel` + `ColombiaMap` + `SankeyFlowDiagram`.
-- Branding UNGRD (navy + amarillo).
+### Back (API)
+| Área | Rutas |
+|------|-------|
+| Temas | `/api/themes/:slug/records`, `uploads`, `template`, `analytics`, `orders`, `change-marks` |
+| Nacional | `/api/analytics/national`, `/api/analytics/crosswalk` |
+| Reportes | `/api/reports/theme`, `/api/reports/national` |
+| Cron | `/api/cron/daily-briefing` |
+| Platform | `/api/v1/cases`, `/api/v1/tasks`, `/api/v1/me` |
+| Admin | `/api/admin/access`, `security`, `schema-sync` |
+| Auth | `/api/auth/[...nextauth]`, `/api/me/access` |
 
-### Back
+### Dominio (`src/lib`)
+- `validation/record-schema.ts` — Zod + DIVIPOLA
+- `excel/template.ts` — plantillas + remap
+- `uploads/process-excel.ts` + `capa-inference.ts` — dry-run / upsert / inferencia
+- `records/repository.ts` + `versions.ts` + `order-lookup.ts`
+- `analytics/*` — national, decision, crosswalk, timeSeries, filters, PDF/Excel briefings
+- `pdf/brand.ts` + `sendBriefingEmail.ts`
+- `security/*` · `geo/*` · `workflow/*` · `publication/*`
 
-- APIs bajo `/api/themes/:slug/*`, `/api/uploads`, `/api/me/access`, `/api/admin/access`, `/api/health`.
-- Validación `src/lib/validation/record-schema.ts`.
-- Excel `src/lib/excel/template.ts`.
+### Temas cableados (schemaVersion 3–4)
+**Puentes (v4 multi-capa)** · Obras emergencia · Obras por impuestos · Declaratoria · Banco maquinaria · Carrotanques · **Agua y Saneamiento (piloto)** · FIC · + resto del catálogo en `src/themes/`.
 
 ### Datos geo
-
-- `data/divipola.json` — 33 / 1122
-- `public/geo/departamentos-mgn2024.json` — coropleta depto
+- `data/divipola.json` — 33 deptos / 1122 municipios
+- `public/geo/departamentos-mgn2024.json` — coropleta
 
 ### Verificación
+- `npm run harness` · `npm run smoke` · `npm run test:unit`
+- Prod smoke: tema Agua en Vercel
 
-- `npm run harness` — env + back + front
-- `npm run smoke` — login → template → upload → bandeja
+### Artefactos fuera del repo (carpeta Johan)
+- `Comparacion_Bases_vs_Formularios_UNGRD.xlsx`
+- `Comparacion_Agua_Saneamiento_Bases_vs_Formulario.xlsx`
+- `Modelo_Alimentacion_Maqueta_Agua.xlsx`
+- `evidencias-contrato-temas-operativos/` — informe supervisión + figuras
 
 ---
 
-## 4. Deuda conocida (no olvidar)
+## 4. Lo último implementado (jul 2026) — leer primero
 
-1. Keycloak requiere Docker (no instalado en todas las máquinas).
+Orden cronológico reciente (commits + trabajo contractual):
+
+1. **Plataforma operativa** — Postgres, workflows, cargas ArcGIS, tema FIC desde `Seguimiento_FIC_2026`
+2. **Auth/Vercel** — cookie sesión HTTPS, login demo restringido, rate limits navegación
+3. **Centro de mando** — semáforos/alertas por base, interconexión DIVIPOLA + claves
+4. **Mapa real** — coroplético + filtros espaciales; macro/micro y leyendas por realidad de base
+5. **Excel avanzado** — validar sin guardar, upsert por clave, inferencia de capa (maqueta/bitácora)
+6. **Analítica de decisión** — lenguaje operativo, series temporales 24m, red sin jerga
+7. **Filtros** — barra compartida, búsqueda por clave, URL compartible, deep-links, guía
+8. **Reportes PDF** — branding UNGRD, API theme/national, cron daily briefing
+9. **Evidencia contrato 9677** — comparación bases↔formularios, modelo alimentación maqueta, informe + figuras
+10. **Graphify** — grafo del repo (1501 nodos / 3066 aristas / 128 comunidades) en `graphify-out/`
+11. **Puentes multi-capa (ago 2026)** — `schemaVersion` 4: inventario (`id_puente`) + bitácora append + estructuración por `clave_proceso`; `PuenteLookup`/`ProcesoLookup`; reimport `scripts/reimport-puentes.ts`; sync inventario vía `puente-sync.ts`.
+12. **Orden de alimentación Puentes (ago 2026)** — el proceso es la raíz: **Estructuración → Inventario → Bitácora**. Estructuración origina el proceso (`lookupOptional` en `CaptureFormConfig` + creación desde `ProcesoLookup`); el inventario exige proceso y hereda `contrato_convenio`/`clave_proceso`/`tipo_vinculo`/`descripcion_proceso`. `searchThemeProcesos` lee la capa Estructuración (inventario solo como legacy, marcado *sin etapas*). Reimport reordenado + `--seed-procesos`; `scripts/seed-procesos-estructuracion.ts` y `scripts/demo-puentes-orden.ts`.
+13. **Contrato con punto de entrada único (ago 2026)** — `contrato_convenio` solo se escribe en Estructuración (`lookupCanCreate`); en Inventario y Bitácora llega heredado y actúa como filtro raíz. `proceso-chain.ts` aplica la regla en `POST`/`PATCH` de records; `capa-inference.ts` descarta el contrato de las hojas de bitácora. Facetas jerárquicas por `FACET_LEVEL` en `puente-lookup.ts`: contrato → origen → territorio → atributos.
+
+### Hubs del grafo (core abstractions)
+`requireSession` · `getTheme` · `ThemeConfig`/`ThemeModule` · `RecordRow` · `process-excel` · `buildDecisionBrief` · `enrichRecordsForDecision` · `NationalCommandCenter` · `guard` (security)
+
+---
+
+## 5. Deuda conocida
+
+1. Keycloak requiere Docker (no en todas las máquinas).
 2. Uploads en disco local (`/uploads`), no object storage.
 3. Polígonos municipales completos no embebidos (peso).
 4. Seed histórico puede tener municipios no DIVIPOLA.
-5. README antiguo (Alibaba Cloud detallado) condensado en [`ROADMAP.md`](./ROADMAP.md).
+5. Platform schemas (`iam/config/staging/workflow`) parcialmente documentados vs legacy `public`.
+6. Memoria Claude-mem MCP puede fallar (dependencia `httpcore`); usar este `docs/MEMORY.md` + Graphify.
 
 ---
 
-## 5. Glosario
+## 6. Glosario
 
 | Término | Significado |
 |---------|-------------|
 | Tema | Módulo misional (`agua-y-saneamiento`, etc.) |
+| Capa | Tipo de fila dentro del tema (maqueta, bitácora, pagos…) |
+| Clave de seguimiento | Identificador de cruce (OP, placa, CDP, convenio…) |
 | DIVIPOLA | Catálogo oficial depto/municipio DANE |
 | MGN | Marco Geoestadístico Nacional (polígonos) |
 | ACL | Access Control List por tema |
-| Harness | Suite de checks locales (env/back/front) |
-| Smoke | Prueba E2E corta de caminos críticos |
+| Harness / Smoke | Checks locales / E2E corto |
+| Mando nacional | Vista agregada multi-tema con alertas y briefing |
+| Graphify | Knowledge graph del código (`graphify-out/`) |
 
 ---
 
-## 6. Historial breve
+## 7. Historial breve
 
 | Fecha | Hito |
 |-------|------|
-| 2026-07 | Clone prototipo cliente-only |
-| 2026-07 | Postgres + Auth.js + Excel + ACL |
-| 2026-07 | DIVIPOLA + mapa MGN + smoke |
-| 2026-07 | Docs profesionales + harness |
-| 2026-07 | Protocolo seguridad v1 (rate limit, ban IP, headers) |
+| 2026-07-15 | Clone prototipo + plan Postgres/Auth/Excel |
+| 2026-07-21 | Plataforma operativa + FIC + docs |
+| 2026-07-22 | Hardening auth/Vercel |
+| 2026-07-23 | Mando nacional, mapa, ETL, filtros, PDF/cron |
+| 2026-07-28 | Comparación bases vs formularios + modelo maqueta Agua |
+| 2026-07-30 | Evidencias contrato 9677 (informe + figuras) |
+| 2026-07-31 | Init memoria agent + Graphify arquitectura |

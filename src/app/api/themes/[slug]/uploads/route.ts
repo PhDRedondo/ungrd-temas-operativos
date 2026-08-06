@@ -17,6 +17,8 @@ import {
   upsertValidatedRecords,
   type UploadMode,
 } from "@/lib/uploads/process-excel";
+import { syncAguaMaquetaFromLatest } from "@/themes/agua-y-saneamiento/maqueta-sync";
+import { syncPuenteInventarioFromLatest } from "@/themes/puentes/puente-sync";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -78,6 +80,59 @@ async function processRows(params: {
         duplicates,
       },
     });
+
+    // Agua: refrescar Maqueta (Alta) con el último vigente por OP tocada
+    if (params.themeId === "agua-y-saneamiento") {
+      const ops = new Set<string>();
+      for (const row of inserted) {
+        const op = String(
+          (row as Record<string, unknown>).orden_de_proveeduria ||
+            (row as Record<string, unknown>).clave_seguimiento ||
+            "",
+        ).trim();
+        if (op) ops.add(op);
+      }
+      for (const item of batch.classified) {
+        const payload = (item.item.payload || {}) as Record<string, unknown>;
+        const op = String(
+          payload.orden_de_proveeduria || payload.clave_seguimiento || "",
+        ).trim();
+        if (op) ops.add(op);
+      }
+      for (const op of ops) {
+        await syncAguaMaquetaFromLatest({
+          op,
+          userId: params.userId,
+          sourceCapa: "carga Excel",
+        });
+      }
+    }
+
+    if (params.themeId === "puentes") {
+      const ids = new Set<string>();
+      for (const row of inserted) {
+        const idp = String(
+          (row as Record<string, unknown>).id_puente ||
+            (row as Record<string, unknown>).clave_seguimiento ||
+            "",
+        ).trim();
+        if (idp) ids.add(idp);
+      }
+      for (const item of batch.classified) {
+        const payload = (item.item.payload || {}) as Record<string, unknown>;
+        const idp = String(
+          payload.id_puente || payload.clave_seguimiento || "",
+        ).trim();
+        if (idp) ids.add(idp);
+      }
+      for (const idPuente of ids) {
+        await syncPuenteInventarioFromLatest({
+          idPuente,
+          userId: params.userId,
+          sourceCapa: "carga Excel",
+        });
+      }
+    }
 
     return {
       inserted,
@@ -231,11 +286,23 @@ export async function POST(req: Request, ctx: Ctx) {
     });
   }
 
-  const uploadsDir = path.join(process.cwd(), "uploads");
-  await mkdir(uploadsDir, { recursive: true });
+  // En Vercel el FS del proyecto es de solo lectura; el Excel ya está parseado en memoria.
+  // Persistimos el archivo solo si hay directorio escribible (local o /tmp).
   const safeName = file.name.replace(/[^\w.\-]+/g, "_");
   const storageName = `${Date.now()}_${theme.id}_${safeName}`;
-  await writeFile(path.join(uploadsDir, storageName), buf);
+  const uploadsDir = process.env.VERCEL
+    ? path.join("/tmp", "ungrd-uploads")
+    : path.join(process.cwd(), "uploads");
+  try {
+    await mkdir(uploadsDir, { recursive: true });
+    await writeFile(path.join(uploadsDir, storageName), buf);
+  } catch (err) {
+    const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
+    if (code !== "EROFS" && code !== "EACCES") {
+      console.warn("[upload] no se pudo guardar archivo en disco:", err);
+    }
+    // Continúa: el procesamiento usa `parsed.rows`, no el archivo en disco.
+  }
 
   const asyncMode = parsed.rows.length >= ASYNC_THRESHOLD;
 
@@ -243,7 +310,9 @@ export async function POST(req: Request, ctx: Ctx) {
     themeId: theme.id,
     schemaVersion: expectedVersion,
     fileName: file.name,
-    storagePath: storageName,
+    storagePath: process.env.VERCEL
+      ? `tmp://${storageName}`
+      : storageName,
     userId: authz.actor.userId,
     status: asyncMode ? "pending" : "processing",
   });

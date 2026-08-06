@@ -1,22 +1,26 @@
 import { buildThemeFromSource, type ThemeModule } from "../shared";
 import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
+import { AGUA_CAPTURE_FORMS } from "./capture-forms";
 
 /**
- * Agua y Saneamiento — maqueta de órdenes + bitácora de estados.
- * Discriminador: tipo_registro.
+ * Agua y Saneamiento — formularios por capa que alimentan la Maqueta.
+ * Discriminador: tipo_registro / capa.
  */
-export const config = buildThemeFromSource({
-  id: "agua-y-saneamiento",
-  name: "Agua y Saneamiento",
-  shortName: "Agua",
-  description:
-    "Maqueta de órdenes OP, control físico (tanques/CT/vactor/M.A.), modificaciones, bitácora de estados y pagos — unidos por orden de proveeduría.",
-  icon: "droplets",
-  unit: "órdenes",
-  valueLabel: "Órdenes",
-  schemaVersion: SCHEMA_VERSION,
-  sourceFields: SOURCE_FIELDS,
-});
+export const config = {
+  ...buildThemeFromSource({
+    id: "agua-y-saneamiento",
+    name: "Agua y Saneamiento",
+    shortName: "Agua",
+    description:
+      "Alta OP, variables del líder, modificaciones (hoja Excel), bitácora, pagos, CDPS/RC, control — unidos por orden de proveeduría.",
+    icon: "droplets",
+    unit: "órdenes",
+    valueLabel: "Órdenes",
+    schemaVersion: SCHEMA_VERSION,
+    sourceFields: SOURCE_FIELDS,
+  }),
+  captureForms: AGUA_CAPTURE_FORMS,
+};
 
 const themeModule: ThemeModule = { config };
 export default themeModule;

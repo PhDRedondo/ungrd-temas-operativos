@@ -14,11 +14,6 @@ const DL = path.join(process.env.HOME!, "Downloads");
 
 const JOBS: Array<{ theme: string; file: string; sheet: string }> = [
   {
-    theme: "puentes",
-    file: "2025-08-19 CONSOLIDADO DE PUENTES SMD  ARCGIS DRIVE.xlsx",
-    sheet: "PUENTES",
-  },
-  {
     theme: "obras-de-emergencia",
     file: "2025-08-21 OBRAS DE EMERGENCIAS ARCGIS DRIVE.xlsx",
     sheet: "OBRAS DE EMERGENCIA",
@@ -90,13 +85,18 @@ const JOBS: Array<{ theme: string; file: string; sheet: string }> = [
   },
   {
     theme: "agua-y-saneamiento",
-    file: "Bitacora Agua y Saneamiento def.xlsx",
+    file: "Bitacora Agua y Saneamiento def (1).xlsx",
     sheet: "bitacora",
   },
   {
     theme: "agua-y-saneamiento",
-    file: "Bitacora Agua y Saneamiento def.xlsx",
+    file: "Bitacora Agua y Saneamiento def (1).xlsx",
     sheet: "PAGOS",
+  },
+  {
+    theme: "agua-y-saneamiento",
+    file: "Bitacora Agua y Saneamiento def (1).xlsx",
+    sheet: "CDPS Y RC",
   },
   // FIC — una hoja por vigencia
   {
@@ -186,4 +186,16 @@ function run(theme: string, file: string, sheet: string) {
 
 console.log("Prep reimport — todas las capas con clave_seguimiento");
 for (const j of JOBS) run(j.theme, j.file, j.sheet);
+
+console.log("\n════════ puentes · multi-capa (puentes 2.xlsx) ════════");
+const puentesFile = path.join(DL, "puentes 2.xlsx");
+const pr = spawnSync("npx", ["tsx", "scripts/reimport-puentes.ts", puentesFile], {
+  stdio: "inherit",
+  env: process.env,
+  shell: process.platform === "win32",
+});
+if (pr.status !== 0) {
+  console.error(`⚠ Falló reimport Puentes (status ${pr.status})`);
+}
+
 console.log("\n✅ Reimport terminado");

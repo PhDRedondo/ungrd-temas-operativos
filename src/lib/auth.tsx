@@ -23,6 +23,7 @@ type AuthContextValue = {
   login: (
     email: string,
     password: string,
+    callbackUrl?: string,
   ) => Promise<{ ok: boolean; error?: string; redirectTo?: string }>;
   loginWithKeycloak: () => Promise<void>;
   logout: () => Promise<void>;
@@ -33,6 +34,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const authMode =
   (process.env.NEXT_PUBLIC_AUTH_MODE as "demo" | "keycloak") || "demo";
+
+/** Evita split localhost ↔ 127.0.0.1: solo rutas relativas del mismo origen. */
+function redirectPath(url: string | undefined | null, fallback: string): string {
+  if (!url) return fallback;
+  if (url.startsWith("/")) return url;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.origin === window.location.origin) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback;
+    }
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
 
 function AuthBridge({ children }: { children: ReactNode }) {
   const { data, status } = useSession();
@@ -53,16 +69,16 @@ function AuthBridge({ children }: { children: ReactNode }) {
       ready,
       role: user?.role ?? null,
       authMode,
-      async login(email, password) {
+      async login(email, password, callbackUrl = "/app") {
         if (authMode === "keycloak") {
-          await signIn("keycloak", { callbackUrl: "/app" });
+          await signIn("keycloak", { callbackUrl });
           return { ok: true };
         }
         const res = await signIn("credentials", {
           email: email.trim(),
           password,
           redirect: false,
-          callbackUrl: "/app",
+          callbackUrl,
         });
         if (!res || res.error || res.ok === false) {
           return {
@@ -70,7 +86,10 @@ function AuthBridge({ children }: { children: ReactNode }) {
             error: "Correo o contraseña incorrectos.",
           };
         }
-        return { ok: true, redirectTo: res.url || "/app" };
+        return {
+          ok: true,
+          redirectTo: redirectPath(res.url, callbackUrl),
+        };
       },
       async loginWithKeycloak() {
         await signIn("keycloak", { callbackUrl: "/app" });

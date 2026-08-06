@@ -1,14 +1,25 @@
 /**
- * Campos generados desde fuentes reales (maqueta / bitácora / ArcGIS).
- * NO editar a mano — regenerar: node scripts/generate-theme-fields.cjs
- * Fuente: General+control+modificaciones+bitacora+PAGOS
- * schemaVersion 3: capas + clave_seguimiento para cruces y seguimiento.
+ * Campos Agua y Saneamiento — solo bases Maqueta + Bitácora oficiales.
+ * Capas v5: alta + tablas actualizables (sin mezclar otros temas).
  */
 import type { FormField } from "../shared";
+import { applyAguaSelectOptions } from "./select-options";
 
-export const SOURCE_FIELDS: FormField[] = [
-  { name: "tipo_registro", label: "Tipo de registro", type: "select", required: true, options: ["Maqueta / orden","Control ejecución física","Modificación contractual","Bitácora estado","Pago / desembolso"], excelWidth: 24 },
-  { name: "capa", label: "Capa (Maqueta / Bitácora / …)", type: "select", required: true, options: ["Maqueta / orden","Control ejecución física","Modificación contractual","Bitácora estado","Pago / desembolso"], excelWidth: 22 },
+/** Capas oficiales (duplicado local para evitar ciclo de imports con capture-forms). */
+const CAPA_OPTIONS = [
+  "Alta / orden",
+  "Variables líder",
+  "Modificación contractual",
+  "Bitácora estado",
+  "Bitácora estructuración",
+  "Pago / desembolso",
+  "CDPS y RC",
+  "Control ejecución física",
+];
+
+const RAW_FIELDS: FormField[] = [
+  { name: "tipo_registro", label: "Tipo de registro", type: "select", required: true, options: CAPA_OPTIONS, excelWidth: 24 },
+  { name: "capa", label: "Capa (Maqueta / Bitácora / …)", type: "select", required: true, options: CAPA_OPTIONS, excelWidth: 22 },
   { name: "clave_seguimiento", label: "Clave de seguimiento (Orden de proveeduría)", type: "text", excelWidth: 28 },
   { name: "orden_de_proveeduria", label: "Orden de proveeduría", type: "text", excelWidth: 22 },
   { name: "orden_de_proveeduria_segmentado", label: "Orden de proveeduría-Segmentado", type: "text", excelWidth: 28 },
@@ -28,7 +39,9 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "objeto", label: "Objeto", type: "textarea", excelWidth: 18 },
   { name: "decreto", label: "Decreto", type: "text", excelWidth: 18 },
   { name: "tipo_maquina", label: "tipo maquina", type: "text", excelWidth: 18 },
-  { name: "coordenadas", label: "Coordenadas", type: "text", excelWidth: 18 },
+  // Solo import Excel/legacy. En captura UI no se muestra: el geo es territorial
+  // (departamento/municipio DIVIPOLA), no coordenadas de punto.
+  { name: "coordenadas", label: "Coordenadas (no aplica captura — territorio)", type: "text", excelWidth: 18 },
   { name: "plazo_de_ejecucion_dias", label: "Plazo de Ejecución Dias", type: "number", excelWidth: 18 },
   { name: "forma_de_pago", label: "Forma de Pago", type: "text", excelWidth: 18 },
   { name: "n_sigob_de_solicitud", label: "N° Sigob de solicitud", type: "text", excelWidth: 18 },
@@ -49,7 +62,8 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "expediente", label: "Expediente", type: "text", excelWidth: 18 },
   { name: "responsable_apoyo_a_la_supervision", label: "Responsable Apoyo a la supervisión", type: "text", excelWidth: 28 },
   { name: "fecha_de_asignacion", label: "Fecha de asignación", type: "date", excelWidth: 18 },
-  { name: "estado", label: "Estado de ejecución", type: "text", excelWidth: 18 },
+  { name: "estado", label: "Estado", type: "text", excelWidth: 22 },
+  { name: "estado_de_ejecucion", label: "Estado de ejecución", type: "text", excelWidth: 22 },
   { name: "fecha_inicio_orden", label: "Fecha Inicio Orden", type: "date", excelWidth: 18 },
   { name: "fecha_fin_orden", label: "Fecha fin Orden", type: "date", excelWidth: 18 },
   { name: "ejecucion", label: "% Ejecución", type: "number", excelWidth: 18 },
@@ -110,7 +124,7 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "dias_volqueta_m_a_ejecutadas", label: "Días Volqueta M.A -EJECUTADAS", type: "number", excelWidth: 28 },
   { name: "num_modificacion", label: "Num_modificación", type: "text", excelWidth: 18 },
   { name: "tipo_de_modificacion", label: "Tipo de modificación", type: "text", excelWidth: 18 },
-  { name: "modificacion", label: "Modificación", type: "text", excelWidth: 18 },
+  { name: "modificacion", label: "Modificación (qué cambia)", type: "text", excelWidth: 22 },
   { name: "horas_maquina", label: "Horas Máquina", type: "number", excelWidth: 18 },
   { name: "dias_volqueta", label: "Días Volqueta", type: "number", excelWidth: 18 },
   { name: "sin_info", label: "sin info", type: "text", excelWidth: 18 },
@@ -120,6 +134,11 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "observaciones", label: "obs", type: "textarea", excelWidth: 18 },
   { name: "horas", label: "horas", type: "number", excelWidth: 18 },
   { name: "verif", label: "verif", type: "text", excelWidth: 18 },
+  { name: "fecha_estado", label: "Fecha Estado", type: "date", excelWidth: 18 },
+  { name: "estado_macro", label: "Estado Macro", type: "text", excelWidth: 18 },
+  { name: "semana_seguimiento", label: "semana SEGUIMIENTO", type: "text", excelWidth: 18 },
+  { name: "comentario_semanal", label: "Comentario semanal", type: "textarea", excelWidth: 28 },
+  { name: "orden_de_proveeduria_x_pago", label: "Orden de proveeduría x Pago", type: "text", excelWidth: 28 },
   { name: "proceso", label: "Proceso", type: "text", excelWidth: 18 },
   { name: "comentario", label: "comentario", type: "textarea", excelWidth: 18 },
   { name: "valor_op_parcial", label: "Valor OP - parcial", type: "number", excelWidth: 18 },
@@ -128,10 +147,16 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "sd_solicitud_de_desembolso", label: "SD (Solicitud de desembolso)", type: "text", excelWidth: 28 },
   { name: "valor_pagado_sin_impuestos", label: "Valor Pagado sin impuestos", type: "number", excelWidth: 28 },
   { name: "valor_pagado_total_con_impuestos", label: "Valor Pagado Total con impuestos", type: "number", excelWidth: 28 },
-  { name: "saldo_a_liberar", label: "Saldo a liberar", type: "text", excelWidth: 18 },
-  { name: "saldo_por_liberar", label: "Saldo Por Liberar", type: "text", excelWidth: 18 },
+  // Calculado en captura Pagos: valor_op_parcial − valor_pagado_total_con_impuestos
+  { name: "saldo_a_liberar", label: "Saldo a liberar", type: "number", excelWidth: 18 },
+  // Alias legacy Excel — no mostrar en captura (ver capture-forms pagos)
+  { name: "saldo_por_liberar", label: "Saldo Por Liberar", type: "number", excelWidth: 18 },
   { name: "comentario_depuracion", label: "comentario depuracion", type: "textarea", excelWidth: 18 },
+  // Columna Excel legacy mal escrita — no mostrar en captura
   { name: "odern_3", label: "ODERN 3", type: "text", excelWidth: 18 },
 ];
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 7;
+
+export const SOURCE_FIELDS: FormField[] =
+  applyAguaSelectOptions(RAW_FIELDS) as FormField[];
