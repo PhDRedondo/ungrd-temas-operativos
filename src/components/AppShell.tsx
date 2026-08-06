@@ -25,6 +25,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { startGuidedTour } from "@/lib/tour";
+import { readJson } from "@/lib/http/read-json";
 
 const SIDEBAR_KEY = "ungrd-sidebar-collapsed";
 
@@ -67,8 +68,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     async function loadAccess() {
       try {
         const res = await fetch("/api/me/access");
-        const data = await res.json();
-        if (!cancelled && res.ok) setThemes(data.themes || []);
+        const parsed = await readJson<{ themes?: AccessTheme[] }>(res);
+        if (!cancelled && parsed.ok) setThemes(parsed.data.themes || []);
       } catch {
         /* ignore */
       }

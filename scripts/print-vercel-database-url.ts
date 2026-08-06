@@ -26,7 +26,12 @@ function main() {
   const host = "aws-1-us-west-2.pooler.supabase.com";
   const port = "5432";
   const user = `postgres.${ref}`;
-  const url = `postgresql://${user}:${encodeURIComponent(decodeURIComponent(password))}@${host}:${port}/postgres?sslmode=require`;
+  // encodeURIComponent no escapa '*'; algunos parsers (Vercel) fallan con '*'.
+  const encPass = encodeURIComponent(decodeURIComponent(password)).replace(
+    /\*/g,
+    "%2A",
+  );
+  const url = `postgresql://${user}:${encPass}@${host}:${port}/postgres?sslmode=require`;
 
   console.log("# Pega EXACTO esto en Vercel → Environment Variables → DATABASE_URL");
   console.log("# Environments: Production (y Preview si aplica)");

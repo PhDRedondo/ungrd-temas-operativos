@@ -5,9 +5,15 @@ import * as platformSchema from "./platform-schema";
 
 const fullSchema = { ...schema, ...platformSchema };
 
+/**
+ * En Vercel NUNCA caer a localhost (enmascara DATABASE_URL vacío).
+ * Local: default brew/docker.
+ */
 const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://ungrd:ungrd@127.0.0.1:5432/ungrd_temas";
+  process.env.DATABASE_URL?.trim() ||
+  (process.env.VERCEL
+    ? ""
+    : "postgresql://ungrd:ungrd@127.0.0.1:5432/ungrd_temas");
 
 declare global {
   // eslint-disable-next-line no-var
@@ -17,14 +23,21 @@ declare global {
 }
 
 function createClient() {
+  if (!connectionString) {
+    // Cliente dummy: las queries fallarán con mensaje claro vía health.
+    return postgres("postgresql://invalid:invalid@127.0.0.1:1/invalid", {
+      max: 1,
+      connect_timeout: 2,
+    });
+  }
+  const isLocal = /127\.0\.0\.1|localhost/.test(connectionString);
   // Transaction pooler (6543) no soporta prepared statements bien.
-  // Session (5432) es el modo recomendado; prepare:false cubre ambos.
-  const usePrepare = !/:(6543)\b/.test(connectionString);
+  const usePrepare = isLocal || !/:(6543)\b/.test(connectionString);
   return postgres(connectionString, {
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
-    ssl: "require",
+    ssl: isLocal ? false : "require",
     prepare: usePrepare,
   });
 }

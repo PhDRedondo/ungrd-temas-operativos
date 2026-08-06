@@ -25,6 +25,7 @@ import { formatCop, formatNumber } from "@/lib/records/types";
 import { ExpedienteTimeline } from "@/components/ExpedienteTimeline";
 import { ThemeBriefDetail } from "@/components/ThemeBriefDetail";
 import type { MapPoint } from "@/components/ColombiaMap";
+import { readJson } from "@/lib/http/read-json";
 
 const ColombiaMap = dynamic(
   () => import("./ColombiaMap").then((m) => m.ColombiaMap),
@@ -97,13 +98,13 @@ export function NationalCommandCenter() {
     setError(null);
     try {
       const res = await fetch("/api/analytics/national");
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "No se pudo cargar el mando nacional");
+      const parsed = await readJson<NationalBrief & { error?: string }>(res);
+      if (!parsed.ok) {
+        setError(parsed.error);
         setBrief(null);
         return;
       }
-      setBrief(data as NationalBrief);
+      setBrief(parsed.data);
     } catch {
       setError("Error de conexión al cargar el tablero nacional");
       setBrief(null);
