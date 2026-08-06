@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, Link2 } from "lucide-react";
+import { Search, X, Link2 } from "lucide-react";
 import {
   departmentNames,
   findDepartment,
@@ -72,9 +72,21 @@ export function inheritFromInventario(
   if (hit.ubicacion_actual && fieldNames.includes("ubicacion_actual")) {
     out.ubicacion_actual = hit.ubicacion_actual;
   }
+  if (hit.codigo_operativo) out.codigo_operativo = hit.codigo_operativo;
   if (hit.convenio_o_cto) out.convenio_o_cto = hit.convenio_o_cto;
   else if (hit.contrato_convenio) out.convenio_o_cto = hit.contrato_convenio;
   return out;
+}
+
+/** Etiqueta principal del activo: ID único operativo del Excel. */
+export function puenteLabel(hit: {
+  codigo_operativo?: string;
+  id_puente?: string;
+}): string {
+  const codigo = String(hit.codigo_operativo || "").trim();
+  if (codigo) return codigo;
+  const idp = String(hit.id_puente || "").trim();
+  return idp ? `ID ${idp}` : "—";
 }
 
 function FacetSelect({
@@ -84,7 +96,6 @@ function FacetSelect({
   disabled,
   placeholder = "Todos",
   hint,
-  emphasis,
   onChange,
 }: {
   label: string;
@@ -93,7 +104,6 @@ function FacetSelect({
   disabled?: boolean;
   placeholder?: string;
   hint?: string;
-  emphasis?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
@@ -103,11 +113,7 @@ function FacetSelect({
         value={value}
         disabled={disabled || options.length === 0}
         onChange={(e) => onChange(e.target.value)}
-        className={`mt-1 w-full rounded-lg border bg-ungrd-input px-3 py-2 text-sm font-normal disabled:cursor-not-allowed disabled:opacity-60 ${
-          emphasis
-            ? "border-ungrd-navy/50 ring-1 ring-ungrd-navy/10"
-            : "border-ungrd-border"
-        }`}
+        className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-normal disabled:cursor-not-allowed disabled:opacity-60"
       >
         <option value="">{placeholder}</option>
         {options.map((opt) => (
@@ -142,7 +148,8 @@ export function PuenteLookup({
   onClear,
   disabled,
 }: Props) {
-  const [convenio, setConvenio] = useState("");
+  const [q, setQ] = useState("");
+  const [proceso, setProceso] = useState("");
   const [departamento, setDepartamento] = useState("");
   const [municipio, setMunicipio] = useState("");
   const [hits, setHits] = useState<PuenteLookupHit[]>([]);
@@ -157,17 +164,24 @@ export function PuenteLookup({
   );
   const departmentOptions = useMemo(() => departmentNames(), []);
 
-  const convenioOptions =
-    facets.convenios.length > 0 ? facets.convenios : facets.procesos;
+  const usingProcesoFacet = facets.procesos.length > 0;
+  const procesoOptions = usingProcesoFacet
+    ? facets.procesos
+    : facets.convenios;
 
   const sortedHits = useMemo(() => {
     return hits.slice().sort((a, b) => {
+      const ca = String(a.codigo_operativo || "");
+      const cb = String(b.codigo_operativo || "");
+      if (ca && cb) return ca.localeCompare(cb, "es", { numeric: true });
       const na = Number(a.id_puente);
       const nb = Number(b.id_puente);
       if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
       return a.id_puente.localeCompare(b.id_puente, "es");
     });
   }, [hits]);
+
+  const hasScope = Boolean(q.trim() || proceso || deptCanonical || municipio);
 
   useEffect(() => {
     if (selected) return;
@@ -178,8 +192,12 @@ export function PuenteLookup({
         const params = new URLSearchParams();
         params.set("capa", capa);
         params.set("facets", "1");
-        params.set("limit", convenio ? "200" : "40");
-        if (convenio) params.set("convenio", convenio);
+        params.set("limit", hasScope ? "200" : "40");
+        if (q.trim()) params.set("q", q.trim());
+        if (proceso) {
+          if (usingProcesoFacet) params.set("proceso", proceso);
+          else params.set("convenio", proceso);
+        }
         if (deptCanonical) params.set("departamento", deptCanonical);
         if (municipio) params.set("municipio", municipio);
 
@@ -202,18 +220,9 @@ export function PuenteLookup({
       } finally {
         setLoading(false);
       }
-    }, 200);
+    }, q.trim() ? 220 : 120);
     return () => clearTimeout(t);
-  }, [convenio, deptCanonical, municipio, themeId, capa, selected]);
-
-  function resetDownstream(from: "convenio" | "depto") {
-    if (from === "convenio") {
-      setDepartamento("");
-      setMunicipio("");
-    } else {
-      setMunicipio("");
-    }
-  }
+  }, [q, proceso, deptCanonical, municipio, themeId, capa, selected, hasScope, usingProcesoFacet]);
 
   if (selected) {
     return (
@@ -224,17 +233,20 @@ export function PuenteLookup({
               <Link2 className="h-3.5 w-3.5" />
               Puente seleccionado · seguimiento
             </p>
-            <p className="mt-1 text-lg font-extrabold text-ungrd-heading">
-              ID {selected.id_puente}
+            <p className="mt-1 text-lg font-extrabold break-all text-ungrd-heading">
+              {puenteLabel(selected)}
+            </p>
+            <p className="mt-0.5 text-xs text-ungrd-muted">
+              # interno {selected.id_puente}
               {selected.tipo ? ` · ${selected.tipo}` : ""}
             </p>
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <dt className="text-[10px] font-bold uppercase text-ungrd-muted">
-                  Convenio o CTO
+                  Proceso (grupo)
                 </dt>
                 <dd className="font-semibold text-ungrd-heading">
-                  {selected.convenio_o_cto || selected.contrato_convenio || "—"}
+                  {selected.contrato_convenio || selected.convenio_o_cto || "—"}
                 </dd>
               </div>
               <div>
@@ -258,7 +270,7 @@ export function PuenteLookup({
             </dl>
             <p className="mt-3 text-xs text-ungrd-muted">
               Complete abajo los campos actualizables de la bitácora. Cada
-              guardado suma un evento de seguimiento de este puente.
+              guardado suma un evento de este ID único.
             </p>
           </div>
           <button
@@ -282,39 +294,62 @@ export function PuenteLookup({
   return (
     <div className="space-y-3">
       <p className="text-sm text-ungrd-muted">
-        Elija el <strong className="text-ungrd-heading">Convenio o CTO</strong>,
-        opcionalmente departamento y municipio. Aparece la tabla de puentes:
-        seleccione uno y complete el formulario de bitácora.
+        Busque por el{" "}
+        <strong className="text-ungrd-heading">ID único</strong> del Excel
+        (ej.{" "}
+        <code className="rounded bg-ungrd-surface px-1 text-[11px]">
+          Donación - EEUU - 1-ACROW-18
+        </code>{" "}
+        o{" "}
+        <code className="rounded bg-ungrd-surface px-1 text-[11px]">
+          9677-…-BRIDGE-3
+        </code>
+        ). El proceso/convenio solo agrupa varios IDs; no es la llave del
+        puente.
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="sm:col-span-2 lg:col-span-3">
-          <FacetSelect
-            label="Convenio o CTO"
-            value={convenio}
-            options={convenioOptions}
+      <label className="block text-sm font-semibold text-ungrd-heading">
+        ID único del puente
+        <div className="relative mt-1.5">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ungrd-muted" />
+          <input
+            type="search"
+            value={q}
             disabled={disabled}
-            emphasis
-            placeholder={
-              convenioOptions.length === 0
-                ? "Sin convenios en inventario"
-                : "Seleccione el convenio o CTO"
-            }
-            hint="Filtro raíz del seguimiento (Excel bitácora)."
-            onChange={(v) => {
-              setConvenio(v);
-              resetDownstream("convenio");
-            }}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Escriba el ID único o un fragmento (ACROW-18, BRIDGE-3…)"
+            className="w-full rounded-lg border border-ungrd-navy/40 bg-ungrd-input py-2.5 pr-3 pl-9 text-sm font-normal ring-1 ring-ungrd-navy/10"
+            autoComplete="off"
           />
         </div>
+      </label>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <FacetSelect
+          label="Proceso (opcional · agrupa varios IDs)"
+          value={proceso}
+          options={procesoOptions}
+          disabled={disabled}
+          placeholder={
+            procesoOptions.length === 0
+              ? "Sin procesos en inventario"
+              : "Todos los procesos"
+          }
+          hint="Ej. «Donación - EEUU - 1» tiene 10 IDs únicos (ACROW-18…27)."
+          onChange={(v) => {
+            setProceso(v);
+            setDepartamento("");
+            setMunicipio("");
+          }}
+        />
         <label className="block text-sm font-semibold text-ungrd-heading">
           Departamento
           <select
             value={departamento}
-            disabled={disabled || !convenio}
+            disabled={disabled}
             onChange={(e) => {
               setDepartamento(e.target.value);
-              resetDownstream("depto");
+              setMunicipio("");
             }}
             className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-normal disabled:opacity-60"
           >
@@ -330,7 +365,7 @@ export function PuenteLookup({
           Municipio
           <select
             value={municipio}
-            disabled={disabled || !convenio || !deptCanonical}
+            disabled={disabled || !deptCanonical}
             onChange={(e) => setMunicipio(e.target.value)}
             className="mt-1 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-normal disabled:opacity-60"
           >
@@ -347,20 +382,19 @@ export function PuenteLookup({
       <div className="flex flex-wrap items-center gap-2 text-xs text-ungrd-muted">
         {loading ? (
           <span>Cargando puentes…</span>
-        ) : convenio ? (
+        ) : (
           <span>
             {sortedHits.length} puente{sortedHits.length === 1 ? "" : "s"} ·
-            elija uno en la tabla
+            elija por ID único
           </span>
-        ) : (
-          <span>Seleccione el Convenio o CTO para ver la tabla</span>
         )}
-        {convenio || departamento || municipio ? (
+        {hasScope ? (
           <button
             type="button"
             disabled={disabled}
             onClick={() => {
-              setConvenio("");
+              setQ("");
+              setProceso("");
               setDepartamento("");
               setMunicipio("");
             }}
@@ -377,15 +411,11 @@ export function PuenteLookup({
         </p>
       ) : null}
 
-      {!convenio ? (
+      {loading ? null : sortedHits.length === 0 ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-          Seleccione el convenio o CTO de arriba para listar los puentes y
-          registrar su seguimiento.
-        </p>
-      ) : loading ? null : sortedHits.length === 0 ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          Sin puentes con estos filtros. Ajuste departamento/municipio o
-          regístrelos en Inventario.
+          {hasScope
+            ? "Ningún puente coincide. Pruebe otro fragmento del ID único o limpie filtros."
+            : "Escriba el ID único o elija un proceso para listar puentes."}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-ungrd-border bg-white">
@@ -393,7 +423,10 @@ export function PuenteLookup({
             <thead className="bg-ungrd-surface">
               <tr>
                 <th className="border-b border-ungrd-border px-2 py-1.5 font-bold">
-                  ID
+                  ID único
+                </th>
+                <th className="border-b border-ungrd-border px-2 py-1.5 font-bold">
+                  #
                 </th>
                 <th className="border-b border-ungrd-border px-2 py-1.5 font-bold">
                   Tipo
@@ -429,7 +462,10 @@ export function PuenteLookup({
                   }}
                   className="cursor-pointer odd:bg-white even:bg-ungrd-surface/40 hover:bg-ungrd-yellow/30"
                 >
-                  <td className="border-b border-ungrd-border/60 px-2 py-1.5 font-semibold">
+                  <td className="border-b border-ungrd-border/60 px-2 py-1.5 font-semibold break-all text-ungrd-heading">
+                    {puenteLabel(h)}
+                  </td>
+                  <td className="border-b border-ungrd-border/60 px-2 py-1.5 text-ungrd-muted">
                     {h.id_puente}
                   </td>
                   <td className="border-b border-ungrd-border/60 px-2 py-1.5">
@@ -452,8 +488,7 @@ export function PuenteLookup({
             </tbody>
           </table>
           <p className="border-t border-ungrd-border px-2 py-1.5 text-[11px] text-ungrd-muted">
-            Clic en una fila para cargar el puente y habilitar el formulario de
-            bitácora.
+            Clic en una fila para cargar ese ID único y habilitar la bitácora.
           </p>
         </div>
       )}

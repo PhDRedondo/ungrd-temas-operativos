@@ -450,8 +450,11 @@ function relevanceScore(hit: PuenteLookupHit, q: string): number {
 
   if (codigo && aliases.includes(codigo)) return 100;
   if (idp && aliases.includes(idp)) return 90;
-  if (codigo && aliases.some((a) => codigo.endsWith(a))) return 70;
+  if (codigo && aliases.some((a) => codigo.endsWith(a) || codigo.includes(a)))
+    return 80;
+  if (aliases.some((a) => a.length >= 4 && codigo.includes(a))) return 75;
   if (codigo.startsWith(term) || idp.startsWith(term)) return 60;
+  if (codigo.includes(term)) return 55;
   if (hit.ubicacion_actual.toLowerCase().includes(term)) return 40;
   if (hit.municipio.toLowerCase().includes(term)) return 30;
   if (hit.proceso_sigla.toLowerCase().includes(term)) return 20;

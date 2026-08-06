@@ -63,6 +63,7 @@ const PUENTE_LOOKUP = {
   requiresPuenteLookup: true,
   lookupCapa: "Inventario puente",
   lookupFilterFields: [
+    "codigo_operativo",
     "convenio_o_cto",
     "departamento",
     "municipio",
@@ -119,7 +120,7 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "inventario",
     label: "2 · Alta / inventario del puente",
     description:
-      "Elija el contrato ya estructurado: verá todos los puentes atados con su ID único. Puede modificar uno o pulsar «Nuevo puente» para registrar otro del mismo contrato.",
+      "Elija el contrato ya estructurado: verá todos los puentes con su ID único operativo (columna Excel). Puede modificar uno o pulsar «Nuevo puente» para registrar otro del mismo contrato.",
     capa: "Inventario puente",
     mode: "upsert",
     ...PROCESO_LOOKUP,
@@ -128,6 +129,7 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
     // capa Estructuración.
     fieldNames: [
       ...ID,
+      "codigo_operativo",
       "clase",
       "tipo",
       "configuracion",
@@ -157,12 +159,13 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "bitacora",
     label: "3 · Bitácora del puente",
     description:
-      "Filtre por Convenio o CTO (y opcionalmente depto/municipio), elija el puente en la tabla y registre el seguimiento en el formulario.",
+      "Busque el puente por su ID único operativo (Excel). El proceso/convenio solo agrupa; la llave del seguimiento es el ID único.",
     capa: "Bitácora estado",
     mode: "append",
     ...PUENTE_LOOKUP,
     fieldNames: [
       ...ID,
+      "codigo_operativo",
       "tipo",
       "cantidad_viajes",
       "ubicacion_actual",

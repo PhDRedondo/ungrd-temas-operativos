@@ -170,7 +170,8 @@ export function assignAssetKeys(
 
 /**
  * Variantes de búsqueda para un término escrito por el operador.
- * "EEUU 3", "eeuu-3", "don eeuu 03" → DON-EEUU-03 (y el término original).
+ * "EEUU 3", "eeuu-3", "don eeuu 03" → DON-EEUU-03
+ * "ACROW-18", "BRIDGE-3", fragmento del ID único Excel → coincidencia parcial
  */
 export function expandSearchAliases(term: string): string[] {
   const raw = String(term || "").trim();
@@ -185,8 +186,22 @@ export function expandSearchAliases(term: string): string[] {
     const n = Number(num);
     out.add(buildCodigoOperativo("DON-EEUU", n));
     out.add(`DON-EEUU-${n}`);
+    out.add(`ACROW-${n}`);
+    out.add(`Donación - EEUU - 1-ACROW-${n}`);
+    out.add(`DONACION - EEUU - 1-ACROW-${n}`);
   }
   if (hasEeuu && !num) out.add("DON-EEUU");
+
+  const acrow = plain.match(/ACROW[- ]?(\d{1,3})/);
+  if (acrow) {
+    out.add(`ACROW-${Number(acrow[1])}`);
+    out.add(`Donación - EEUU - 1-ACROW-${Number(acrow[1])}`);
+  }
+  const bridge = plain.match(/BRIDGE[- ]?(\d{1,3})/);
+  if (bridge) {
+    out.add(`BRIDGE-${Number(bridge[1])}`);
+    out.add(`3S-BRIDGE-${Number(bridge[1])}`);
+  }
 
   const codigoMatch = plain.match(/^([A-Z]{2,4}(?:-[A-Z]{2,6})?)-?(\d{1,3})$/);
   if (codigoMatch) {
