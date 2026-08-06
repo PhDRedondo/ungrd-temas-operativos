@@ -17,10 +17,15 @@ declare global {
 }
 
 function createClient() {
+  // Transaction pooler (6543) no soporta prepared statements bien.
+  // Session (5432) es el modo recomendado; prepare:false cubre ambos.
+  const usePrepare = !/:(6543)\b/.test(connectionString);
   return postgres(connectionString, {
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
+    ssl: "require",
+    prepare: usePrepare,
   });
 }
 
