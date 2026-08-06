@@ -88,22 +88,46 @@ export function OrdenLookup({
       setLoading(true);
       setErr(null);
       try {
-        const expand = expandPaymentOps ? "&expandPaymentOps=1" : "";
+        const params = new URLSearchParams();
+        params.set("q", term);
+        params.set("capa", capa);
+        params.set("limit", "15");
+        if (expandPaymentOps) params.set("expandPaymentOps", "1");
         const res = await fetch(
-          `/api/themes/${themeId}/orders?q=${encodeURIComponent(term)}&capa=${encodeURIComponent(capa)}&limit=15${expand}`,
+          `/api/themes/${encodeURIComponent(themeId)}/orders?${params.toString()}`,
         );
-        const data = await res.json();
-        if (!res.ok) {
-          setErr(data.error || "No se pudo buscar");
+        const raw = await res.text();
+        let data: { error?: string; orders?: OrdenLookupHit[] } = {};
+        try {
+          data = raw ? (JSON.parse(raw) as typeof data) : {};
+        } catch {
+          setErr(
+            res.ok
+              ? "Respuesta inválida al buscar órdenes"
+              : `Error del servidor (${res.status}). ¿Base de datos caída?`,
+          );
           setHits([]);
           return;
         }
-        setHits((data.orders as OrdenLookupHit[]) || []);
+        if (!res.ok) {
+          setErr(data.error || `No se pudo buscar (${res.status})`);
+          setHits([]);
+          return;
+        }
+        setHits(data.orders || []);
         if (term.length >= 1 || (data.orders?.length ?? 0) > 0) {
           setOpen(true);
         }
-      } catch {
-        setErr("Error de conexión al buscar órdenes");
+      } catch (e) {
+        const detail =
+          e instanceof Error && e.message
+            ? e.message
+            : "Error de conexión al buscar órdenes";
+        setErr(
+          detail.includes("pattern") || detail.includes("JSON")
+            ? "No se pudo leer la respuesta del servidor al buscar órdenes"
+            : detail,
+        );
         setHits([]);
       } finally {
         setLoading(false);
