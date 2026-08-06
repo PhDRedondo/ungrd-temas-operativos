@@ -223,6 +223,16 @@ export function prepareTrackingRow(
         out.id_unico ?? out["ID UNICO"] ?? out["Id Unico"],
       ).trim();
     }
+    // Excel Base General trae un 2.º «ID UNICO» (código operativo por puente).
+    if (!String(out.codigo_operativo || "").trim()) {
+      const op =
+        out["ID UNICO_1"] ?? out.id_unico_1 ?? out["Id Unico_1"];
+      const opText = String(op ?? "").trim();
+      const idp = String(out.id_puente || "").trim();
+      if (opText && opText !== idp && !/^\d+$/.test(opText)) {
+        out.codigo_operativo = opText;
+      }
+    }
     if (out.id_puente && !out.clave_seguimiento) {
       out.clave_seguimiento = String(out.id_puente).trim();
     }

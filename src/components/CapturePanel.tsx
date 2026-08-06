@@ -2071,7 +2071,10 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                     <thead className="bg-ungrd-surface">
                       <tr>
                         <th className="border-b border-ungrd-border px-2 py-1.5 font-bold">
-                          ID
+                          ID único
+                        </th>
+                        <th className="border-b border-ungrd-border px-2 py-1.5 font-bold">
+                          #
                         </th>
                         <th className="border-b border-ungrd-border px-2 py-1.5 font-bold">
                           Tipo
@@ -2090,6 +2093,9 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                     <tbody>
                       {puentesVinculados.map((r) => {
                         const selected = editingRecordId === String(r.id);
+                        const codigo = String(
+                          r.codigo_operativo || "",
+                        ).trim();
                         return (
                           <tr
                             key={String(r.id)}
@@ -2108,7 +2114,13 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                                 : "cursor-pointer odd:bg-white even:bg-ungrd-surface/40 hover:bg-ungrd-navy/5"
                             }
                           >
-                            <td className="border-b border-ungrd-border/60 px-2 py-1.5 font-semibold">
+                            <td className="border-b border-ungrd-border/60 px-2 py-1.5 font-semibold break-all text-ungrd-heading">
+                              {codigo ||
+                                (rowIdPuente(r)
+                                  ? `ID ${rowIdPuente(r)}`
+                                  : "—")}
+                            </td>
+                            <td className="border-b border-ungrd-border/60 px-2 py-1.5 text-ungrd-muted">
                               {rowIdPuente(r) || "—"}
                             </td>
                             <td className="border-b border-ungrd-border/60 px-2 py-1.5">

@@ -48,9 +48,9 @@ const RAW_FIELDS: FormField[] = [
   // ── Llaves derivadas (calculadas, no se capturan a mano) ──
   {
     name: "codigo_operativo",
-    label: "Código operativo",
+    label: "ID único operativo",
     type: "text",
-    excelWidth: 18,
+    excelWidth: 36,
   },
   {
     name: "numero_unidad",

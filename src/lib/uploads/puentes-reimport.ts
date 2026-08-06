@@ -310,6 +310,15 @@ export async function runPuentesReimport(params: {
       if (!idp) return null;
       mapped.id_puente = idp;
       mapped.clave_seguimiento = idp;
+      const codigoOp = String(
+        mapped.codigo_operativo ||
+          mapped["ID UNICO_1"] ||
+          mapped.id_unico_1 ||
+          "",
+      ).trim();
+      if (codigoOp && codigoOp !== idp && !/^\d+$/.test(codigoOp)) {
+        mapped.codigo_operativo = codigoOp;
+      }
       const geo = canonicalizeGeo(
         String(mapped.departamento || ""),
         String(mapped.municipio || ""),
