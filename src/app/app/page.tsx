@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ThemeIcon } from "@/components/ThemeIcon";
+import { readJson } from "@/lib/http/read-json";
 
 type AccessTheme = {
   id: string;
@@ -21,8 +22,8 @@ export default function AppHomePage() {
     async function load() {
       try {
         const res = await fetch("/api/me/access");
-        const data = await res.json();
-        if (!cancelled && res.ok) setThemes(data.themes || []);
+        const parsed = await readJson<{ themes?: AccessTheme[] }>(res);
+        if (!cancelled && parsed.ok) setThemes(parsed.data.themes || []);
       } finally {
         if (!cancelled) setLoading(false);
       }

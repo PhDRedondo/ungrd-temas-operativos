@@ -7,6 +7,7 @@ import {
   inferTipoVinculo,
   normalizeClaveProceso,
 } from "@/themes/puentes/process-keys";
+import { readJson } from "@/lib/http/read-json";
 
 export type { ProcesoLookupHit };
 
@@ -104,15 +105,18 @@ export function ProcesoLookup({
       setErr(null);
       try {
         const res = await fetch(
-          `/api/themes/${themeId}/procesos?q=${encodeURIComponent(term)}&limit=40&from=${catalog}`,
+          `/api/themes/${encodeURIComponent(themeId)}/procesos?q=${encodeURIComponent(term)}&limit=40&from=${catalog}`,
         );
-        const data = await res.json();
-        if (!res.ok) {
-          setErr(data.error || "No se pudo buscar");
+        const parsed = await readJson<{
+          error?: string;
+          procesos?: ProcesoLookupHit[];
+        }>(res);
+        if (!parsed.ok) {
+          setErr(parsed.error);
           setHits([]);
           return;
         }
-        const list = (data.procesos as ProcesoLookupHit[]) || [];
+        const list = parsed.data.procesos || [];
         setHits(list);
         setOpen(true);
       } catch {
