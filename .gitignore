@@ -46,3 +46,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .data/
+
+# graphify (regenerable: graphify update .)
+/graphify-out/cache/
+/graphify-out/.graphify_*
+/graphify-out/update.log

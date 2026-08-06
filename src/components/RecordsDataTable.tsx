@@ -163,8 +163,10 @@ export function RecordsDataTable({ theme, records }: Props) {
           const title =
             String(
               row.clave_seguimiento ||
+                row.id_puente ||
                 row.municipio ||
                 row.departamento ||
+                row.id_legacy ||
                 row.id,
             ) || "Registro";
           return (

@@ -97,6 +97,9 @@ export const records = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
@@ -104,6 +107,41 @@ export const records = pgTable(
     index("records_theme_dept_idx").on(t.themeId, t.departamento),
     index("records_theme_estado_idx").on(t.themeId, t.estado),
     uniqueIndex("records_theme_hash_uidx").on(t.themeId, t.contentHash),
+  ],
+);
+
+/**
+ * Versionamiento de registros (trazabilidad).
+ * Cada edición guarda un snapshot; restaurar crea una versión nueva (no borra historia).
+ */
+export const recordVersions = pgTable(
+  "record_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    recordId: uuid("record_id")
+      .notNull()
+      .references(() => records.id, { onDelete: "cascade" }),
+    themeId: text("theme_id")
+      .notNull()
+      .references(() => themes.id),
+    version: integer("version").notNull(),
+    departamento: text("departamento").notNull(),
+    municipio: text("municipio").notNull(),
+    fecha: date("fecha").notNull(),
+    estado: text("estado").notNull(),
+    valor: numeric("valor", { precision: 18, scale: 2 }).notNull().default("0"),
+    payload: jsonb("payload").notNull().$type<Record<string, unknown>>().default({}),
+    changedFields: jsonb("changed_fields").$type<string[]>().default([]),
+    reason: text("reason").notNull().default(""),
+    createdBy: uuid("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("record_versions_uidx").on(t.recordId, t.version),
+    index("record_versions_record_idx").on(t.recordId),
+    index("record_versions_theme_idx").on(t.themeId),
   ],
 );
 
@@ -153,6 +191,7 @@ export const userThemeAccess = pgTable(
 
 export type ThemeRow = typeof themes.$inferSelect;
 export type RecordRowDb = typeof records.$inferSelect;
+export type RecordVersionRow = typeof recordVersions.$inferSelect;
 export type UploadRow = typeof uploads.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
 export type UserThemeAccessRow = typeof userThemeAccess.$inferSelect;

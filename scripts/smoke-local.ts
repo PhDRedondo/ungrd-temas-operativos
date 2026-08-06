@@ -176,35 +176,40 @@ async function main() {
       row.commit();
     }
 
+    const opA = `SMOKE-OP-${stamp}-A`;
+    const opB = `SMOKE-OP-${stamp}-B`;
     writeRow(2, {
+      tipo_registro: "Alta / orden",
+      capa: "Alta / orden",
+      orden_de_proveeduria: opA,
+      clave_seguimiento: opA,
       departamento: "Antioquia",
       municipio: "Medellín",
       fecha: "2026-07-15",
       estado: "Programado",
-      tipo_intervencion: "Acueducto",
       valor: 1_500_000 + (stamp % 1000),
-      beneficiarios: 120,
-      observaciones: `smoke-${stamp}-a`,
+      proveedor: "Smoke Proveedor A",
+      objeto: `smoke-${stamp}-a`,
     });
     writeRow(3, {
+      tipo_registro: "Alta / orden",
+      capa: "Alta / orden",
+      orden_de_proveeduria: opB,
+      clave_seguimiento: opB,
       departamento: "Antioquia",
       municipio: "Bello",
       fecha: "2026-07-16",
       estado: "En ejecución",
-      tipo_intervencion: "Alcantarillado",
       valor: 2_500_000 + (stamp % 1000),
-      beneficiarios: 80,
-      observaciones: `smoke-${stamp}-b`,
+      proveedor: "Smoke Proveedor B",
+      objeto: `smoke-${stamp}-b`,
     });
+    // Fila inválida: sin tipo_registro/capa ni OP
     writeRow(4, {
       departamento: "Antioquia",
-      municipio: "MunicipioInventadoXYZ",
-      fecha: "2026-07-16",
-      estado: "Programado",
-      tipo_intervencion: "Acueducto",
+      municipio: "Medellín",
       valor: 100,
-      beneficiarios: 1,
-      observaciones: `smoke-bad-${stamp}`,
+      objeto: `smoke-bad-${stamp}`,
     });
 
     const uploadPath = path.join(WORK, `_smoke_upload_${stamp}.xlsx`);
@@ -218,6 +223,7 @@ async function main() {
       }),
       path.basename(uploadPath),
     );
+    form.append("mode", "upsert");
 
     const up = await req(jar, `/api/themes/${THEME}/uploads`, {
       method: "POST",
@@ -229,12 +235,34 @@ async function main() {
       rejected: number;
       duplicates: number;
       uploadId: string;
+      inserted?: number;
     };
     assert(u.accepted >= 2, `expected ≥2 accepted, got ${u.accepted}`);
-    assert(u.rejected >= 1, `expected ≥1 rejected invalid muni`);
+    assert(u.rejected >= 1, `expected ≥1 rejected, got ${u.rejected}`);
     step(
       `Upload OK · accepted=${u.accepted} rejected=${u.rejected} dup=${u.duplicates} id=${u.uploadId}`,
     );
+
+    // Multi-formulario: bitácora append sobre la misma OP
+    const bit = await req(jar, `/api/themes/${THEME}/records`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        formId: "bitacora",
+        mode: "append",
+        values: {
+          orden_de_proveeduria: opA,
+          fecha_estado: "2026-07-20",
+          estado_macro: "Expediente",
+          estado: "En ejecución",
+          proceso: "En revisión",
+          dependencia: "Técnico",
+          comentario: `smoke-bitacora-${stamp}`,
+        },
+      }),
+    });
+    assert(bit.res.ok, `bitacora form ${bit.res.status} ${JSON.stringify(bit.json)}`);
+    step(`Multi-form bitácora OK · OP ${opA}`);
   }
 
   {

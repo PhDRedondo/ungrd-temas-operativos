@@ -42,9 +42,50 @@ export function departmentNames(): string[] {
   return DEPARTMENTS.map((d) => d.name);
 }
 
+function foldGeo(s: string): string {
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Alias frecuentes en Excel/maqueta → nombre DIVIPOLA canónico. */
+const DEPARTMENT_ALIASES: Record<string, string> = {
+  guajira: "La Guajira",
+  "la guajira": "La Guajira",
+  "nivel nacional": "Bogotá D.C.",
+  "santa marta": "Magdalena",
+  bogota: "Bogotá D.C.",
+  "bogota d c": "Bogotá D.C.",
+  "bogota dc": "Bogotá D.C.",
+  "distrito capital": "Bogotá D.C.",
+};
+
 export function findDepartment(name: string): Department | undefined {
-  const n = name.trim().toLowerCase();
-  return DEPARTMENTS.find((d) => d.name.toLowerCase() === n);
+  const raw = String(name || "").trim();
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase();
+  const exact = DEPARTMENTS.find((d) => d.name.toLowerCase() === lower);
+  if (exact) return exact;
+
+  const folded = foldGeo(raw);
+  const byFold = DEPARTMENTS.find((d) => foldGeo(d.name) === folded);
+  if (byFold) return byFold;
+
+  const stripped = folded.replace(/^(la|el|los|las)\s+/, "");
+  const byStrip = DEPARTMENTS.find(
+    (d) => foldGeo(d.name).replace(/^(la|el|los|las)\s+/, "") === stripped,
+  );
+  if (byStrip) return byStrip;
+
+  const aliasName =
+    DEPARTMENT_ALIASES[folded] || DEPARTMENT_ALIASES[stripped];
+  if (aliasName) {
+    return DEPARTMENTS.find((d) => d.name === aliasName);
+  }
+  return undefined;
 }
 
 export function findMunicipality(
@@ -53,8 +94,19 @@ export function findMunicipality(
 ): Municipality | undefined {
   const dept = findDepartment(departmentName);
   if (!dept) return undefined;
-  const n = municipalityName.trim().toLowerCase();
-  return dept.municipalities.find((m) => m.name.toLowerCase() === n);
+  const raw = String(municipalityName || "").trim();
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase();
+  const exact = dept.municipalities.find((m) => m.name.toLowerCase() === lower);
+  if (exact) return exact;
+  const folded = foldGeo(raw);
+  const byFold = dept.municipalities.find((m) => foldGeo(m.name) === folded);
+  if (byFold) return byFold;
+  // Primer municipio si el Excel puso el depto o un listado multilínea
+  if (folded === foldGeo(dept.name) || raw.includes(",")) {
+    return dept.municipalities[0];
+  }
+  return undefined;
 }
 
 /** Valida que el municipio pertenezca al departamento (DIVIPOLA). */

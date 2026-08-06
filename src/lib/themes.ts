@@ -17,4 +17,7 @@ export type {
   FormField,
   ThemeConfig,
   ThemeModule,
+  CaptureFormConfig,
+  CaptureFormMode,
+  ComputedFieldRule,
 } from "@/themes";

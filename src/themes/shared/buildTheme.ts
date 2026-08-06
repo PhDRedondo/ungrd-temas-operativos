@@ -13,8 +13,9 @@ export const GEO_FIELDS: FormField[] = [
   {
     name: "municipio",
     label: "Municipio (DIVIPOLA)",
-    type: "text",
+    type: "select",
     required: true,
+    options: [],
     placeholder: "Seleccione departamento primero",
   },
 ];
@@ -36,13 +37,43 @@ export const BASE_DATE_FIELDS: FormField[] = [
   },
 ];
 
+/** Alinea departamento/municipio con DIVIPOLA en cualquier lista de campos. */
+export function ensureDivipolaGeoFields(fields: FormField[]): FormField[] {
+  const depts = departmentNames();
+  return fields.map((f) => {
+    if (f.name === "departamento") {
+      return {
+        ...f,
+        type: "select",
+        options: depts,
+        required: f.required ?? true,
+      };
+    }
+    if (f.name === "municipio") {
+      return {
+        ...f,
+        type: "select",
+        // Opciones vacías: la UI filtra por departamento (cascada DIVIPOLA).
+        options: f.options?.length ? f.options : [],
+        placeholder: f.placeholder || "Seleccione departamento primero",
+        required: f.required ?? true,
+      };
+    }
+    return f;
+  });
+}
+
 /** Ensambla un ThemeConfig con geo + campos propios + fechas/estado. */
 export function buildTheme(
   partial: Omit<ThemeConfig, "fields"> & { extraFields: FormField[] },
 ): ThemeConfig {
   return {
     ...partial,
-    fields: [...GEO_FIELDS, ...partial.extraFields, ...BASE_DATE_FIELDS],
+    fields: [
+      ...GEO_FIELDS,
+      ...partial.extraFields,
+      ...BASE_DATE_FIELDS,
+    ],
   };
 }
 
@@ -61,6 +92,6 @@ export function buildThemeFromSource(
   return {
     ...rest,
     schemaVersion,
-    fields: sourceFields,
+    fields: ensureDivipolaGeoFields(sourceFields),
   };
 }

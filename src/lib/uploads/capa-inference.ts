@@ -3,6 +3,17 @@
  * Solo rellena campos vacíos; nunca sobrescribe lo que el equipo ya puso.
  */
 import type { ThemeConfig } from "@/themes/shared/types";
+import {
+  normalizeAguaCdp,
+  normalizeAguaRc,
+  normalizeAguaTipoDeEvento,
+} from "@/themes/agua-y-saneamiento/select-options";
+import { applyProcesoKeys } from "@/themes/puentes/process-keys";
+import {
+  inferOrigenAdquisicion,
+  procesoSigla,
+} from "@/themes/puentes/asset-keys";
+import { normalizePuenteCapa } from "@/themes/puentes/capture-forms";
 
 /** Opciones oficiales de capa por tema (alineadas a fields-from-source). */
 const THEME_CAPA_HINTS: Record<
@@ -11,10 +22,14 @@ const THEME_CAPA_HINTS: Record<
 > = {
   "agua-y-saneamiento": [
     { pattern: /pago|desembolso/i, capa: "Pago / desembolso" },
-    { pattern: /bitacora|bitácora|seguimiento/i, capa: "Bitácora estado" },
-    { pattern: /modific/i, capa: "Modificación contractual" },
+    { pattern: /cdp|rc\b|cdps/i, capa: "CDPS y RC" },
+    { pattern: /estructuracion|estructuración|semana/i, capa: "Bitácora estructuración" },
+    { pattern: /lider|variables.?lider|categoriz/i, capa: "Variables líder" },
+    { pattern: /bitacora|bitácora/i, capa: "Bitácora estado" },
+    // Una sola hoja Excel `modificaciones` (plazo / forma de pago van aquí)
+    { pattern: /modific|plazo|forma.?de.?pago/i, capa: "Modificación contractual" },
     { pattern: /control/i, capa: "Control ejecución física" },
-    { pattern: /maqueta|orden|general/i, capa: "Maqueta / orden" },
+    { pattern: /alta|maqueta|orden|general/i, capa: "Alta / orden" },
   ],
   carrotanques: [
     { pattern: /suministro|viaje/i, capa: "Suministro / viajes" },
@@ -34,7 +49,11 @@ const THEME_CAPA_HINTS: Record<
   fic: [
     // vigencia por año en el hint
   ],
-  puentes: [{ pattern: /./, capa: "Inventario puente" }],
+  puentes: [
+    { pattern: /estructuracion|estructuración|contratos/i, capa: "Contrato estructuración" },
+    { pattern: /bitacora|bitácora/i, capa: "Bitácora estado" },
+    { pattern: /base\s*general|inventario|general/i, capa: "Inventario puente" },
+  ],
   "declaratoria-de-emergencia": [
     { pattern: /./, capa: "Decreto / declaratoria" },
   ],
@@ -151,9 +170,148 @@ export function prepareTrackingRow(
   if (tipo) out.tipo_registro = tipo;
   if (capa) out.capa = capa;
 
+  // Compatibilidad import Agua: Maqueta / orden → Alta / orden
+  if (theme.id === "agua-y-saneamiento") {
+    const normalize = (v: string) => {
+      if (/^maqueta\s*\/\s*orden$/i.test(v)) return "Alta / orden";
+      if (/^seguimiento\s*operativo$/i.test(v)) return "Bitácora estructuración";
+      return v;
+    };
+    if (out.tipo_registro) out.tipo_registro = normalize(String(out.tipo_registro));
+    if (out.capa) out.capa = normalize(String(out.capa));
+    // bitacora estructuracion usa "op"
+    if (!out.orden_de_proveeduria && out.op) {
+      out.orden_de_proveeduria = out.op;
+    }
+    if (out.tipo_de_evento != null && String(out.tipo_de_evento).trim()) {
+      out.tipo_de_evento = normalizeAguaTipoDeEvento(String(out.tipo_de_evento));
+    }
+    if (out.no_cdp != null && String(out.no_cdp).trim()) {
+      out.no_cdp = normalizeAguaCdp(String(out.no_cdp));
+    }
+    if (out.no_rc != null && String(out.no_rc).trim()) {
+      out.no_rc = normalizeAguaRc(String(out.no_rc));
+    }
+    // ValorOP de maqueta → valor canónico
+    if (
+      (out.valor === undefined ||
+        out.valor === null ||
+        out.valor === "" ||
+        Number(out.valor) === 0) &&
+      (out.valorop != null || out.ValorOP != null)
+    ) {
+      out.valor = out.valorop ?? out.ValorOP;
+    }
+  }
+
+  if (theme.id === "puentes") {
+    const normalizeCapa = (v: string) => normalizePuenteCapa(v) || v;
+    if (out.tipo_registro) {
+      out.tipo_registro = normalizeCapa(String(out.tipo_registro));
+    }
+    if (out.capa) out.capa = normalizeCapa(String(out.capa));
+    if (!out.id_puente && (out.ID != null || out.id != null)) {
+      out.id_puente = String(out.ID ?? out.id).trim();
+    }
+    if (
+      !out.id_puente &&
+      (out.id_unico != null ||
+        out["ID UNICO"] != null ||
+        out["Id Unico"] != null)
+    ) {
+      out.id_puente = String(
+        out.id_unico ?? out["ID UNICO"] ?? out["Id Unico"],
+      ).trim();
+    }
+    if (out.id_puente && !out.clave_seguimiento) {
+      out.clave_seguimiento = String(out.id_puente).trim();
+    }
+    const capaPuente = normalizeCapa(
+      String(out.capa ?? out.tipo_registro ?? ""),
+    );
+    /**
+     * El contrato solo entra por Estructuración (donde nace) o por Inventario
+     * (donde el activo declara de qué proceso proviene). La bitácora nunca
+     * origina un contrato: hereda el del puente al que le hace seguimiento.
+     * Sí conserva «convenio o cto» como etiqueta de filtro del Excel.
+     */
+    const puedeDeclararContrato = capaPuente !== "Bitácora estado";
+
+    // Columna Excel «convenio o cto» → convenio_o_cto (filtro de bitácora).
+    if (!out.convenio_o_cto) {
+      const looseConv = Object.entries(out).find(([k]) => {
+        const n = k.trim().toLowerCase().replace(/\s+/g, " ");
+        return (
+          n === "convenio o cto" ||
+          n === "convenio_o_cto" ||
+          n === "convenio o contrato"
+        );
+      });
+      if (looseConv && String(looseConv[1] ?? "").trim()) {
+        out.convenio_o_cto = looseConv[1];
+      }
+    }
+
+    if (puedeDeclararContrato) {
+      if (!out.contrato_convenio && out.contrato) {
+        out.contrato_convenio = out.contrato;
+      }
+      if (!out.contrato_convenio) {
+        const loose = Object.entries(out).find(
+          ([k]) => k.trim().toLowerCase() === "contrato",
+        );
+        if (loose && String(loose[1] ?? "").trim()) {
+          out.contrato_convenio = loose[1];
+        }
+      }
+      if (
+        !String(out.convenio_o_cto || "").trim() &&
+        String(out.contrato_convenio || "").trim()
+      ) {
+        out.convenio_o_cto = out.contrato_convenio;
+      }
+    } else {
+      // Se descarta el contrato del archivo: la fuente es el inventario.
+      // Se conserva convenio_o_cto como etiqueta de seguimiento del Excel.
+      const convenioSeguimiento = String(out.convenio_o_cto || "").trim();
+      delete out.contrato_convenio;
+      delete out.clave_proceso;
+      delete out.tipo_vinculo;
+      for (const key of Object.keys(out)) {
+        if (key.trim().toLowerCase() === "contrato") delete out[key];
+      }
+      if (convenioSeguimiento) out.convenio_o_cto = convenioSeguimiento;
+    }
+    if (!out.ubicacion_actual && out.lugar) {
+      out.ubicacion_actual = out.lugar;
+    }
+    if (!out.configuracion && out.segun_configuracion) {
+      out.configuracion = out.segun_configuracion;
+    }
+    if (!out.entidad_receptora && out.ente_receptor) {
+      out.entidad_receptora = out.ente_receptor;
+    }
+    Object.assign(out, applyProcesoKeys(out));
+
+    const contrato = String(out.contrato_convenio || "").trim();
+    if (contrato) {
+      const tipo = String(out.tipo_vinculo || "").trim() as
+        | "contrato"
+        | "donacion"
+        | "otro";
+      if (!String(out.origen_adquisicion || "").trim()) {
+        out.origen_adquisicion = inferOrigenAdquisicion(contrato, tipo || undefined);
+      }
+      if (!String(out.proceso_sigla || "").trim()) {
+        out.proceso_sigla = procesoSigla(contrato, tipo || undefined);
+      }
+    }
+  }
+
   const claveRaw =
     out.clave_seguimiento ??
     out.orden_de_proveeduria ??
+    out.id_puente ??
     out.placa ??
     out.serial ??
     out.no_cdp ??
@@ -180,13 +338,14 @@ export function feedingGuideForTheme(themeId: string): {
     "agua-y-saneamiento": {
       clave: "Orden de proveeduría (OP)",
       capas: [
-        "Maqueta / orden",
-        "Bitácora estado",
-        "Pago / desembolso",
-        "Control ejecución física",
+        "Alta / orden",
         "Modificación contractual",
+        "Bitácora estado",
+        "Bitácora estructuración",
+        "Pago / desembolso",
+        "CDPS y RC",
       ],
-      tip: "Una fila por OP+capa. Actualice la maqueta semanalmente; agregue bitácoras como eventos nuevos o con upsert de la misma capa.",
+      tip: "Tablas actualizables (append): modificación, bitácora, pagos, CDPS/RC y bitácora estructuración. Alta es única; la Maqueta consolida el vigente.",
     },
     carrotanques: {
       clave: "Placa",
@@ -214,9 +373,13 @@ export function feedingGuideForTheme(themeId: string): {
       tip: "Una capa por vigencia. Use upsert para actualizar el mismo CDP+año sin duplicar.",
     },
     puentes: {
-      clave: "Id / identificador del puente",
-      capas: ["Inventario puente"],
-      tip: "Base de inventario: actualice con upsert sobre la misma clave.",
+      clave: "id_puente (inventario) · clave_proceso (estructuración)",
+      capas: [
+        "Inventario puente",
+        "Bitácora estado",
+        "Contrato estructuración",
+      ],
+      tip: "Alta única por puente; bitácora y estructuración son tablas append. Tras bitácora, el inventario refleja el último estado.",
     },
     "declaratoria-de-emergencia": {
       clave: "Nº declaratoria",

@@ -8,6 +8,20 @@ import { ADMIN_EMAIL, STAFF_DOMAIN, resolveLoginEmail } from "@/lib/accounts";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+function redirectPath(url: string | undefined | null, fallback: string): string {
+  if (!url) return fallback;
+  if (url.startsWith("/")) return url;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.origin === window.location.origin) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback;
+    }
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
 function LoginForm() {
   const { login, loginWithKeycloak, user, ready, authMode } = useAuth();
   const router = useRouter();
@@ -27,13 +41,15 @@ function LoginForm() {
     setLoading(true);
     setError(null);
     const email = resolveLoginEmail(username);
-    const result = await login(email, password);
+    const result = await login(email, password, next);
     if (!result.ok) {
       setLoading(false);
       setError(result.error || "No fue posible iniciar sesión.");
       return;
     }
-    window.location.assign(result.redirectTo || next);
+    // Navegación relativa (mismo host) — evita perder cookie si AUTH_URL apunta a localhost.
+    const target = redirectPath(result.redirectTo, next);
+    window.location.assign(target.startsWith("/") ? target : next);
   }
 
   const looksLikeAdmin =
@@ -127,6 +143,19 @@ function LoginForm() {
                 required
               />
             </label>
+
+            {authMode === "demo" && process.env.NODE_ENV === "development" ? (
+              <p className="rounded-lg border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-3 py-2 text-xs text-ungrd-muted">
+                Local demo:{" "}
+                <strong className="text-ungrd-heading">admin@ungrd.gov.co</strong>{" "}
+                / <strong className="text-ungrd-heading">UNGRD2026</strong>
+                {" · "}
+                Use la misma URL del servidor (
+                <strong className="text-ungrd-heading">localhost</strong> o{" "}
+                <strong className="text-ungrd-heading">127.0.0.1</strong>, no
+                mezcle ambas).
+              </p>
+            ) : null}
 
             {error && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-ungrd-danger dark:bg-red-950/40">

@@ -99,6 +99,8 @@ export function fillFixedAliases(
       "no_declaratoria",
       "no_cdp",
       "no_rc",
+      "id_puente",
+      "clave_proceso",
       "id",
     );
     if (v !== undefined) out.clave_seguimiento = String(v).trim();

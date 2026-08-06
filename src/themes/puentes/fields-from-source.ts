@@ -1,42 +1,186 @@
 /**
- * Campos generados desde fuentes reales (maqueta / bitácora / ArcGIS).
- * NO editar a mano — regenerar: node scripts/generate-theme-fields.cjs
- * Fuente: 2025-08-19 CONSOLIDADO DE PUENTES SMD  ARCGIS DRIVE.xlsx · PUENTES (44 filas)
- * schemaVersion 3: capas + clave_seguimiento para cruces y seguimiento.
+ * Campos Puentes — puentes 2.xlsx (Base General, bitácora, Contratos Estructuracion).
+ * schemaVersion 4: multi-capa + id_puente + clave_proceso.
  */
 import type { FormField } from "../shared";
+import { applyPuentesSelectOptions } from "./select-options";
 
-export const SOURCE_FIELDS: FormField[] = [
-  { name: "tipo_registro", label: "Tipo de registro", type: "select", required: true, options: ["Inventario puente"], excelWidth: 24 },
-  { name: "capa", label: "Capa (Maqueta / Bitácora / …)", type: "select", required: true, options: ["Inventario puente"], excelWidth: 22 },
-  { name: "clave_seguimiento", label: "Clave de seguimiento (ID puente / lugar)", type: "text", excelWidth: 28 },
-  { name: "id", label: "ID puente / lugar", type: "text", excelWidth: 22 },
-  { name: "valor", label: "Valor (COP)", type: "number", excelWidth: 16 },
-  { name: "estado", label: "Estado", type: "text", excelWidth: 16 },
-  { name: "departamento", label: "DEPARTAMENTO", type: "text", excelWidth: 18 },
-  { name: "municipio", label: "MUNICIPIO", type: "text", excelWidth: 18 },
-  { name: "lugar", label: "LUGAR", type: "text", excelWidth: 18 },
-  { name: "divipola", label: "DIVIPOLA", type: "text", excelWidth: 18 },
-  { name: "entidad", label: "ENTIDAD", type: "text", excelWidth: 18 },
-  { name: "tipologia_segun_marca_y_estructura", label: "TIPOLOGIA SEGUN MARCA Y ESTRUCTURA", type: "text", excelWidth: 28 },
-  { name: "segun_configuracion", label: "SEGUN CONFIGURACION", type: "text", excelWidth: 18 },
-  { name: "latitud", label: "LATITUD", type: "number", excelWidth: 18 },
-  { name: "longitud", label: "LONGITUD", type: "number", excelWidth: 18 },
-  { name: "funcionalidad", label: "FUNCIONALIDAD", type: "text", excelWidth: 18 },
-  { name: "longitud_puente", label: "LONGITUD PUENTE", type: "number", excelWidth: 18 },
-  { name: "capacidad", label: "CAPACIDAD", type: "number", excelWidth: 18 },
-  { name: "no_beneficiarios", label: "No BENEFICIARIOS", type: "text", excelWidth: 18 },
-  { name: "estado_actual_detallado", label: "ESTADO ACTUAL DETALLADO", type: "text", excelWidth: 18 },
-  { name: "inventario_general", label: "INVENTARIO GENERAL", type: "text", excelWidth: 18 },
-  { name: "observaciones", label: "OBSERVACIONES", type: "textarea", excelWidth: 18 },
-  { name: "fecha", label: "FECHA DE INSTALACION", type: "date", excelWidth: 18 },
-  { name: "fecha_de_inicio_proceso", label: "FECHA DE INICIO PROCESO", type: "date", excelWidth: 18 },
-  { name: "fecha_de_termino_de_proceso", label: "FECHA DE TERMINO DE PROCESO", type: "date", excelWidth: 28 },
-  { name: "porcentaje_de_avance", label: "PORCENTAJE DE AVANCE", type: "number", excelWidth: 18 },
-  { name: "acrow_tolemaida", label: "ACROW TOLEMAIDA", type: "text", excelWidth: 18 },
-  { name: "bailey_tolemaida", label: "BAILEY TOLEMAIDA", type: "text", excelWidth: 18 },
-  { name: "acrow_valledupar", label: "ACROW VALLEDUPAR", type: "text", excelWidth: 18 },
-  { name: "bailey_valledupar", label: "BAILEY VALLEDUPAR", type: "text", excelWidth: 18 },
+const CAPA_OPTIONS = [
+  "Inventario puente",
+  "Bitácora estado",
+  "Contrato estructuración",
+] as const;
+
+const RAW_FIELDS: FormField[] = [
+  {
+    name: "tipo_registro",
+    label: "Tipo de registro",
+    type: "select",
+    required: true,
+    options: [...CAPA_OPTIONS],
+    excelWidth: 24,
+  },
+  {
+    name: "capa",
+    label: "Capa",
+    type: "select",
+    required: true,
+    options: [...CAPA_OPTIONS],
+    excelWidth: 22,
+  },
+  {
+    name: "clave_seguimiento",
+    label: "Clave de seguimiento (ID puente)",
+    type: "text",
+    excelWidth: 28,
+  },
+  {
+    name: "id_puente",
+    label: "ID puente",
+    type: "text",
+    excelWidth: 12,
+  },
+  /** Alias Excel Base General (puentes (1) 2.xlsx): columna «ID UNICO». */
+  { name: "id_unico", label: "ID UNICO", type: "text", excelWidth: 12 },
+  /** Alias legacy ArcGIS / Excel columna ID */
+  { name: "id", label: "ID (legacy)", type: "text", excelWidth: 12 },
+
+  // ── Llaves derivadas (calculadas, no se capturan a mano) ──
+  {
+    name: "codigo_operativo",
+    label: "Código operativo",
+    type: "text",
+    excelWidth: 18,
+  },
+  {
+    name: "numero_unidad",
+    label: "N° unidad en el proceso",
+    type: "number",
+    excelWidth: 16,
+  },
+  {
+    name: "proceso_sigla",
+    label: "Sigla del proceso",
+    type: "text",
+    excelWidth: 18,
+  },
+  {
+    name: "origen_adquisicion",
+    label: "Origen de adquisición",
+    type: "text",
+    excelWidth: 20,
+  },
+
+  // ── Inventario (Base General) ──
+  { name: "clase", label: "Clase", type: "text", excelWidth: 22 },
+  { name: "tipo", label: "Tipo", type: "text", excelWidth: 18 },
+  { name: "configuracion", label: "Configuración", type: "text", excelWidth: 18 },
+  { name: "ano_compra", label: "Año compra", type: "number", excelWidth: 12 },
+  { name: "longitud_m", label: "Longitud (m)", type: "number", excelWidth: 14 },
+  { name: "capacidad_ton", label: "Capacidad (ton)", type: "number", excelWidth: 14 },
+  {
+    name: "clasificacion_propiedad",
+    label: "Clasificación propiedad",
+    type: "text",
+    excelWidth: 22,
+  },
+  { name: "valor", label: "Valor", type: "number", excelWidth: 16 },
+  { name: "contrato_convenio", label: "Contrato / Convenio", type: "text", excelWidth: 28 },
+  /**
+   * Columna bitácora «convenio o cto» (puentes (1) 2.xlsx).
+   * Filtro raíz del seguimiento: convenio → puente → evento.
+   */
+  {
+    name: "convenio_o_cto",
+    label: "Convenio o CTO",
+    type: "text",
+    excelWidth: 28,
+  },
+  /** Texto legal largo del proceso (hoja Base General: columna "comentarios"). */
+  {
+    name: "descripcion_proceso",
+    label: "Descripción del proceso",
+    type: "textarea",
+    excelWidth: 34,
+  },
+  { name: "tipo_vinculo", label: "Tipo de vínculo", type: "text", excelWidth: 16 },
+  { name: "clave_proceso", label: "Clave proceso", type: "text", excelWidth: 28 },
+  { name: "ubicacion_actual", label: "Ubicación actual", type: "text", excelWidth: 22 },
+  { name: "region", label: "Región", type: "text", excelWidth: 14 },
+  { name: "departamento", label: "Departamento", type: "text", excelWidth: 18 },
+  { name: "municipio", label: "Municipio", type: "text", excelWidth: 18 },
+  { name: "personas_beneficiadas", label: "Personas beneficiadas", type: "number", excelWidth: 18 },
+  { name: "latitud", label: "Latitud", type: "number", excelWidth: 14 },
+  { name: "longitud", label: "Longitud", type: "number", excelWidth: 14 },
+  { name: "entidad_receptora", label: "Entidad receptora", type: "text", excelWidth: 22 },
+  { name: "estado_puente", label: "Estado puente", type: "text", excelWidth: 18 },
+  { name: "situacion_prestamo", label: "Situación de préstamo", type: "text", excelWidth: 22 },
+  {
+    name: "fecha_inicio_estado_actual",
+    label: "Fecha inicio estado actual",
+    type: "date",
+    excelWidth: 18,
+  },
+  {
+    name: "fecha_fin_estado_actual",
+    label: "Fecha fin estado actual",
+    type: "date",
+    excelWidth: 18,
+  },
+  {
+    name: "fecha_desde_ultimo_estado",
+    label: "Fecha desde último estado",
+    type: "date",
+    excelWidth: 18,
+  },
+
+  // ── Bitácora ──
+  { name: "cantidad_viajes", label: "Cantidad de viajes", type: "number", excelWidth: 14 },
+  { name: "vereda", label: "Vereda", type: "text", excelWidth: 18 },
+  { name: "ente_receptor", label: "Ente receptor", type: "text", excelWidth: 22 },
+  { name: "fecha_inicio", label: "Fecha inicio", type: "date", excelWidth: 16 },
+  { name: "fecha_fin", label: "Fecha fin", type: "date", excelWidth: 16 },
+  {
+    name: "fecha_corte_reporte",
+    label: "Fecha corte del reporte",
+    type: "date",
+    excelWidth: 18,
+  },
+  { name: "fundamento", label: "Fundamento", type: "textarea", excelWidth: 22 },
+  { name: "nombre_hoja_reporte", label: "Nombre hoja reporte", type: "text", excelWidth: 22 },
+
+  // ── Contrato estructuración ──
+  { name: "vigencia", label: "Vigencia", type: "number", excelWidth: 12 },
+  { name: "tipo_proceso", label: "Tipo proceso", type: "text", excelWidth: 16 },
+  { name: "grupo", label: "Grupo", type: "text", excelWidth: 14 },
+  { name: "etapa", label: "Etapa", type: "text", excelWidth: 18 },
+  { name: "area", label: "Área", type: "text", excelWidth: 16 },
+  { name: "responsable", label: "Responsable", type: "text", excelWidth: 22 },
+  { name: "fecha_inicio_proceso", label: "Fecha inicio", type: "date", excelWidth: 16 },
+  { name: "fecha_fin_proceso", label: "Fecha fin", type: "date", excelWidth: 16 },
+  { name: "plazo_ejecucion", label: "Plazo de ejecución", type: "date", excelWidth: 18 },
+  { name: "tiempo_etapa_dias", label: "Tiempo en etapa (días)", type: "number", excelWidth: 18 },
+  {
+    name: "tiempo_acumulado_dias",
+    label: "Tiempo acumulado (días)",
+    type: "number",
+    excelWidth: 18,
+  },
+  { name: "alerta", label: "Alerta", type: "text", excelWidth: 14 },
+  { name: "comentarios", label: "Comentarios", type: "textarea", excelWidth: 22 },
+  { name: "reporte", label: "Reporte", type: "text", excelWidth: 18 },
+
+  // ── Legacy ArcGIS (compat import) ──
+  /** Hoja Base General trae la columna "Contrato"; se copia a contrato_convenio. */
+  { name: "contrato", label: "Contrato", type: "text", excelWidth: 28 },
+  { name: "lugar", label: "LUGAR (legacy)", type: "text", excelWidth: 18 },
+  { name: "longitud_puente", label: "LONGITUD PUENTE (legacy)", type: "number", excelWidth: 18 },
+  { name: "capacidad", label: "CAPACIDAD (legacy)", type: "number", excelWidth: 18 },
+  { name: "observaciones", label: "Observaciones", type: "textarea", excelWidth: 22 },
+  { name: "fecha", label: "Fecha", type: "date", excelWidth: 16 },
+  { name: "estado", label: "Estado del proceso", type: "text", excelWidth: 18 },
 ];
 
-export const SCHEMA_VERSION = 3;
+export const SOURCE_FIELDS = applyPuentesSelectOptions(RAW_FIELDS) as FormField[];
+
+export const SCHEMA_VERSION = 5;
