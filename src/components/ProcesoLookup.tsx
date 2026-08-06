@@ -250,7 +250,7 @@ export function ProcesoLookup({
             </li>
           ) : (
             hits.map((h) => (
-              <li key={h.clave_proceso}>
+              <li key={h.clave_proceso.toLowerCase()}>
                 <button
                   type="button"
                   disabled={disabled}
@@ -261,12 +261,14 @@ export function ProcesoLookup({
                   className="w-full border-b border-ungrd-border px-3 py-2 text-left text-sm hover:bg-ungrd-surface last:border-0"
                 >
                   <span className="font-semibold">{h.contrato_convenio}</span>
-                  {catalog === "inventario" && h.puentes_vinculados ? (
+                  {catalog === "inventario" && (h.puentes_vinculados ?? 0) > 0 ? (
                     <span className="text-ungrd-muted">
                       {" "}
                       · {h.puentes_vinculados} puente
                       {h.puentes_vinculados === 1 ? "" : "s"}
                     </span>
+                  ) : catalog === "inventario" ? (
+                    <span className="text-ungrd-muted"> · sin puentes aún</span>
                   ) : null}
                   {h.descripcion_proceso && catalog === "estructuracion" ? (
                     <>

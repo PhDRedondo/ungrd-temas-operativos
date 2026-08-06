@@ -817,6 +817,8 @@ export async function searchThemeProcesos(params: {
       .orderBy(desc(records.updatedAt))
       .limit(500);
 
+    // Clave del Map siempre en minúsculas: evita duplicar el mismo contrato
+    // cuando inventario trae "9677-CV…" y estructuración busca "9677-cv…".
     const byClave = new Map<string, ProcesoLookupHit>();
     for (const row of inventarioRows) {
       const r = dbToRow(row);
@@ -828,9 +830,10 @@ export async function searchThemeProcesos(params: {
       });
       const clave = String(proc.clave_proceso || normalizeClaveProceso(contrato));
       if (!clave) continue;
-      const prev = byClave.get(clave);
+      const key = clave.toLowerCase();
+      const prev = byClave.get(key);
       if (!prev) {
-        byClave.set(clave, {
+        byClave.set(key, {
           id: String(r.id),
           contrato_convenio: contrato,
           clave_proceso: clave,
@@ -943,9 +946,10 @@ export async function searchThemeProcesos(params: {
     });
     const clave = String(proc.clave_proceso || normalizeClaveProceso(contrato));
     if (!clave) continue;
-    const prev = byClave.get(clave);
+    const key = clave.toLowerCase();
+    const prev = byClave.get(key);
     if (!prev) {
-      byClave.set(clave, {
+      byClave.set(key, {
         id: String(r.id),
         contrato_convenio: contrato,
         clave_proceso: clave,
