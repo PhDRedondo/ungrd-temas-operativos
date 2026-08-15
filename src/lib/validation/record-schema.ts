@@ -67,6 +67,7 @@ export function fillFixedAliases(
       "valor_unitario",
       "valor_total",
       "valor_pagado",
+      "valor_total_pagado",
       "valor_desemboloso",
       "valor_desembolso",
       "capacidad",
@@ -101,6 +102,7 @@ export function fillFixedAliases(
       "no_rc",
       "id_puente",
       "clave_proceso",
+      "uuid",
       "id",
     );
     if (v !== undefined) out.clave_seguimiento = String(v).trim();
@@ -234,6 +236,25 @@ function fieldZod(field: FormField): z.ZodTypeAny {
       break;
     }
     case "select": {
+      // Geo DIVIPOLA y listas de dominio Excel: no usar enum estricto
+      // (placeholders «Sin registro», variantes de mayúsculas, valores legacy).
+      if (
+        field.name === "departamento" ||
+        field.name === "municipio" ||
+        field.name === "estado" ||
+        field.name === "tenencia" ||
+        field.name === "id_vivienda" ||
+        field.name === "situacion_de_prestamo" ||
+        field.name === "region"
+      ) {
+        schema = z.preprocess(
+          (v) => (v == null ? "" : String(v).trim()),
+          field.required
+            ? z.string().min(1, `${field.label} es obligatorio`)
+            : z.string(),
+        );
+        break;
+      }
       if (field.options?.length) {
         schema = z.enum(field.options as [string, ...string[]], {
           error: `${field.label} no es un valor permitido`,
@@ -357,6 +378,7 @@ export function normalizeValidated(
       raw.no_declaratoria,
       raw.no_cdp,
       raw.no_rc,
+      raw.uuid,
       raw.id,
     ].find((v) => v !== undefined && v !== null && String(v).trim() !== "");
     if (key !== undefined) payload.clave_seguimiento = String(key).trim();

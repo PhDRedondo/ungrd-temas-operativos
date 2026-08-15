@@ -19,6 +19,12 @@ import {
 } from "@/lib/uploads/process-excel";
 import { syncAguaMaquetaFromLatest } from "@/themes/agua-y-saneamiento/maqueta-sync";
 import { syncPuenteInventarioFromLatest } from "@/themes/puentes/puente-sync";
+import { syncCarrotanqueMaquetaFromLatest } from "@/themes/carrotanques/maqueta-sync";
+import {
+  syncBmaqConvenioFromBitacora,
+  syncBmaqDetalleFromEntrega,
+} from "@/themes/banco-de-maquinaria/maqueta-sync";
+import { normalizeBmaqCapa } from "@/themes/banco-de-maquinaria/capture-forms";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
@@ -128,6 +134,76 @@ async function processRows(params: {
       for (const idPuente of ids) {
         await syncPuenteInventarioFromLatest({
           idPuente,
+          userId: params.userId,
+          sourceCapa: "carga Excel",
+        });
+      }
+    }
+
+    if (params.themeId === "carrotanques") {
+      const placas = new Set<string>();
+      for (const row of inserted) {
+        const p = String(
+          (row as Record<string, unknown>).placa ||
+            (row as Record<string, unknown>).clave_seguimiento ||
+            "",
+        ).trim();
+        if (p) placas.add(p);
+      }
+      for (const item of batch.classified) {
+        const payload = (item.item.payload || {}) as Record<string, unknown>;
+        const p = String(payload.placa || payload.clave_seguimiento || "").trim();
+        if (p) placas.add(p);
+      }
+      for (const placa of placas) {
+        await syncCarrotanqueMaquetaFromLatest({
+          placa,
+          userId: params.userId,
+          sourceCapa: "carga Excel",
+        });
+      }
+    }
+
+    if (params.themeId === "banco-de-maquinaria") {
+      const convenios = new Set<string>();
+      const serials = new Set<string>();
+      const consider = (
+        payload: Record<string, unknown>,
+        capaHint?: string,
+      ) => {
+        const capa = normalizeBmaqCapa(
+          String(capaHint || payload.tipo_registro || payload.capa || ""),
+        );
+        if (capa === "Bitácora convenio") {
+          const c = String(
+            payload.no_convenio || payload.clave_seguimiento || "",
+          ).trim();
+          if (c) convenios.add(c);
+        }
+        if (capa === "Entrega a beneficiario") {
+          const s = String(
+            payload.serial || payload.clave_seguimiento || "",
+          ).trim();
+          if (s) serials.add(s);
+        }
+      };
+      for (const row of inserted) {
+        consider(row as Record<string, unknown>);
+      }
+      for (const item of batch.classified) {
+        const payload = (item.item.payload || {}) as Record<string, unknown>;
+        consider(payload);
+      }
+      for (const noConvenio of convenios) {
+        await syncBmaqConvenioFromBitacora({
+          noConvenio,
+          userId: params.userId,
+          sourceCapa: "carga Excel",
+        });
+      }
+      for (const serial of serials) {
+        await syncBmaqDetalleFromEntrega({
+          serial,
           userId: params.userId,
           sourceCapa: "carga Excel",
         });

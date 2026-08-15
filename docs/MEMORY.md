@@ -55,6 +55,28 @@ Todo registro lleva `tipo_registro`, `capa`, `clave_seguimiento` para cruces, up
 ### ADR-009 · Piloto contractual Agua y Saneamiento
 Contrato 9677: foco en maqueta como matriz + satélites (bitácora, pagos, mods, CDP/RC) con inferencia de capa.
 
+### ADR-010 · Medallón = 1 URL + schema.tema + tabla por hoja + JOIN intra-schema
+Equipo de datos: una connection string `medallion_reader`. Cada hoja es
+jalable sola con el **mismo nombre Excel** (`agua.general`, `agua.bitacora`,
+`puentes.base_general_puentes`, `puentes.bitacora` con `convenio_o_cto`, …).
+Sin `all`/`inventario`/`maqueta` inventados. Catálogo: `medallion.v_connections`.
+**JOINs solo dentro del mismo schema** (`medallion.v_join_map`):
+- Puentes: `id_puente` (bitácora↔inventario); `clave_proceso` / `convenio_o_cto` (↔contratos)
+- Agua: `orden_de_proveeduria` une satélites con `agua.general`
+No cruzar `puentes.*` con `agua.*`. Regenerar: `npm run medallion:generate` → aplicar SQL.
+Handoff colega: `docs/platform/MEDALLION-DDL-HANDOFF.md`. Prod `vbxvqctdemtnmkifrxeo`
+tiene **001+003 aplicados** (2026-08-06): `agua.general` (no `maqueta`), `v_join_map` OK.
+
+### ADR-011 · Silver físico (Agua / Puentes) sin tocar captura
+Schemas `silver_agua` / `silver_puentes`: tablas físicas con PK `record_id`,
+FKs DEFERRABLE, dim `silver_agua.orden` (absorbe OPs huérfanas), sync
+truncate+reload desde vistas Bronze. Captura y `public.records` intactos.
+Bronze/Silver = **solo datos operativos reales** (`form`/`excel`; excluye
+`seed`/`demo`/`harness`/`smoke`/`test`). Soft-delete 843 seeds en prod
+2026-08-06. Docs: `docs/platform/MEDALLION-SILVER.md`. Scripts:
+`medallion:generate-silver` · `medallion:sync-silver` · `medallion:test-silver`.
+Prod sync post-filtro: Bronze=Silver; dim orden=112, general=107.
+
 ---
 
 ## 3. Inventario técnico actual
@@ -124,6 +146,9 @@ Orden cronológico reciente (commits + trabajo contractual):
 11. **Puentes multi-capa (ago 2026)** — `schemaVersion` 4: inventario (`id_puente`) + bitácora append + estructuración por `clave_proceso`; `PuenteLookup`/`ProcesoLookup`; reimport `scripts/reimport-puentes.ts`; sync inventario vía `puente-sync.ts`.
 12. **Orden de alimentación Puentes (ago 2026)** — el proceso es la raíz: **Estructuración → Inventario → Bitácora**. Estructuración origina el proceso (`lookupOptional` en `CaptureFormConfig` + creación desde `ProcesoLookup`); el inventario exige proceso y hereda `contrato_convenio`/`clave_proceso`/`tipo_vinculo`/`descripcion_proceso`. `searchThemeProcesos` lee la capa Estructuración (inventario solo como legacy, marcado *sin etapas*). Reimport reordenado + `--seed-procesos`; `scripts/seed-procesos-estructuracion.ts` y `scripts/demo-puentes-orden.ts`.
 13. **Contrato con punto de entrada único (ago 2026)** — `contrato_convenio` solo se escribe en Estructuración (`lookupCanCreate`); en Inventario y Bitácora llega heredado y actúa como filtro raíz. `proceso-chain.ts` aplica la regla en `POST`/`PATCH` de records; `capa-inference.ts` descarta el contrato de las hojas de bitácora. Facetas jerárquicas por `FACET_LEVEL` en `puente-lookup.ts`: contrato → origen → territorio → atributos.
+14. **Banco de Maquinaria multi-capa (ago 2026)** — `schemaVersion` 6: **convenio raíz** (como Puentes); F–I editables; detalle por `serial` cuelga del convenio; sync bitácora/entrega; lookup `serial`/`convenio`.
+15. **Carrotanques multi-capa (ago 2026)** — maqueta por `placa`; bitácora→M–P/T–Z; suministro→suma Q–R–S; formularios B–J / K–L.
+16. **Subsidios de Arriendos (ago 2026)** — consolidado de envíos: identidad `uuid`; `numero_envio` + `n_orden` del archivo; ingesta Excel + formulario opcional; medallón `subsidios_arriendos.consolidado`.
 
 ### Hubs del grafo (core abstractions)
 `requireSession` · `getTheme` · `ThemeConfig`/`ThemeModule` · `RecordRow` · `process-excel` · `buildDecisionBrief` · `enrichRecordsForDecision` · `NationalCommandCenter` · `guard` (security)

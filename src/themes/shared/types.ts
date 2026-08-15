@@ -47,6 +47,7 @@ export type CaptureFormConfig = {
   /**
    * Si true, hay que buscar y seleccionar una OP del alta antes de capturar.
    * Evita reescribir datos del registro inicial.
+   * En temas por placa (Carrotanques) use `lookupBy: "placa"`.
    */
   requiresOrdenLookup?: boolean;
   /** Buscar puente del inventario antes de capturar (Puentes). */
@@ -61,6 +62,15 @@ export type CaptureFormConfig = {
   lookupCanCreate?: boolean;
   /** Capa fuente del lookup (default: formulario create-once / Alta). */
   lookupCapa?: string;
+  /**
+   * Clave de identidad del lookup compartido (`OrdenLookup`).
+   * - `orden` (default): OP / clave de proveeduría (Agua).
+   * - `placa`: placa de la maqueta (Carrotanques).
+   * - `serial`: serial del equipo (Banco de Maquinaria / detalle).
+   * - `convenio`: nº convenio o proceso (Banco de Maquinaria / bitácora).
+   * - `contrato`: orden de compra o contrato de adquisición (Detalle maquinaria).
+   */
+  lookupBy?: "orden" | "placa" | "serial" | "convenio" | "contrato";
   /** Filtros facetados para PuenteLookup (departamento, municipio, …). */
   lookupFilterFields?: string[];
   /**
@@ -74,6 +84,15 @@ export type CaptureFormConfig = {
    * Se recalculan al cambiar inputs; el input queda deshabilitado.
    */
   computedFields?: Record<string, ComputedFieldRule>;
+  /**
+   * En modo upsert con registro existente, solo estos campos viajan en el PATCH.
+   * El resto del registro (p. ej. B–J de maqueta) no se reescribe.
+   */
+  patchFieldNames?: string[];
+  /**
+   * Con registro existente (editing), estos campos se muestran deshabilitados.
+   */
+  readonlyWhenEditing?: string[];
 };
 
 export type ThemeConfig = {

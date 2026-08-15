@@ -35,6 +35,13 @@ export async function GET(req: Request, ctx: Ctx) {
   const expandPaymentOps =
     url.searchParams.get("expandPaymentOps") === "1" ||
     url.searchParams.get("expand_payment_ops") === "1";
+  const lookupBy = (url.searchParams.get("lookupBy") || "").trim() as
+    | "orden"
+    | "placa"
+    | "serial"
+    | "convenio"
+    | "contrato"
+    | "";
   const capa =
     url.searchParams.get("capa") ||
     theme.captureForms?.find((f) => f.mode === "create-once")?.capa ||
@@ -85,6 +92,7 @@ export async function GET(req: Request, ctx: Ctx) {
     capa,
     limit,
     expandPaymentOps,
+    lookupBy: lookupBy || undefined,
   });
 
   return NextResponse.json({
@@ -92,6 +100,7 @@ export async function GET(req: Request, ctx: Ctx) {
     capa,
     q,
     expandPaymentOps,
+    lookupBy: lookupBy || undefined,
     count: orders.length,
     orders,
   });

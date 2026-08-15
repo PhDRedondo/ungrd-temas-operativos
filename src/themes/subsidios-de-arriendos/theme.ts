@@ -1,28 +1,26 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SUBSIDIOS_CAPTURE_FORMS } from "./capture-forms";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Módulo autónomo del tema: Subsidios de Arriendos
- * Carpeta: src/themes/subsidios-de-arriendos/
- * Ruta app: /app/temas/subsidios-de-arriendos
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
+ * Subsidios de Arriendos — consolidado de envíos (Excel).
+ * Columnas = las del archivo. El formulario no pide uuid.
  */
-export const config = buildTheme({
-  id: "subsidios-de-arriendos",
-  name: "Subsidios de Arriendos",
-  shortName: "Arriendos",
-  description: "Apoyo de arriendo temporal a hogares damnificados.",
-  icon: "home",
-  unit: "hogares",
-  valueLabel: "Hogares",
-  extraFields: [
-      { name: "documento", label: "Documento beneficiario", type: "text", required: true },
-      { name: "meses", label: "Meses cubiertos", type: "number", required: true },
-      { name: "valor", label: "Valor mensual (COP)", type: "number", required: true },
-    ],
-});
+export const config: ThemeModule["config"] = {
+  ...buildThemeFromSource({
+    id: "subsidios-de-arriendos",
+    name: "Subsidios de Arriendos",
+    shortName: "Arriendos",
+    description:
+      "Consolidado de envíos de subsidio de arriendo (número de envío, orden, DIVIPOLA). Ingesta principal por Excel; captura puntual opcional.",
+    icon: "home",
+    unit: "hogares",
+    valueLabel: "Hogares",
+    schemaVersion: SCHEMA_VERSION,
+    sourceFields: SOURCE_FIELDS,
+  }),
+  captureForms: SUBSIDIOS_CAPTURE_FORMS,
+};
 
 const themeModule: ThemeModule = { config };
-
 export default themeModule;

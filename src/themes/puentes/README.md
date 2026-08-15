@@ -5,7 +5,7 @@
 | **ID / slug** | `puentes` |
 | **Ruta** | `/app/temas/puentes` |
 | **Carpeta** | `src/themes/puentes/` |
-| **schemaVersion** | 4 (multi-capa) |
+| **schemaVersion** | 5 (multi-capa + convenio en bitácora) |
 | **Excel fuente** | `puentes 2.xlsx` |
 
 ## Modelo operativo
@@ -17,7 +17,20 @@ de él nacen los puentes y de cada puente sus eventos.
 |---|------|--------------|-------|------------------|
 | 1 | **Contrato estructuración** | Append por etapa | `clave_proceso` (1 proceso : N puentes) | Ninguno: **aquí nace el proceso** |
 | 2 | **Inventario puente** | Alta única (`create-once`) | `id_puente` → `clave_seguimiento` | Proceso estructurado (`ProcesoLookup` obligatorio) |
-| 3 | **Bitácora estado** | Append por evento | Lookup por puente (`id_puente`) | Puente en inventario (`PuenteLookup`) |
+| 3 | **Bitácora estado** | Append por evento | Lookup por puente (`id_puente`) + `convenio_o_cto` | Puente en inventario (`PuenteLookup`) |
+
+### JOIN map (schema `puentes` — medallón)
+
+Tablas: `puentes.contratos_estructuracion` · `puentes.base_general_puentes` · `puentes.bitacora`.
+
+| Relación | Llave | Notas |
+|----------|-------|-------|
+| bitácora ↔ inventario | `id_puente` | Alt: `codigo_operativo` (ID UNICO) |
+| inventario ↔ estructuración | `clave_proceso` | Alt: `contrato_convenio` / `convenio_o_cto` |
+| bitácora ↔ estructuración | `clave_proceso` | Alt: `convenio_o_cto` (columna Excel «convenio o cto») |
+
+La bitácora **siempre** lleva `convenio_o_cto` (Excel) y hereda `contrato_convenio` /
+`clave_proceso` del puente. No se cruza con schema `agua`.
 
 ### El contrato tiene un único punto de entrada
 
@@ -63,8 +76,8 @@ mismo orden.
 | **Activo** | `id_puente` (canónica) + `codigo_operativo` (alias legible) | 1 : 1 puente | `id_puente` manual; código derivado |
 | **Evento** | `records.id` (UUID) + `fecha_inicio` | N eventos : 1 puente | Append en bitácora |
 
-- **`id_puente`** sigue siendo la llave del activo (columna `ID` del Excel). Una fila de inventario por puente.
-- **`codigo_operativo`** = `proceso_sigla` + número de unidad dentro del proceso (`DON-EEUU-03`, `CTO-9677-CV020-875-2023-07`). Nunca se escribe a mano: lo calcula `asset-keys.ts`.
+- **`id_puente`** (etiqueta UI: **ID**) es la llave corta del activo (columna Excel `ID`). Una fila de inventario por puente.
+- **`codigo_operativo`** (etiqueta UI: **ID UNICO**) corresponde a la última columna Excel `ID UNICO`; también puede derivarse como `proceso_sigla` + número de unidad (`DON-EEUU-03`). Nunca se escribe a mano: lo calcula `asset-keys.ts` o llega del import.
 - **`origen_adquisicion`**: `donacion_eeuu` | `donacion_otra` | `contrato_nacional` | `sin_definir`. Permite filtrar sin parsear el texto legal.
 - **`clave_proceso`** derivada de `contrato_convenio` + `tipo_vinculo`. Muchos puentes comparten contrato; la estructuración **no** se duplica por puente.
 

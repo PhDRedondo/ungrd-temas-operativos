@@ -1,22 +1,27 @@
 import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { BMAQ_CAPTURE_FORMS } from "./capture-forms";
 import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields-from-source";
 
 /**
- * Banco de Maquinaria — inventario, convenios, bitácora y entregas.
- * Discriminador: tipo_registro.
+ * Banco de Maquinaria — convenio/proceso (raíz) + detalle de equipos + bitácora + entrega.
+ * Como Puentes: todo nace del convenio; las máquinas se atan después (serial).
+ * Sync: `maqueta-sync.ts` (bitácora → estado convenio; entrega → ENTREGADA).
  */
-export const config = buildThemeFromSource({
-  id: "banco-de-maquinaria",
-  name: "Banco de Maquinaria",
-  shortName: "Maquinaria",
-  description:
-    "Inventario de maquinaria, convenios contractuales, bitácora de estados y entregas a beneficiarios — unidos por serial/convenio.",
-  icon: "cog",
-  unit: "equipos",
-  valueLabel: "Equipos",
-  schemaVersion: SCHEMA_VERSION,
-  sourceFields: SOURCE_FIELDS,
-});
+export const config: ThemeModule["config"] = {
+  ...buildThemeFromSource({
+    id: "banco-de-maquinaria",
+    name: "Banco de Maquinaria",
+    shortName: "Maquinaria",
+    description:
+      "Convenios o procesos de adquisición (raíz) y el detalle de maquinaria que cada uno adquiere — unidos por nº convenio / serial.",
+    icon: "cog",
+    unit: "equipos",
+    valueLabel: "Equipos",
+    schemaVersion: SCHEMA_VERSION,
+    sourceFields: SOURCE_FIELDS,
+  }),
+  captureForms: BMAQ_CAPTURE_FORMS,
+};
 
 const themeModule: ThemeModule = { config };
 export default themeModule;

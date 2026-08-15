@@ -8,6 +8,15 @@ import {
   restoreRecordVersion,
 } from "@/lib/records/versions";
 import { sanitizePuentePatch } from "@/themes/puentes/proceso-chain";
+import { sanitizeCarroMaquetaCategoriasPatch } from "@/themes/carrotanques/maqueta-mutable";
+import {
+  BMAQ_CONVENIO_MUTABLE_FIELDS,
+  BMAQ_MAQUETA_MUTABLE_FIELDS,
+  sanitizeBmaqConvenioAvancePatch,
+  sanitizeBmaqMaquetaOperativoPatch,
+} from "@/themes/banco-de-maquinaria/maqueta-mutable";
+import { normalizeCarroCapa } from "@/themes/carrotanques/capture-forms";
+import { normalizeBmaqCapa } from "@/themes/banco-de-maquinaria/capture-forms";
 
 type Ctx = { params: Promise<{ slug: string; id: string }> };
 
@@ -54,6 +63,80 @@ export async function PATCH(req: Request, ctx: Ctx) {
     // Puentes: el contrato solo se edita en la capa que lo origina.
     if (theme.id === "puentes") {
       patch = await sanitizePuentePatch(id, patch);
+    }
+    // Carrotanques: si el PATCH solo trae K–L (o mezcla), no permitir pisar B–J.
+    if (theme.id === "carrotanques") {
+      const current = await getRecordById(id);
+      const capa = normalizeCarroCapa(
+        String(
+          (current?.payload as Record<string, unknown> | undefined)
+            ?.tipo_registro ||
+            (current?.payload as Record<string, unknown> | undefined)?.capa ||
+            "",
+        ),
+      );
+      const keys = Object.keys(patch);
+      const touchesCategorias = keys.some(
+        (k) =>
+          k === "otras_categorizaciones" || k === "clasificacion_propiedad",
+      );
+      const onlyMutableOrMeta = keys.every((k) =>
+        [
+          "otras_categorizaciones",
+          "clasificacion_propiedad",
+          "placa",
+          "clave_seguimiento",
+          "tipo_registro",
+          "capa",
+        ].includes(k),
+      );
+      if (capa === "Maqueta / inventario" && touchesCategorias && onlyMutableOrMeta) {
+        patch = sanitizeCarroMaquetaCategoriasPatch(patch);
+      }
+    }
+    if (theme.id === "banco-de-maquinaria") {
+      const current = await getRecordById(id);
+      const capa = normalizeBmaqCapa(
+        String(
+          (current?.payload as Record<string, unknown> | undefined)
+            ?.tipo_registro ||
+            (current?.payload as Record<string, unknown> | undefined)?.capa ||
+            "",
+        ),
+      );
+      const keys = Object.keys(patch);
+      if (capa === "Maqueta / inventario") {
+        const mutableSet = new Set<string>([
+          ...BMAQ_MAQUETA_MUTABLE_FIELDS,
+          "serial",
+          "clave_seguimiento",
+          "tipo_registro",
+          "capa",
+        ]);
+        const touchesOperativo = keys.some((k) =>
+          (BMAQ_MAQUETA_MUTABLE_FIELDS as readonly string[]).includes(k),
+        );
+        const onlyMutableOrMeta = keys.every((k) => mutableSet.has(k));
+        if (touchesOperativo && onlyMutableOrMeta) {
+          patch = sanitizeBmaqMaquetaOperativoPatch(patch);
+        }
+      }
+      if (capa === "Convenio o proceso") {
+        const mutableSet = new Set<string>([
+          ...BMAQ_CONVENIO_MUTABLE_FIELDS,
+          "no_convenio",
+          "clave_seguimiento",
+          "tipo_registro",
+          "capa",
+        ]);
+        const touchesAvance = keys.some((k) =>
+          (BMAQ_CONVENIO_MUTABLE_FIELDS as readonly string[]).includes(k),
+        );
+        const onlyMutableOrMeta = keys.every((k) => mutableSet.has(k));
+        if (touchesAvance && onlyMutableOrMeta) {
+          patch = sanitizeBmaqConvenioAvancePatch(patch);
+        }
+      }
     }
     const result = await patchRecordWithVersion({
       theme,

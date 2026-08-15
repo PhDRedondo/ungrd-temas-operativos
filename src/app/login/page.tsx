@@ -28,7 +28,10 @@ function LoginForm() {
   const params = useSearchParams();
   const next = params.get("next") || "/app";
   const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin2026");
+  // Debe coincidir con DEMO_AUTH_PASSWORD / seed en accountsServer (no hardcode legacy).
+  const [password, setPassword] = useState(
+    process.env.NEXT_PUBLIC_DEMO_AUTH_PASSWORD || "UNGRD2026",
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -174,7 +177,7 @@ function LoginForm() {
             <div className="rounded-lg bg-ungrd-bg px-3 py-2 text-xs text-ungrd-muted">
               <p className="font-bold text-ungrd-heading">Demo</p>
               <p>
-                Admin: <code>admin</code> / <code>admin2026</code>
+                Admin: <code>admin</code> / <code>UNGRD2026</code>
               </p>
               <p>
                 Operativo: <code>operativo</code> / <code>ungrd2026</code>

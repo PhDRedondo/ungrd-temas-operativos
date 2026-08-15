@@ -4,6 +4,8 @@ import { records } from "@/db/schema";
 import type { RecordRow } from "@/lib/records/types";
 import { dbToRow } from "@/lib/records/db-to-row";
 import { aguaCapaLookupVariants } from "@/themes/agua-y-saneamiento/capture-forms";
+import { bmaqCapaLookupVariants } from "@/themes/banco-de-maquinaria/capture-forms";
+import { carroCapaLookupVariants } from "@/themes/carrotanques/capture-forms";
 
 export type OrderLookupMatchKind = "unica" | "x_pago";
 
@@ -31,7 +33,14 @@ export type OrderLookupHit = {
 };
 
 function opOf(r: RecordRow): string {
-  return String(r.orden_de_proveeduria || r.clave_seguimiento || "").trim();
+  return String(
+    r.orden_de_proveeduria ||
+      r.clave_seguimiento ||
+      r.placa ||
+      r.serial ||
+      r.no_convenio ||
+      "",
+  ).trim();
 }
 
 function paymentOpOf(r: RecordRow): string {
@@ -118,7 +127,288 @@ function capaVariants(themeId: string, capa: string): string[] {
   if (themeId === "agua-y-saneamiento") {
     return aguaCapaLookupVariants(capa);
   }
+  if (themeId === "carrotanques") {
+    return carroCapaLookupVariants(capa);
+  }
+  if (themeId === "banco-de-maquinaria") {
+    return bmaqCapaLookupVariants(capa);
+  }
   return [capa.trim()].filter(Boolean);
+}
+
+/**
+ * Detalle maquinaria: filtrar por Nº orden de compra o contrato/convenio.
+ * La lista sale de DETALLE (claves reales); se enriquece con fila Convenio si existe.
+ */
+function isRealBmaqContratoKey(raw: string): boolean {
+  const t = String(raw || "").trim();
+  if (!t) return false;
+  // Basura del Excel CONVENIOS: códigos 1..46 = departamentos
+  if (/^\d{1,3}$/.test(t)) return false;
+  if (/^(sin registro|sin municipio|n\/?a|-|—)$/i.test(t)) return false;
+  return true;
+}
+
+async function searchBmaqContratoOOrden(params: {
+  q: string;
+  limit?: number;
+}): Promise<OrderLookupHit[]> {
+  const THEME_ID = "banco-de-maquinaria";
+  const limit = Math.min(Math.max(params.limit ?? 15, 1), 40);
+  const q = params.q.trim();
+  const like = q ? `%${q.replace(/[%_]/g, "")}%` : null;
+
+  const convenioVariants = bmaqCapaLookupVariants("Convenio o proceso");
+  const detalleVariants = bmaqCapaLookupVariants("Maqueta / inventario");
+  const allVariants = [...new Set([...convenioVariants, ...detalleVariants])];
+
+  const capaFilter = sql`(
+    coalesce(${records.payload}->>'tipo_registro','') IN (${sql.join(
+      allVariants.map((v) => sql`${v}`),
+      sql`, `,
+    )})
+    OR coalesce(${records.payload}->>'capa','') IN (${sql.join(
+      allVariants.map((v) => sql`${v}`),
+      sql`, `,
+    )})
+  )`;
+
+  // Buscar por convenio / OC / empresa del DETALLE (no por catálogo de departamentos).
+  const textFilter = like
+    ? sql`(
+        coalesce(${records.payload}->>'no_convenio','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'clave_seguimiento','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'no_orden_de_compra','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'objeto','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'entidad_receptora','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'empresa','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'referencia','') ILIKE ${like}
+      )`
+    : undefined;
+
+  const fetchLimit = q ? 500 : 2500;
+  const rows = await db
+    .select()
+    .from(records)
+    .where(
+      and(
+        eq(records.themeId, THEME_ID),
+        isNull(records.deletedAt),
+        capaFilter,
+        textFilter,
+      ),
+    )
+    .orderBy(desc(records.updatedAt))
+    .limit(fetchLimit);
+
+  const mapped = rows.map(dbToRow);
+
+  const isConvenioCapa = (r: RecordRow) => {
+    const capa = String(r.tipo_registro || r.capa || "").trim().toLowerCase();
+    return convenioVariants.some((v) => v.toLowerCase() === capa);
+  };
+  const isDetalleCapa = (r: RecordRow) => {
+    const capa = String(r.tipo_registro || r.capa || "").trim().toLowerCase();
+    return detalleVariants.some((v) => v.toLowerCase() === capa);
+  };
+
+  const pick = (...vals: unknown[]) => {
+    for (const v of vals) {
+      const s = String(v ?? "").trim();
+      if (s && !/^(sin registro|sin municipio|n\/?a|-|—)$/i.test(s)) return s;
+    }
+    return "";
+  };
+
+  type Ctx = {
+    no_convenio: string;
+    no_orden_de_compra: string;
+    empresa: string;
+    entidad_receptora: string;
+    departamento: string;
+    municipio: string;
+    tipo_maquinaria: string;
+    modalidad: string;
+    estado_maquina: string;
+    estado_convenio: string;
+    referencia: string;
+    equipos: number;
+  };
+
+  const emptyCtx = (): Ctx => ({
+    no_convenio: "",
+    no_orden_de_compra: "",
+    empresa: "",
+    entidad_receptora: "",
+    departamento: "",
+    municipio: "",
+    tipo_maquinaria: "",
+    modalidad: "",
+    estado_maquina: "",
+    estado_convenio: "",
+    referencia: "",
+    equipos: 0,
+  });
+
+  const mergeCtx = (into: Ctx, r: RecordRow) => {
+    into.no_convenio = pick(into.no_convenio, r.no_convenio);
+    into.no_orden_de_compra = pick(into.no_orden_de_compra, r.no_orden_de_compra);
+    into.empresa = pick(into.empresa, r.empresa);
+    into.entidad_receptora = pick(into.entidad_receptora, r.entidad_receptora);
+    into.departamento = pick(into.departamento, r.departamento);
+    into.municipio = pick(into.municipio, r.municipio);
+    into.tipo_maquinaria = pick(into.tipo_maquinaria, r.tipo_maquinaria);
+    into.modalidad = pick(into.modalidad, r.modalidad);
+    into.estado_maquina = pick(into.estado_maquina, r.estado_maquina);
+    into.estado_convenio = pick(into.estado_convenio, r.estado_convenio);
+    into.referencia = pick(into.referencia, r.referencia);
+    into.equipos += 1;
+  };
+
+  const convenioByKey = new Map<string, RecordRow>();
+  const detalleByConvenio = new Map<string, Ctx>();
+  const detalleByOc = new Map<string, Ctx>();
+
+  for (const r of mapped) {
+    if (isConvenioCapa(r)) {
+      const key = pick(r.no_convenio, r.clave_seguimiento);
+      if (!isRealBmaqContratoKey(key)) continue;
+      const k = key.toLowerCase();
+      if (!convenioByKey.has(k)) convenioByKey.set(k, r);
+      continue;
+    }
+    if (!isDetalleCapa(r)) continue;
+    const convenio = pick(r.no_convenio);
+    const oc = pick(r.no_orden_de_compra);
+    if (isRealBmaqContratoKey(convenio)) {
+      const k = convenio.toLowerCase();
+      const ctx = detalleByConvenio.get(k) || emptyCtx();
+      mergeCtx(ctx, r);
+      detalleByConvenio.set(k, ctx);
+    }
+    if (isRealBmaqContratoKey(oc)) {
+      const k = oc.toLowerCase();
+      const ctx = detalleByOc.get(k) || emptyCtx();
+      mergeCtx(ctx, r);
+      detalleByOc.set(k, ctx);
+    }
+  }
+
+  const buildRow = (
+    convenioRow: RecordRow | undefined,
+    ctx: Ctx,
+    convenioKey: string,
+    ocKey: string,
+  ): RecordRow => {
+    const estado = pick(convenioRow?.estado, ctx.estado_convenio);
+    const expectativa = pick(
+      convenioRow?.cantidad_maquinaria_expectativa,
+      convenioRow?.cantidad_maquinaria_espectativa,
+    );
+    const entregada = pick(convenioRow?.cantidad_maquinaria_entregada);
+    return {
+      ...(convenioRow || {}),
+      no_convenio: pick(convenioKey, convenioRow?.no_convenio, ctx.no_convenio),
+      no_orden_de_compra: pick(
+        ocKey,
+        convenioRow?.no_orden_de_compra,
+        ctx.no_orden_de_compra,
+      ),
+      // Solo datos reales: convenio si existe; si no, no inventar marco.
+      empresa: pick(convenioRow?.empresa, ctx.empresa),
+      entidad_receptora: pick(convenioRow?.entidad_receptora),
+      departamento: pick(convenioRow?.departamento),
+      municipio: pick(convenioRow?.municipio),
+      tipo_maquinaria: "",
+      modalidad: pick(convenioRow?.modalidad),
+      estado_maquina: ctx.estado_maquina,
+      estado_convenio: pick(convenioRow?.estado, ctx.estado_convenio),
+      estado,
+      referencia: "",
+      objeto: pick(convenioRow?.objeto),
+      cantidad_maquinaria_expectativa: expectativa,
+      cantidad_maquinaria_entregada: entregada,
+      equipos_en_clave: ctx.equipos,
+      _from_convenio: convenioRow ? "1" : "",
+      _lista_empresa: ctx.empresa,
+      _lista_ubicacion: pick(ctx.municipio, ctx.departamento),
+    } as RecordRow;
+  };
+
+  type Cand = {
+    key: string;
+    display: string;
+    row: RecordRow;
+    kind: "convenio" | "oc";
+  };
+  const cands: Cand[] = [];
+  const seen = new Set<string>();
+
+  // 1) Claves desde DETALLE (fuente del filtro)
+  for (const [k, ctx] of detalleByConvenio) {
+    const convenio = pick(ctx.no_convenio) || k;
+    if (!isRealBmaqContratoKey(convenio)) continue;
+    const sk = `c:${convenio.toLowerCase()}`;
+    if (seen.has(sk)) continue;
+    seen.add(sk);
+    const convenioRow = convenioByKey.get(convenio.toLowerCase());
+    cands.push({
+      key: convenio,
+      display: convenio,
+      kind: "convenio",
+      row: buildRow(convenioRow, ctx, convenio, ctx.no_orden_de_compra),
+    });
+  }
+  for (const [k, ctx] of detalleByOc) {
+    const oc = pick(ctx.no_orden_de_compra) || k;
+    if (!isRealBmaqContratoKey(oc)) continue;
+    const sk = `oc:${oc.toLowerCase()}`;
+    if (seen.has(sk)) continue;
+    seen.add(sk);
+    const convenioKey = pick(ctx.no_convenio);
+    const convenioRow = convenioKey
+      ? convenioByKey.get(convenioKey.toLowerCase())
+      : undefined;
+    cands.push({
+      key: convenioKey || oc,
+      display: convenioKey ? `OC ${oc} · ${convenioKey}` : `OC ${oc}`,
+      kind: "oc",
+      row: buildRow(convenioRow, ctx, convenioKey, oc),
+    });
+  }
+
+  // 2) Convenios reales sin detalle aún (p. ej. recién dados de alta)
+  for (const [k, r] of convenioByKey) {
+    if (!isRealBmaqContratoKey(k)) continue;
+    const sk = `c:${k}`;
+    if (seen.has(sk)) continue;
+    seen.add(sk);
+    const convenio = pick(r.no_convenio, r.clave_seguimiento) || k;
+    cands.push({
+      key: convenio,
+      display: convenio,
+      kind: "convenio",
+      row: buildRow(r, emptyCtx(), convenio, ""),
+    });
+  }
+
+  cands.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "convenio" ? -1 : 1;
+    return a.display.localeCompare(b.display, "es");
+  });
+
+  const out: OrderLookupHit[] = [];
+  for (const c of cands.slice(0, limit)) {
+    const hit = toHit(c.row, { displayOp: c.display });
+    hit.orden_de_proveeduria = c.key;
+    hit.display_op = c.display;
+    // Geo del convenio (para heredar en bitácora). El listado usa _lista_ubicacion.
+    hit.departamento = String(c.row.departamento || "");
+    hit.municipio = String(c.row.municipio || "");
+    hit.objeto = String(c.row.objeto || "");
+    out.push(hit);
+  }
+  return out;
 }
 
 /**
@@ -132,7 +422,19 @@ export async function searchThemeOrders(params: {
   capa: string;
   limit?: number;
   expandPaymentOps?: boolean;
+  /** Banco Detalle: buscar por orden de compra o contrato de adquisición. */
+  lookupBy?: "orden" | "placa" | "serial" | "convenio" | "contrato";
 }): Promise<OrderLookupHit[]> {
+  if (
+    params.themeId === "banco-de-maquinaria" &&
+    (params.lookupBy === "contrato" || params.lookupBy === "convenio")
+  ) {
+    return searchBmaqContratoOOrden({
+      q: params.q,
+      limit: params.limit,
+    });
+  }
+
   const limit = Math.min(Math.max(params.limit ?? 15, 1), 40);
   const q = params.q.trim().toLowerCase();
   const variants = capaVariants(params.themeId, params.capa);
@@ -155,6 +457,8 @@ export async function searchThemeOrders(params: {
     ? sql`(
         coalesce(${records.payload}->>'orden_de_proveeduria','') ILIKE ${like}
         OR coalesce(${records.payload}->>'clave_seguimiento','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'placa','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'placa_ungrd','') ILIKE ${like}
         OR coalesce(${records.payload}->>'orden_de_proveeduria_x_pago','') ILIKE ${like}
         OR coalesce(${records.payload}->>'orden_de_proveeduria_segmentado','') ILIKE ${like}
         OR coalesce(${records.payload}->>'op2','') ILIKE ${like}
@@ -163,6 +467,14 @@ export async function searchThemeOrders(params: {
         OR coalesce(${records.payload}->>'objeto','') ILIKE ${like}
         OR coalesce(${records.payload}->>'vigencia','') ILIKE ${like}
         OR coalesce(${records.payload}->>'tipo_de_orden','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'marca','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'serial','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'no_convenio','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'no_orden_de_compra','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'no_maquina','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'referencia','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'empresa','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'entidad_receptora','') ILIKE ${like}
         OR ${records.departamento} ILIKE ${like}
         OR ${records.municipio} ILIKE ${like}
       )`
@@ -244,6 +556,9 @@ export async function findThemeRecordByOpAndCapa(params: {
   const opFilter = sql`(
     lower(trim(coalesce(${records.payload}->>'orden_de_proveeduria',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'clave_seguimiento',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'placa',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'serial',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'no_convenio',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'orden_de_proveeduria_x_pago',''))) = ${op.toLowerCase()}
   )`;
 
@@ -311,6 +626,9 @@ export async function listThemeRecordsByOpAndCapa(params: {
   const opFilter = sql`(
     lower(trim(coalesce(${records.payload}->>'orden_de_proveeduria',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'clave_seguimiento',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'placa',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'serial',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'no_convenio',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'orden_de_proveeduria_x_pago',''))) = ${op.toLowerCase()}
   )`;
 

@@ -17,8 +17,8 @@ Valida: health + DIVIPOLA · login demo · records · analytics SQL · plantilla
 2. Tema **Agua y Saneamiento** → Analítica: mapa + gráficos.  
 3. Clic en un departamento → filtra barras/pie/sankey.  
 4. Captura → formulario → guardar → Analítica actualizada.  
-5. Captura → Excel → plantilla → filas DIVIPOLA → subir.  
-6. Pestaña **Cargas Excel** / `/app/cargas`.  
+5. Carga Excel → plantilla → filas DIVIPOLA → subir.  
+6. La misma pestaña **Carga Excel** muestra la bandeja; también `/app/cargas`.  
 7. Admin → `/app/admin/permisos` (rol admin).
 
 ## Credenciales smoke

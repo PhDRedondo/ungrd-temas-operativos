@@ -24,9 +24,13 @@ export function remapRowToThemeFields(
   const byNorm = new Map<string, FormField>();
   for (const f of theme.fields) {
     byName.set(f.name, f);
-    byLabel.set(f.label.trim().toLowerCase(), f);
-    byNorm.set(normKey(f.label), f);
-    byNorm.set(normKey(f.name), f);
+    // Primera coincidencia gana: labels duplicados (p. ej. «Fecha inicio» en
+    // bitácora vs estructuración) no deben pisar el campo canónico anterior.
+    const labelKey = f.label.trim().toLowerCase();
+    if (!byLabel.has(labelKey)) byLabel.set(labelKey, f);
+    const labelNorm = normKey(f.label);
+    if (!byNorm.has(labelNorm)) byNorm.set(labelNorm, f);
+    if (!byNorm.has(normKey(f.name))) byNorm.set(normKey(f.name), f);
   }
 
   const out: Record<string, unknown> = {};
@@ -49,6 +53,133 @@ export function remapRowToThemeFields(
   if (out.valorop !== undefined && out.valor === undefined) {
     out.valor = out.valorop;
   }
+  // Observaciones: Excel a veces trae «obs» / «Observacion» (sin s)
+  if (
+    out.observaciones === undefined ||
+    out.observaciones === null ||
+    out.observaciones === ""
+  ) {
+    const obsAlias =
+      out.obs ??
+      out.OBS ??
+      out.OBSERVACION ??
+      out.Observacion ??
+      out.observacion ??
+      out["Observaciones"] ??
+      out["OBSERVACION"];
+    if (obsAlias !== undefined && obsAlias !== null && obsAlias !== "") {
+      out.observaciones = obsAlias;
+    }
+  }
+
+  // Carrotanques: cabeceras cortas de Bitácora / SUMINISTRO DEF
+  if (theme.id === "carrotanques") {
+    if (!String(out.fecha_inicio_estado_actual || "").trim()) {
+      const v =
+        out["Fecha Inicio"] ??
+        out.fecha_inicio ??
+        out.Fecha_Inicio ??
+        out["fecha inicio"];
+      if (v != null && String(v).trim()) out.fecha_inicio_estado_actual = v;
+    }
+    if (!String(out.fech_fin_estado_actual || "").trim()) {
+      const v = out["Fecha Fin"] ?? out.fecha_fin ?? out.Fecha_Fin;
+      if (v != null && String(v).trim()) out.fech_fin_estado_actual = v;
+    }
+    if (!String(out.estado || "").trim()) {
+      const v =
+        out["Estado Carrotanque"] ??
+        out["Estado CARROTANQUE"] ??
+        out.estado_carrotanque ??
+        out.Estado_Carrotanque;
+      if (v != null && String(v).trim()) out.estado = v;
+    }
+    if (!String(out.ente_receptor || "").trim()) {
+      const v = out["Ente receptor"] ?? out.ente_receptor ?? out["Entidad Receptora"];
+      if (v != null && String(v).trim()) out.ente_receptor = v;
+    }
+    if (!String(out.situacion_de_prestamo || "").trim()) {
+      const v =
+        out["Situación DE PRESTAMO"] ??
+        out["Situación de Prestamo"] ??
+        out.situacion_de_prestamo;
+      if (v != null && String(v).trim()) out.situacion_de_prestamo = v;
+    }
+  }
+
+  // Banco de Maquinaria: cabeceras oficiales de las 4 hojas
+  if (theme.id === "banco-de-maquinaria") {
+    if (!String(out.no_convenio || "").trim()) {
+      const v =
+        out["NO CONVENIO O PROCESO"] ??
+        out.no_convenio_o_proceso ??
+        out.n_convenio_o_proceso ??
+        out["NO CONVENIO"] ??
+        out.NO_CONVENIO ??
+        out["CONTRATO DE ADQUISICION O CONVENIO"] ??
+        out["CONTRATO DE ADQUISICIÓN O CONVENIO"] ??
+        out.contrato_de_adquisicion_o_convenio;
+      if (v != null && String(v).trim()) out.no_convenio = v;
+    }
+    if (!String(out.estado_maquina || "").trim()) {
+      const v =
+        out["ESTADO MAQUINA"] ??
+        out.estado_maquinaria ??
+        out.ESTADO_MAQUINA ??
+        out["Estado Maquina"];
+      if (v != null && String(v).trim()) out.estado_maquina = v;
+    }
+    if (!String(out.estado_convenio || "").trim()) {
+      const v =
+        out["ESTADO CONVENIO"] ??
+        out.ESTADO_CONVENIO ??
+        out["Estado Convenio"];
+      if (v != null && String(v).trim()) out.estado_convenio = v;
+    }
+    // Si no hay estado genérico, usar el de máquina/convenio (evita default Programado).
+    if (!String(out.estado || "").trim() || String(out.estado).trim() === "Programado") {
+      const v = out.estado_maquina || out.estado_convenio;
+      if (v != null && String(v).trim()) out.estado = v;
+    }
+    if (!String(out.valor_total || "").trim()) {
+      const v = out["VALOR TOTAL"] ?? out.valor_sin_iva ?? out.VALOR_TOTAL;
+      if (v != null && String(v).trim()) out.valor_total = v;
+    }
+    if (!String(out.cantidad_maquinaria_expectativa || "").trim()) {
+      const v =
+        out.cantidad_maquinaria_espectativa ??
+        out["CANTIDAD MAQUINARIA EXPECTATIVA"] ??
+        out["CANTIDAD MAQUINARIA ESPECTATIVA"];
+      if (v != null && String(v).trim()) out.cantidad_maquinaria_expectativa = v;
+    }
+    if (!String(out.fecha_de_estado || "").trim()) {
+      const v = out["FECHA DE ESTADO"] ?? out.fecha_estado;
+      if (v != null && String(v).trim()) out.fecha_de_estado = v;
+    }
+    if (!String(out.entidad_receptora || "").trim()) {
+      const v =
+        out["Entidad Receptora"] ??
+        out["ENTIDAD RECEPTORA"] ??
+        out.entidad_receptora;
+      if (v != null && String(v).trim()) out.entidad_receptora = v;
+    }
+    // Tiempo de ejecución: "12 meses" / "18 meses" → número de meses
+    if (
+      out.tiempo_de_ejecucion !== undefined &&
+      out.tiempo_de_ejecucion !== null &&
+      out.tiempo_de_ejecucion !== ""
+    ) {
+      const raw = String(out.tiempo_de_ejecucion).trim();
+      const m = raw.match(/(\d+(?:[.,]\d+)?)/);
+      if (m) out.tiempo_de_ejecucion = Number(m[1]!.replace(",", "."));
+    }
+    // Año modelo: Excel suele traer número; el campo es select (string).
+    if (out.ano_modelo !== undefined && out.ano_modelo !== null && out.ano_modelo !== "") {
+      const y = String(out.ano_modelo).trim().replace(/\.0$/, "");
+      if (/^\d{4}$/.test(y)) out.ano_modelo = y;
+    }
+  }
+
   return out;
 }
 

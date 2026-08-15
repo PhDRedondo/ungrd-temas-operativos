@@ -122,7 +122,8 @@ export async function syncPuenteInventarioFromLatest(params: {
     put(patch, "departamento", bitacora.departamento);
     put(patch, "municipio", bitacora.municipio);
     put(patch, "fecha_desde_ultimo_estado", bitacora.fecha_inicio || bitacora.fecha);
-    put(patch, "estado", bitacora.estado_puente || bitacora.estado);
+    // No pisar `estado` (columna Excel Base General: Instalado/Asignado/Disponible).
+    // Es distinta de `estado_puente` (Operativo/En bodega).
   }
 
   if (!Object.keys(patch).length) return { ok: true, changedFields: [] };

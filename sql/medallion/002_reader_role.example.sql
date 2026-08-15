@@ -1,0 +1,33 @@
+-- Ejemplo: rol solo-lectura para el equipo medallón.
+-- NO ejecutar tal cual en prod sin cambiar password y host.
+-- Revisar políticas de red (IP allowlist / VPN) antes de abrir.
+
+-- BEGIN;
+--
+-- CREATE ROLE medallion_reader WITH
+--   LOGIN
+--   PASSWORD 'CAMBIAR_PASSWORD_FUERTE'
+--   NOSUPERUSER
+--   NOCREATEDB
+--   NOCREATEROLE
+--   NOINHERIT;
+--
+-- GRANT USAGE ON SCHEMA public TO medallion_reader;
+-- GRANT USAGE ON SCHEMA medallion TO medallion_reader;
+--
+-- GRANT SELECT ON ALL TABLES IN SCHEMA public TO medallion_reader;
+-- GRANT SELECT ON ALL TABLES IN SCHEMA medallion TO medallion_reader;
+--
+-- -- Futuras tablas
+-- ALTER DEFAULT PRIVILEGES IN SCHEMA public
+--   GRANT SELECT ON TABLES TO medallion_reader;
+-- ALTER DEFAULT PRIVILEGES IN SCHEMA medallion
+--   GRANT SELECT ON TABLES TO medallion_reader;
+--
+-- -- Opcional: denegar tablas sensibles de IAM app
+-- REVOKE SELECT ON TABLE public.users FROM medallion_reader;
+-- REVOKE SELECT ON TABLE public.user_theme_access FROM medallion_reader;
+--
+-- COMMIT;
+
+SELECT 'Edite y descomente este archivo antes de aplicarlo' AS aviso;

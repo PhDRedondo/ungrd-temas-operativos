@@ -7,25 +7,45 @@
 | **Clave** | `orden_de_proveeduria` |
 | **schemaVersion** | 7 |
 
+## JOIN map (schema `agua` — medallón)
+
+Todas las hojas se unen por **`orden_de_proveeduria`** (OP). Hub: `agua.general`.
+
+```text
+agua.general ──OP──► bitacora | pagos | cdps_y_rc | modificaciones |
+                     bitacora_estructuracion | control_y_seguimiento_detalle_m |
+                     variables_lider
+```
+
+No se cruza con schema `puentes`. Catálogo: `medallion.v_join_map` WHERE `schema_name = 'agua'`.
+
+**Lectura en Alibaba / BI:** las primeras columnas (`record_id`, `theme_id`,
+`source`, fechas, `capa`…) son el sobre técnico de `public.records`. La primera
+columna de negocio Excel es `orden_de_proveeduria`. Abrir tablas `agua.*` por
+hoja (no `agua.maqueta` legacy ni bronze crudo). Detalle:
+`docs/platform/MEDALLION-SOURCE-CATALOG.md` §0.
+
 ## Tablas actualizables (append → alimentan Maqueta)
 
 Estas hojas/formularios **sí se actualizan** con el tiempo; cada registro nuevo entra al historial:
 
-| Formulario | Capa | Fuente Excel |
-|------------|------|--------------|
-| **Modificaciones** | `Modificación contractual` | hoja `modificaciones` (incluye plazo / forma de pago) |
-| **Bitácora** | `Bitácora estado` | hoja `bitacora` (`Bitacora Agua y Saneamiento def (1).xlsx`) |
-| **Pagos** | `Pago / desembolso` | hoja `PAGOS` |
-| **CDPS y RC** | `CDPS y RC` | hoja `CDPS Y RC` |
-| **Bitácora estructuración** | `Bitácora estructuración` | hoja `bitacora estructuracion` |
+| Formulario | Capa | Fuente Excel | Tabla medallón |
+|------------|------|--------------|----------------|
+| **Modificaciones** | `Modificación contractual` | hoja `modificaciones` | `agua.modificaciones` |
+| **Bitácora** | `Bitácora estado` | hoja `bitacora` | `agua.bitacora` |
+| **Pagos** | `Pago / desembolso` | hoja `PAGOS` | `agua.pagos` |
+| **CDPS y RC** | `CDPS y RC` | hoja `CDPS Y RC` | `agua.cdps_y_rc` |
+| **Bitácora estructuración** | `Bitácora estructuración` | hoja `bitacora estructuracion` | `agua.bitacora_estructuracion` |
+
+**JOIN intra-schema:** todas las tablas Agua se unen por **`orden_de_proveeduria`** a `agua.general` (ver `medallion.v_join_map`).
 
 ## Otras capas
 
-| Formulario | Modo | Notas |
-|------------|------|-------|
-| Alta / registro inicial | create-once | Estática (A–S, V–X). Geo = depto/municipio DIVIPOLA (sin coordenadas de punto) |
-| Variables del líder | upsert | Y, Z, AA, AB + asignaciones |
-| Control ejecución física | upsert | hoja control |
+| Formulario | Modo | Fuente Excel | Tabla medallón |
+|------------|------|--------------|----------------|
+| Alta / registro inicial | create-once | hoja `General` | `agua.general` |
+| Variables del líder | upsert | columnas de General | `agua.variables_lider` |
+| Control ejecución física | upsert | hoja `control y seguimiento-detalle m` | `agua.control_y_seguimiento_detalle_m` |
 
 > **Nota:** Antes existía un formulario aparte «Modificación plazo / forma de pago». Quedó unificado en **Modificaciones**, igual que la única pestaña del Excel.
 >

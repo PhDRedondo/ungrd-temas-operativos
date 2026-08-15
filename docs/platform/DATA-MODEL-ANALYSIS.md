@@ -57,13 +57,17 @@ Al importar, `fillFixedAliases` copia la mejor clave disponible a `clave_seguimi
 | Bitácora estado | `Bitacora` | Cambios de estado / ubicación / ente receptor |
 | Suministro / viajes | `SUMINISTRO DEF` | Litros, personas y comunidades beneficiadas |
 
-### Banco de Maquinaria — 72 campos
-| Capa | Fuente | Qué representa |
-|------|--------|----------------|
-| Maqueta / inventario | `DETALLE MAQUINARIA` | Equipo físico + contrato/orden compra |
-| Convenio o proceso | `CONVENIOS O PROCESOS` | Marco contractual, aportes, responsables |
-| Bitácora convenio | `BITACORA CONVENIOS` | Cambios de estado del convenio |
-| Entrega a beneficiario | `BASE ENTREGA BOMBEROS` | Acta, pólizas, SOAT, tras entrega física |
+### Banco de Maquinaria — schemaVersion 6 (convenio raíz)
+| Capa | Fuente | Llave | Modo |
+|------|--------|-------|------|
+| Convenio o proceso | `CONVENIOS O PROCESOS` | `no_convenio` | Alta única; F–I upsert |
+| Maqueta / inventario | `DETALLE MAQUINARIA` | `serial` (cuelga del convenio) | Alta por equipo |
+| Bitácora convenio | `BITACORA CONVENIOS` | `no_convenio` | Append |
+| Entrega a beneficiario | `BASE ENTREGA BOMBEROS` | `serial` | Upsert |
+
+- **Orden:** como Puentes — nace el convenio; luego se atan las máquinas (`CONTRATO DE ADQUISICION O CONVENIO`).
+- **F–I editables:** cantidad expectativa, cantidad entregada, tiempo ejecución, fecha acta de inicio.
+- **Sync:** bitácora → estado convenio/equipos; entrega → `ENTREGADA`.
 
 ### Puentes — schemaVersion 4 (multi-capa)
 | Capa | Fuente Excel | Llave | Modo |

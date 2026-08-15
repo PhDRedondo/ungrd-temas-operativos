@@ -171,7 +171,7 @@ export function assignAssetKeys(
 /**
  * Variantes de búsqueda para un término escrito por el operador.
  * "EEUU 3", "eeuu-3", "don eeuu 03" → DON-EEUU-03
- * "ACROW-18", "BRIDGE-3", fragmento del ID único Excel → coincidencia parcial
+ * "ACROW-18", "BRIDGE-3", fragmento del ID UNICO Excel → coincidencia parcial
  */
 export function expandSearchAliases(term: string): string[] {
   const raw = String(term || "").trim();

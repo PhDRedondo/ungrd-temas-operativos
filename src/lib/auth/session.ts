@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { canAdmin, canRead, canWrite } from "@/lib/auth/roles";
 import { assertThemeRead, assertThemeWrite } from "@/lib/auth/acl";
+import { normalizeAccountRole } from "@/lib/accounts";
 import { ensureUser } from "@/lib/records/repository";
 import type { AppRole } from "@/themes/shared/types";
 import { NextResponse } from "next/server";
@@ -24,7 +25,8 @@ export async function requireSession(): Promise<
     };
   }
 
-  const role = (session.user.role || "operativo") as AppRole;
+  // Normaliza roles legacy en JWT (captura/analista/auditor) para no bloquear sesiones viejas.
+  const role = normalizeAccountRole(session.user.role || "operativo") as AppRole;
   if (!canRead(role)) {
     return {
       ok: false,

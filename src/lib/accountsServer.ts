@@ -17,7 +17,7 @@ const DATA_FILE = path.join(DATA_DIR, "demo-accounts.json");
 
 function seed(): AccountRecord[] {
   const demoPassword = (
-    process.env.DEMO_AUTH_PASSWORD || "admin2026"
+    process.env.DEMO_AUTH_PASSWORD || "UNGRD2026"
   ).trim();
   return [
     {

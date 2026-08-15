@@ -78,7 +78,7 @@ function seedAccounts(): AccountRecord[] {
     {
       email: ADMIN_EMAIL,
       name: "Administrador UNGRD",
-      password: "admin2026",
+      password: "UNGRD2026",
       role: "admin",
       canCreateAccounts: true,
       mustChangePassword: false,

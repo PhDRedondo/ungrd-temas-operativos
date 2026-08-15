@@ -19,42 +19,12 @@ import {
 } from "@/lib/analytics/recordFilters";
 
 const TABS = [
-  {
-    id: "captura",
-    short: "Captura",
-    label: "Captura de datos",
-    highlight: false,
-  },
-  {
-    id: "seguimiento",
-    short: "Excel",
-    label: "Base Excel",
-    highlight: true,
-  },
-  {
-    id: "analitica",
-    short: "Decisión",
-    label: "Centro de mando",
-    highlight: false,
-  },
-  {
-    id: "quickbi",
-    short: "QuickBI",
-    label: "QuickBI",
-    highlight: false,
-  },
-  {
-    id: "avanzado",
-    short: "Avanzado",
-    label: "Análisis avanzado",
-    highlight: false,
-  },
-  {
-    id: "cargas",
-    short: "Cargas",
-    label: "Cargas Excel",
-    highlight: false,
-  },
+  { id: "cargas", short: "Carga", label: "Carga Excel" },
+  { id: "captura", short: "Captura", label: "Captura de datos" },
+  { id: "seguimiento", short: "Base", label: "Base completa" },
+  { id: "analitica", short: "Mando", label: "Centro de mando" },
+  { id: "quickbi", short: "QuickBI", label: "QuickBI" },
+  { id: "avanzado", short: "Avanzado", label: "Análisis avanzado" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -204,30 +174,13 @@ export function ThemeWorkspace({
               }
             }}
             className={`relative shrink-0 px-3 py-3 text-sm font-extrabold transition sm:px-4 ${
-              t.highlight
-                ? tab === t.id
-                  ? "text-ungrd-heading"
-                  : "text-ungrd-heading/80 hover:text-ungrd-heading"
-                : tab === t.id
-                  ? "text-ungrd-heading"
-                  : "text-ungrd-muted hover:text-ungrd-heading"
+              tab === t.id
+                ? "text-ungrd-heading"
+                : "text-ungrd-muted hover:text-ungrd-heading"
             }`}
           >
-            {t.highlight ? (
-              <>
-                <span className="rounded-full bg-ungrd-yellow px-2.5 py-1 text-ungrd-navy sm:hidden">
-                  {t.short}
-                </span>
-                <span className="hidden rounded-full bg-ungrd-yellow px-2.5 py-1 text-ungrd-navy sm:inline">
-                  {t.label}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="sm:hidden">{t.short}</span>
-                <span className="hidden sm:inline">{t.label}</span>
-              </>
-            )}
+            <span className="sm:hidden">{t.short}</span>
+            <span className="hidden sm:inline">{t.label}</span>
             {tab === t.id && (
               <span className="absolute inset-x-2 -bottom-px h-1 rounded-full bg-ungrd-yellow" />
             )}
@@ -248,11 +201,23 @@ export function ThemeWorkspace({
         </p>
       ) : null}
 
+      {!loading && tab === "cargas" && (
+        <div className="space-y-6">
+          <CapturePanel
+            theme={theme}
+            records={records}
+            onSaved={bump}
+            variant="excel"
+          />
+          <UploadsInbox key={`inbox-${version}`} themeId={theme.id} compact />
+        </div>
+      )}
       {!loading && tab === "captura" && (
         <CapturePanel
           theme={theme}
           records={records}
           onSaved={bump}
+          variant="form"
         />
       )}
       {!loading && tab === "seguimiento" && theme.captureForms?.length ? (
@@ -267,7 +232,7 @@ export function ThemeWorkspace({
                   : "text-ungrd-muted hover:text-ungrd-heading"
               }`}
             >
-              Base completa (Excel)
+              Vista Excel
             </button>
             <button
               type="button"
@@ -322,9 +287,6 @@ export function ThemeWorkspace({
         />
       )}
       {!loading && tab === "quickbi" && <QuickBIPanel theme={theme} />}
-      {!loading && tab === "cargas" && (
-        <UploadsInbox key={`inbox-${version}`} themeId={theme.id} compact />
-      )}
     </div>
   );
 }
