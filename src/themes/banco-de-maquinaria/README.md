@@ -5,27 +5,33 @@
 | **ID / slug** | `banco-de-maquinaria` |
 | **Ruta** | `/app/temas/banco-de-maquinaria` |
 | **Carpeta** | `src/themes/banco-de-maquinaria/` |
+| **schemaVersion** | 6 |
 
-## Trabajo autónomo
+## Modelo (como Puentes)
 
-1. Cree una rama: `feat/banco-de-maquinaria-descripcion`
-2. Edite **solo** archivos dentro de esta carpeta (más el registro si es tema nuevo).
-3. Abra un PR enfocado a este tema.
+Todo nace del **convenio o proceso** (`CONTRATO DE ADQUISICIÓN O CONVENIO`).  
+Cada convenio adquiere varias máquinas en **Detalle maquinaria**.
+
+| Orden | Capa | Hoja | Llave | Modo |
+|------:|------|------|-------|------|
+| 1 | Convenio o proceso | `CONVENIOS O PROCESOS` | `no_convenio` | Alta única |
+| 2 | Maqueta / inventario | `DETALLE MAQUINARIA` | `serial` | Alta por equipo (lookup convenio) |
+| 3 | Bitácora convenio | `BITACORA CONVENIOS` | `no_convenio` | Append |
+
+## Sync
+
+1. **Bitácora** → último `estado` (+ comentario) del convenio y `estado_convenio` en equipos. Departamento/municipio se heredan del convenio y no se pisan.
 
 ## Archivos
 
-- `theme.ts` — configuración del tema (campos de captura, textos, icono).
-- `index.ts` — reexporta el módulo.
-- `README.md` — esta guía.
+- `theme.ts` · `fields-from-source.ts` · `capture-forms.ts`
+- `maqueta-mutable.ts` · `maqueta-sync.ts` · `select-options.ts`
 
-## Extensiones futuras (opcional en esta carpeta)
+## Importar
 
-- `demo.ts` — generador de datos demo propio.
-- `rules.ts` — validaciones de negocio.
-- `components/` — UI específica del tema (si diverge del shell compartido).
-
-## No modificar (núcleo compartido)
-
-- `src/components/*` — shell, captura genérica, analítica.
-- `src/themes/shared/*` — tipos y `buildTheme`.
-- Otros directorios bajo `src/themes/<otro-tema>/`.
+```bash
+npx tsx scripts/import-source-file.ts banco-de-maquinaria "~/Downloads/Banco de Maquinaria.xlsx" "CONVENIOS"
+npx tsx scripts/import-source-file.ts banco-de-maquinaria "~/Downloads/Banco de Maquinaria.xlsx" "DETALLE"
+npx tsx scripts/import-source-file.ts banco-de-maquinaria "~/Downloads/Banco de Maquinaria.xlsx" "BITACORA"
+npx tsx scripts/import-source-file.ts banco-de-maquinaria "~/Downloads/Banco de Maquinaria.xlsx" "ENTREGA"
+```

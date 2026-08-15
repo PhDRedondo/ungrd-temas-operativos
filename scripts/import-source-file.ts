@@ -21,6 +21,13 @@ import {
   type RowValidationError,
   type ValidatedRecord,
 } from "../src/lib/validation/record-schema";
+import { prepareTrackingRow } from "../src/lib/uploads/capa-inference";
+import { syncCarrotanqueMaquetaFromLatest } from "../src/themes/carrotanques/maqueta-sync";
+import {
+  syncBmaqConvenioFromBitacora,
+  syncBmaqDetalleFromEntrega,
+} from "../src/themes/banco-de-maquinaria/maqueta-sync";
+import { normalizeBmaqCapa } from "../src/themes/banco-de-maquinaria/capture-forms";
 
 function parseSheet(
   filePath: string,
@@ -126,12 +133,12 @@ async function main() {
           : /control/i.test(sheetHint || "")
             ? "Control ejecución física"
             : "Maqueta / orden",
-    "banco-de-maquinaria": /convenio/i.test(sheetHint || "")
-      ? "Convenio o proceso"
+    "banco-de-maquinaria": /bitacora/i.test(sheetHint || "")
+      ? "Bitácora convenio"
       : /entrega/i.test(sheetHint || "")
         ? "Entrega a beneficiario"
-        : /bitacora/i.test(sheetHint || "")
-          ? "Bitácora convenio"
+        : /convenio|proceso/i.test(sheetHint || "")
+          ? "Convenio o proceso"
           : "Maqueta / inventario",
     puentes: "Inventario puente",
     "obras-por-impuestos": "Convenio obra por impuesto",
@@ -140,6 +147,7 @@ async function main() {
       const y = (sheetHint || "").match(/(20\d{2})/);
       return y ? `Transferencia FIC ${y[1]}` : "Transferencia FIC";
     })(),
+    "subsidios-de-arriendos": "Consolidado / envío",
   };
 
   rawRows.forEach((raw, idx) => {
@@ -166,6 +174,7 @@ async function main() {
       mapped.no_cdp,
       mapped.no_rc,
       mapped.clave_seguimiento,
+      mapped.uuid,
       mapped.id,
     ].some((v) => v != null && String(v).trim() !== "");
     const hasDept =
@@ -188,10 +197,16 @@ async function main() {
         mapped.no_declaratoria,
         mapped.no_cdp,
         mapped.no_rc,
+        mapped.uuid,
         mapped.id,
       ].find((v) => v != null && String(v).trim() !== "");
       if (key != null) mapped.clave_seguimiento = String(key).trim();
     }
+
+    Object.assign(
+      mapped,
+      prepareTrackingRow(theme, mapped, { hint: sheetHint || themeId }),
+    );
 
     const result = validateRow(theme, mapped, idx + 2);
     if (result.ok) accepted.push(result.data);
@@ -213,6 +228,68 @@ async function main() {
   console.log(
     `✓ Import ${themeId}: insertados=${inserted.length} duplicados=${duplicates} rechazados=${errors.length}`,
   );
+
+  if (themeId === "carrotanques" && inserted.length) {
+    const placas = new Set<string>();
+    for (const row of inserted) {
+      const p = String(
+        (row as Record<string, unknown>).placa ||
+          (row as Record<string, unknown>).clave_seguimiento ||
+          "",
+      ).trim();
+      if (p) placas.add(p);
+    }
+    let synced = 0;
+    for (const placa of placas) {
+      const r = await syncCarrotanqueMaquetaFromLatest({
+        placa,
+        userId,
+        sourceCapa: sheetHint || "import",
+      });
+      if (r.ok) synced++;
+    }
+    console.log(`✓ Sync maqueta carrotanques: placas=${placas.size} ok=${synced}`);
+  }
+
+  if (themeId === "banco-de-maquinaria" && inserted.length) {
+    const convenios = new Set<string>();
+    const serials = new Set<string>();
+    for (const row of inserted) {
+      const r = row as Record<string, unknown>;
+      const capa = normalizeBmaqCapa(String(r.tipo_registro || r.capa || ""));
+      if (capa === "Bitácora convenio") {
+        const c = String(r.no_convenio || r.clave_seguimiento || "").trim();
+        if (c) convenios.add(c);
+      }
+      if (capa === "Entrega a beneficiario") {
+        const s = String(r.serial || r.clave_seguimiento || "").trim();
+        if (s) serials.add(s);
+      }
+    }
+    let syncedC = 0;
+    let syncedS = 0;
+    for (const noConvenio of convenios) {
+      const r = await syncBmaqConvenioFromBitacora({
+        noConvenio,
+        userId,
+        sourceCapa: sheetHint || "import",
+      });
+      if (r.ok) syncedC++;
+    }
+    for (const serial of serials) {
+      const r = await syncBmaqDetalleFromEntrega({
+        serial,
+        userId,
+        sourceCapa: sheetHint || "import",
+      });
+      if (r.ok) syncedS++;
+    }
+    if (convenios.size || serials.size) {
+      console.log(
+        `✓ Sync bmaq: convenios=${convenios.size} ok=${syncedC} · entregas=${serials.size} ok=${syncedS}`,
+      );
+    }
+  }
 }
 
 main()

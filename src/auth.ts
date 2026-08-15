@@ -113,8 +113,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, account, profile }) {
       if (user) {
         token.sub = user.id;
-        token.role = user.role || "operativo";
-        token.roles = user.roles || [token.role];
+        token.role = asAppRole(user.role || "operativo");
+        token.roles = (user.roles || [token.role]).map((r) => asAppRole(r));
+      } else if (token.role) {
+        // Sesiones JWT antiguas (captura/analista/auditor) → roles actuales
+        token.role = asAppRole(token.role);
+        token.roles = (token.roles || [token.role]).map((r) => asAppRole(r));
       }
       if (account?.provider === "keycloak" && profile) {
         const roles = extractKeycloakRoles(profile as Record<string, unknown>);
@@ -129,10 +133,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = String(token.sub || "");
-        session.user.role = (token.role as AppRole) || "operativo";
-        session.user.roles = (token.roles as AppRole[]) || [
+        session.user.role = asAppRole(token.role || "operativo");
+        session.user.roles = ((token.roles as AppRole[]) || [
           session.user.role,
-        ];
+        ]).map((r) => asAppRole(r));
       }
       session.accessToken = token.accessToken;
       return session;

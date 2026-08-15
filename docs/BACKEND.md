@@ -86,7 +86,7 @@ Usuarios de prueba (realm `ungrd`):
 - Sin filas ACL + `ACL_STRICT=false` (local): acceso amplio según rol.
 - Con filas ACL: solo esos temas.
 - UI admin: `/app/admin/permisos`
-- Bandeja: `/app/cargas` y pestaña “Cargas Excel” en cada tema.
+- Bandeja: `/app/cargas` y pestaña “Carga Excel” en cada tema.
 
 ## Modelo
 

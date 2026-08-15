@@ -30,25 +30,28 @@ const RAW_FIELDS: FormField[] = [
   },
   {
     name: "clave_seguimiento",
-    label: "Clave de seguimiento (ID puente)",
+    label: "Clave de seguimiento (ID)",
     type: "text",
     excelWidth: 28,
   },
   {
     name: "id_puente",
-    label: "ID puente",
+    label: "ID",
     type: "text",
     excelWidth: 12,
   },
-  /** Alias Excel Base General (puentes (1) 2.xlsx): columna «ID UNICO». */
-  { name: "id_unico", label: "ID UNICO", type: "text", excelWidth: 12 },
-  /** Alias legacy ArcGIS / Excel columna ID */
-  { name: "id", label: "ID (legacy)", type: "text", excelWidth: 12 },
+  /**
+   * Alias del ID corto (Excel columna «ID» / primera columna ID).
+   * No es la última columna «ID UNICO» — esa va en `codigo_operativo`.
+   */
+  { name: "id_unico", label: "ID", type: "text", excelWidth: 12 },
+  /** Alias legacy ArcGIS / Excel columna ID (mismo valor corto que `id_puente`). */
+  { name: "id", label: "ID", type: "text", excelWidth: 12 },
 
   // ── Llaves derivadas (calculadas, no se capturan a mano) ──
   {
     name: "codigo_operativo",
-    label: "ID único operativo",
+    label: "ID UNICO",
     type: "text",
     excelWidth: 36,
   },
@@ -89,10 +92,11 @@ const RAW_FIELDS: FormField[] = [
   /**
    * Columna bitácora «convenio o cto» (puentes (1) 2.xlsx).
    * Filtro raíz del seguimiento: convenio → puente → evento.
+   * Label = encabezado Excel exacto.
    */
   {
     name: "convenio_o_cto",
-    label: "Convenio o CTO",
+    label: "convenio o cto",
     type: "text",
     excelWidth: 28,
   },
@@ -156,8 +160,9 @@ const RAW_FIELDS: FormField[] = [
   { name: "etapa", label: "Etapa", type: "text", excelWidth: 18 },
   { name: "area", label: "Área", type: "text", excelWidth: 16 },
   { name: "responsable", label: "Responsable", type: "text", excelWidth: 22 },
-  { name: "fecha_inicio_proceso", label: "Fecha inicio", type: "date", excelWidth: 16 },
-  { name: "fecha_fin_proceso", label: "Fecha fin", type: "date", excelWidth: 16 },
+  /** Labels distintos de bitácora: si ambos dicen «Fecha inicio», el Excel pisa fecha_inicio. */
+  { name: "fecha_inicio_proceso", label: "Fecha inicio proceso", type: "date", excelWidth: 16 },
+  { name: "fecha_fin_proceso", label: "Fecha fin proceso", type: "date", excelWidth: 16 },
   { name: "plazo_ejecucion", label: "Plazo de ejecución", type: "date", excelWidth: 18 },
   { name: "tiempo_etapa_dias", label: "Tiempo en etapa (días)", type: "number", excelWidth: 18 },
   {
@@ -178,7 +183,8 @@ const RAW_FIELDS: FormField[] = [
   { name: "capacidad", label: "CAPACIDAD (legacy)", type: "number", excelWidth: 18 },
   { name: "observaciones", label: "Observaciones", type: "textarea", excelWidth: 22 },
   { name: "fecha", label: "Fecha", type: "date", excelWidth: 16 },
-  { name: "estado", label: "Estado del proceso", type: "text", excelWidth: 18 },
+  /** Excel Base General: columna «estado» (distinta de «estado_puente»). */
+  { name: "estado", label: "Estado", type: "text", excelWidth: 18 },
 ];
 
 export const SOURCE_FIELDS = applyPuentesSelectOptions(RAW_FIELDS) as FormField[];

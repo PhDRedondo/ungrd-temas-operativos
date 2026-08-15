@@ -30,6 +30,20 @@ function pick<T>(rand: () => number, arr: readonly T[]): T {
 }
 
 async function main() {
+  const dbUrl = process.env.DATABASE_URL || "";
+  const forceSeed = process.env.ALLOW_PROD_SEED === "1";
+  if (
+    !forceSeed &&
+    /supabase|pooler\.supabase|amazonaws\.com/i.test(dbUrl) &&
+    !/127\.0\.0\.1|localhost/i.test(dbUrl)
+  ) {
+    console.error(
+      "Abortado: seed demo no debe correr contra Postgres remoto/prod.\n" +
+        "Usa DB local, o ALLOW_PROD_SEED=1 solo si sabes lo que haces.",
+    );
+    process.exit(1);
+  }
+
   console.log("→ Sincronizando catálogo de temas…");
   for (const theme of THEMES) {
     await upsertThemeCatalog(theme);

@@ -331,6 +331,14 @@ export async function runPuentesReimport(params: {
         mapped.descripcion_proceso = mapped.comentarios;
         delete mapped.comentarios;
       }
+      // Excel «Estado» (Instalado/Asignado/…) ≠ «Estado PUENTE»
+      if (!String(mapped.estado || "").trim()) {
+        const estadoExcel =
+          mapped.Estado || mapped.ESTADO || mapped["estado"];
+        if (estadoExcel != null && String(estadoExcel).trim()) {
+          mapped.estado = String(estadoExcel).trim();
+        }
+      }
       const contrato = String(
         mapped.contrato_convenio || mapped.contrato || "",
       ).trim();
@@ -402,6 +410,24 @@ export async function runPuentesReimport(params: {
         mapped.convenio_o_cto || mapped["convenio o cto"] || "",
       ).trim();
       if (convenioExcel) mapped.convenio_o_cto = convenioExcel;
+
+      // Labels duplicados «Fecha inicio/fin» podían caer en *_proceso.
+      if (!String(mapped.fecha_inicio || "").trim() && mapped.fecha_inicio_proceso) {
+        mapped.fecha_inicio = mapped.fecha_inicio_proceso;
+      }
+      if (!String(mapped.fecha_fin || "").trim() && mapped.fecha_fin_proceso) {
+        mapped.fecha_fin = mapped.fecha_fin_proceso;
+      }
+      if (
+        !String(mapped.observaciones || "").trim() &&
+        (mapped.fundamento || mapped.comentarios || mapped.Observaciones)
+      ) {
+        mapped.observaciones =
+          mapped.observaciones ||
+          mapped.fundamento ||
+          mapped.comentarios ||
+          mapped.Observaciones;
+      }
 
       const inv = inventarioCtx.get(idp.toLowerCase());
       if (inv?.departamento) {

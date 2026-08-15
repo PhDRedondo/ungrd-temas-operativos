@@ -88,7 +88,7 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "estructuracion",
     label: "1 · Estructuración del proceso",
     description:
-      "Aquí nace el contrato o convenio. Regístrelo o elija uno existente para actualizar etapa/estado. Después, en Inventario, se le atan los puentes con su ID único.",
+      "Aquí nace el contrato o convenio. Regístrelo o elija uno existente para actualizar etapa/estado. Después, en Inventario, se le atan los puentes con su ID.",
     capa: "Contrato estructuración",
     mode: "upsert",
     ...PROCESO_RAIZ,
@@ -120,7 +120,7 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "inventario",
     label: "2 · Alta / inventario del puente",
     description:
-      "Elija el contrato ya estructurado: verá todos los puentes con su ID único operativo (columna Excel). Puede modificar uno o pulsar «Nuevo puente» para registrar otro del mismo contrato.",
+      "Elija el contrato ya estructurado: verá todos los puentes con su ID y su ID UNICO (última columna Excel). Puede modificar uno o pulsar «Nuevo puente» para registrar otro del mismo contrato.",
     capa: "Inventario puente",
     mode: "upsert",
     ...PROCESO_LOOKUP,
@@ -146,6 +146,7 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
       "latitud",
       "longitud",
       "entidad_receptora",
+      "estado",
       "estado_puente",
       "situacion_prestamo",
       "fecha_inicio_estado_actual",
@@ -159,7 +160,7 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "bitacora",
     label: "3 · Bitácora del puente",
     description:
-      "Busque el puente por su ID único operativo (Excel). El proceso/convenio solo agrupa; la llave del seguimiento es el ID único.",
+      "Busque el puente por su ID o por su ID UNICO (Excel). El proceso/convenio solo agrupa; la llave del seguimiento es el ID.",
     capa: "Bitácora estado",
     mode: "append",
     ...PUENTE_LOOKUP,
@@ -182,6 +183,8 @@ export const PUENTES_CAPTURE_FORMS: CaptureFormConfig[] = [
       "fundamento",
       "observaciones",
       "nombre_hoja_reporte",
+      /** Columna Excel bitácora «convenio o cto» — no puede faltar. */
+      "convenio_o_cto",
     ],
     requiredNames: ["id_puente", "fecha_inicio"],
   },

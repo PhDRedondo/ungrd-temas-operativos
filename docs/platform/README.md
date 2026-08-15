@@ -16,6 +16,11 @@ Integración progresiva de workflows, casos, versiones y publicación sobre el m
 ## Fase 3–4 — Datos y workflow
 
 - [Modelo de datos](./database-model.md)
+- [**Contrato medallón (bronze/silver/gold)**](./MEDALLION-DATA-CONTRACT.md) — lectura para lake + portabilidad Postgres
+- [**Catálogo de fuentes (1 URL + vistas por tema)**](./MEDALLION-SOURCE-CATALOG.md) — “Agua maqueta”, “Puentes inventario”, …
+- [**Handoff DDL reader (Puentes + Agua)**](./MEDALLION-DDL-HANDOFF.md) — schemas, columnas, JOIN, DDL 001/003, apply Supabase
+- [**Capa Silver (tablas físicas + FK)**](./MEDALLION-SILVER.md) — `silver_agua` / `silver_puentes`, sync, plantilla temas nuevos
+- [Análisis capas Excel ↔ app](./DATA-MODEL-ANALYSIS.md)
 - [Motor de workflows](./workflow-engine-design.md)
 - [Máquina de estados piloto](./workflow-state-machine.md)
 

@@ -20,6 +20,22 @@ import {
   isAguaCapaOficial,
   normalizeAguaCapa,
 } from "@/themes/agua-y-saneamiento/capture-forms";
+import {
+  CARRO_CAPAS,
+  normalizeCarroCapa,
+} from "@/themes/carrotanques/capture-forms";
+import {
+  BMAQ_CAPAS,
+  normalizeBmaqCapa,
+} from "@/themes/banco-de-maquinaria/capture-forms";
+import {
+  PUENTES_CAPAS,
+  normalizePuenteCapa,
+} from "@/themes/puentes/capture-forms";
+import {
+  SUBSIDIOS_CAPAS,
+  normalizeSubsidiosCapa,
+} from "@/themes/subsidios-de-arriendos/capture-forms";
 
 type ChangeMark = {
   versionCount: number;
@@ -45,8 +61,8 @@ type Props = {
 const HIDDEN = new Set(["tipo_registro", "capa", "clave_seguimiento"]);
 const PAGE_SIZE = 40;
 
-/** Columnas prioritarias (vista rápida; el resto con «Más columnas»). */
-const PIN_LEFT = [
+/** Columnas prioritarias Agua (vista rápida). */
+const PIN_LEFT_AGUA = [
   "orden_de_proveeduria",
   "departamento",
   "municipio",
@@ -65,12 +81,212 @@ const PIN_LEFT = [
   "dependencia",
 ];
 
-function capaOf(r: RecordRow) {
-  return normalizeAguaCapa(String(r.tipo_registro || r.capa || "")) || "Sin capa";
+/** Columnas prioritarias Carrotanques (maqueta M–Z + identidad). */
+const PIN_LEFT_CARRO = [
+  "placa",
+  "placa_ungrd",
+  "marca",
+  "clase",
+  "modelo_ref",
+  "capacidad_lt",
+  "otras_categorizaciones",
+  "clasificacion_propiedad",
+  "ubicacion_actual",
+  "departamento",
+  "municipio",
+  "region",
+  "lt_suministrados",
+  "per_benef",
+  "com_benef",
+  "fecha_inicio_estado_actual",
+  "fech_fin_estado_actual",
+  "fecha_desde_ultm_estado",
+  "entidad_receptora",
+  "ente_receptor",
+  "estado",
+  "situacion_de_prestamo",
+  "observaciones",
+];
+
+/** Columnas prioritarias Banco de Maquinaria. */
+const PIN_LEFT_BMAQ = [
+  "no_convenio",
+  "serial",
+  "no_maquina",
+  "empresa",
+  "entidad_receptora",
+  "tipo_maquinaria",
+  "departamento",
+  "municipio",
+  "no_orden_de_compra",
+  "referencia",
+  "estado",
+  "estado_maquina",
+  "estado_convenio",
+  "cantidad_maquinaria_expectativa",
+  "cantidad_maquinaria_entregada",
+  "objeto",
+  "fecha_de_estado",
+  "comentario",
+  "observaciones",
+];
+
+/** Columnas prioritarias Puentes. */
+const PIN_LEFT_PUENTES = [
+  "id_puente",
+  "contrato_convenio",
+  "clave_proceso",
+  "contrato",
+  "departamento",
+  "municipio",
+  "estado",
+  "estado_puente",
+  "objeto",
+  "valor",
+  "longitud_m",
+  "ancho_m",
+  "fecha",
+  "observaciones",
+];
+
+const PIN_LEFT_SUBSIDIOS = [
+  "uuid",
+  "numero_envio",
+  "n_orden",
+  "departamento",
+  "municipio",
+  "estado",
+  "nombres_arrendatario",
+  "apellidos_arrendatario",
+  "no_contrato",
+  "valor_total_pagado",
+  "fecha_inicio",
+  "_archivo_fuente",
+];
+
+type ThemeExcelProfile = {
+  capas: readonly string[];
+  defaultCapa: string;
+  pinLeft: string[];
+  searchLabel: string;
+  searchPlaceholder: string;
+  helpText: string;
+  filterHint: string;
+  emptyHint: string;
+  normalizeCapa: (raw: string) => string;
+  isOfficial: (capa: string) => boolean;
+  keyOf: (r: RecordRow) => string;
+};
+
+function profileFor(themeId: string): ThemeExcelProfile {
+  if (themeId === "carrotanques") {
+    return {
+      capas: CARRO_CAPAS,
+      defaultCapa: "Maqueta / inventario",
+      pinLeft: PIN_LEFT_CARRO,
+      searchLabel: "Buscar placa",
+      searchPlaceholder: "OZJ943…",
+      helpText:
+        "Capas: Maqueta / inventario, Bitácora estado y Suministro / viajes. Busque por placa. Clic en celda para editar; el botón vN abre el historial.",
+      filterHint: " · filtro placa: todas las capas de esa placa",
+      emptyHint:
+        " (Maqueta / Bitácora / Suministro) o quite el filtro de placa.",
+      normalizeCapa: (raw) => normalizeCarroCapa(raw) || "Sin capa",
+      isOfficial: (capa) => (CARRO_CAPAS as readonly string[]).includes(capa),
+      keyOf: (r) => String(r.placa || r.clave_seguimiento || "").trim(),
+    };
+  }
+  if (themeId === "banco-de-maquinaria") {
+    return {
+      capas: BMAQ_CAPAS,
+      defaultCapa: "Maqueta / inventario",
+      pinLeft: PIN_LEFT_BMAQ,
+      searchLabel: "Buscar convenio / serial",
+      searchPlaceholder: "9677-… o serial…",
+      helpText:
+        "Capas: Convenio o proceso, Detalle (maqueta), Bitácora y Entrega. Busque por nº convenio o serial. Clic en celda para editar; el botón vN abre el historial de versiones.",
+      filterHint: " · filtro: todas las capas de ese convenio/serial",
+      emptyHint:
+        " (Convenio / Detalle / Bitácora / Entrega) o quite el filtro de convenio/serial.",
+      normalizeCapa: (raw) => normalizeBmaqCapa(raw) || "Sin capa",
+      isOfficial: (capa) => (BMAQ_CAPAS as readonly string[]).includes(capa),
+      keyOf: (r) =>
+        String(r.no_convenio || r.serial || r.clave_seguimiento || "").trim(),
+    };
+  }
+  if (themeId === "puentes") {
+    return {
+      capas: PUENTES_CAPAS,
+      defaultCapa: "Inventario puente",
+      pinLeft: PIN_LEFT_PUENTES,
+      searchLabel: "Buscar id puente / contrato",
+      searchPlaceholder: "id puente o contrato…",
+      helpText:
+        "Capas: Contrato estructuración, Inventario puente y Bitácora estado. Busque por id puente o contrato. Clic en celda para editar; el botón vN abre el historial de versiones.",
+      filterHint: " · filtro: todas las capas de ese puente/contrato",
+      emptyHint:
+        " (Estructuración / Inventario / Bitácora) o quite el filtro de id/contrato.",
+      normalizeCapa: (raw) => normalizePuenteCapa(raw) || "Sin capa",
+      isOfficial: (capa) => (PUENTES_CAPAS as readonly string[]).includes(capa),
+      keyOf: (r) =>
+        String(
+          r.id_puente ||
+            r.contrato_convenio ||
+            r.clave_proceso ||
+            r.contrato ||
+            r.clave_seguimiento ||
+            "",
+        ).trim(),
+    };
+  }
+  if (themeId === "subsidios-de-arriendos") {
+    return {
+      capas: SUBSIDIOS_CAPAS,
+      defaultCapa: "Consolidado / envío",
+      pinLeft: PIN_LEFT_SUBSIDIOS,
+      searchLabel: "Buscar UUID / envío",
+      searchPlaceholder: "uuid o número de envío…",
+      helpText:
+        "Capa: Consolidado / envío. Cargue el Excel consolidado. Busque por UUID, número de envío o documento. Clic en celda para editar.",
+      filterHint: " · filtro UUID/envío",
+      emptyHint: " o quite el filtro.",
+      normalizeCapa: (raw) => normalizeSubsidiosCapa(raw) || "Sin capa",
+      isOfficial: (capa) =>
+        (SUBSIDIOS_CAPAS as readonly string[]).includes(capa),
+      keyOf: (r) =>
+        String(r.uuid || r.clave_seguimiento || r.numero_envio || "").trim(),
+    };
+  }
+  // Agua y Saneamiento (default de la vista Excel histórica)
+  return {
+    capas: AGUA_CAPAS_UI,
+    defaultCapa: "Alta / orden",
+    pinLeft: PIN_LEFT_AGUA,
+    searchLabel: "Buscar OP",
+    searchPlaceholder: "GS-SMD-…",
+    helpText:
+      "Capas oficiales Agua (Alta, Bitácora, Pagos, Modificaciones…). Busque por OP. Clic en celda para editar; el botón vN abre el historial de versiones.",
+    filterHint: " · filtro OP: todas las capas de esa orden",
+    emptyHint: " o quite el filtro de OP.",
+    normalizeCapa: (raw) => normalizeAguaCapa(raw) || "Sin capa",
+    isOfficial: (capa) => isAguaCapaOficial(capa),
+    keyOf: (r) =>
+      String(r.orden_de_proveeduria || r.clave_seguimiento || "").trim(),
+  };
 }
 
-function opOf(r: RecordRow) {
-  return String(r.orden_de_proveeduria || r.clave_seguimiento || "").trim();
+function capaOf(themeId: string, r: RecordRow) {
+  return profileFor(themeId).normalizeCapa(
+    String(r.tipo_registro || r.capa || ""),
+  );
+}
+
+function isOfficialCapa(themeId: string, capa: string) {
+  return profileFor(themeId).isOfficial(capa);
+}
+
+function keyOf(themeId: string, r: RecordRow) {
+  return profileFor(themeId).keyOf(r);
 }
 
 function cellStr(row: RecordRow, name: string) {
@@ -82,10 +298,12 @@ function cellStr(row: RecordRow, name: string) {
 export function MaquetaExcelView({ theme, records, onChanged }: Props) {
   const { role } = useAuth();
   const writable = canWrite(role || undefined);
+  const profile = useMemo(() => profileFor(theme.id), [theme.id]);
+  const defaultCapa = profile.defaultCapa;
 
-  const [opFilter, setOpFilter] = useState("");
-  const [opQuery, setOpQuery] = useState("");
-  const [capaFilter, setCapaFilter] = useState<string>("Alta / orden");
+  const [keyFilter, setKeyFilter] = useState("");
+  const [keyQuery, setKeyQuery] = useState("");
+  const [capaFilter, setCapaFilter] = useState<string>(defaultCapa);
   const [onlyChanged, setOnlyChanged] = useState(false);
   const [showAllColumns, setShowAllColumns] = useState(false);
   const [page, setPage] = useState(0);
@@ -99,36 +317,49 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
   );
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedOp, setSelectedOp] = useState("");
+  const [selectedKey, setSelectedKey] = useState("");
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    setCapaFilter(defaultCapa);
+    setKeyFilter("");
+    setKeyQuery("");
+    setPage(0);
+  }, [theme.id, defaultCapa]);
 
   const fieldsByName = useMemo(
     () => new Map(theme.fields.map((f) => [f.name, f])),
     [theme.fields],
   );
 
+  const pinLeft = profile.pinLeft;
+
   const columns = useMemo(() => {
     const names = theme.fields
       .map((f) => f.name)
       .filter((n) => !HIDDEN.has(n));
-    const pinned = PIN_LEFT.filter((n) => names.includes(n));
-    if (!showAllColumns) return pinned;
-    const rest = names.filter((n) => !pinned.includes(n));
-    return [...pinned, ...rest];
-  }, [theme.fields, showAllColumns]);
+    const pinned = pinLeft.filter((n) => names.includes(n));
+    // Si no hay pins (tema sin esos campos), mostrar las primeras columnas útiles
+    const base = pinned.length
+      ? pinned
+      : names.filter((n) => n !== "valor" && n !== "fecha").slice(0, 12);
+    if (!showAllColumns) return base;
+    const rest = names.filter((n) => !base.includes(n));
+    return [...base, ...rest];
+  }, [theme.fields, showAllColumns, pinLeft]);
 
-  const capas = useMemo(() => [...AGUA_CAPAS_UI], []);
+  const capas = useMemo(() => [...profile.capas], [profile]);
 
-  // Debounce búsqueda OP
+  // Debounce búsqueda placa/OP
   useEffect(() => {
     const t = setTimeout(() => {
-      setOpQuery(opFilter.trim().toLowerCase());
+      setKeyQuery(keyFilter.trim().toLowerCase());
       setPage(0);
     }, 200);
     return () => clearTimeout(t);
-  }, [opFilter]);
+  }, [keyFilter]);
 
   useEffect(() => {
     setPage(0);
@@ -164,12 +395,12 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
 
   const rows = useMemo(() => {
     return records.filter((r) => {
-      const capa = capaOf(r);
-      if (!isAguaCapaOficial(capa) && capa !== "Sin capa") return false;
+      const capa = capaOf(theme.id, r);
+      if (!isOfficialCapa(theme.id, capa) && capa !== "Sin capa") return false;
       if (capa === "Sin capa") return false;
-      // Con búsqueda por OP: mostrar realidad completa (todas las capas de esa OP).
-      if (opQuery) {
-        if (!opOf(r).toLowerCase().includes(opQuery)) return false;
+      // Con búsqueda por placa/OP: todas las capas de esa clave.
+      if (keyQuery) {
+        if (!keyOf(theme.id, r).toLowerCase().includes(keyQuery)) return false;
       } else if (capaFilter !== "__todas__" && capa !== capaFilter) {
         return false;
       }
@@ -178,7 +409,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
       }
       return true;
     });
-  }, [records, capaFilter, opQuery, onlyChanged, marks, marksReady]);
+  }, [records, capaFilter, keyQuery, onlyChanged, marks, marksReady, theme.id]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -209,7 +440,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
 
   function openHistory(row: RecordRow) {
     setSelectedId(row.id);
-    setSelectedOp(opOf(row) || row.id.slice(0, 8));
+    setSelectedKey(keyOf(theme.id, row) || row.id.slice(0, 8));
     setHistoryOpen(true);
     void loadVersions(row.id);
   }
@@ -217,7 +448,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
   function closeHistory() {
     setHistoryOpen(false);
     setSelectedId(null);
-    setSelectedOp("");
+    setSelectedKey("");
     setVersions([]);
   }
 
@@ -396,22 +627,18 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
           <Table2 className="h-4 w-4 text-ungrd-navy" />
           Base completa · vista Excel
         </p>
-        <p className="mt-1 text-sm text-ungrd-muted">
-          Vista rápida por capa (paginada). Clic en una celda para editar. Si
-          hay cambios verá un botón <span className="font-bold">vN</span> +
-          historial: pulse ahí para abrir la tablita.
-        </p>
+        <p className="mt-1 text-sm text-ungrd-muted">{profile.helpText}</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-sm font-semibold text-ungrd-heading">
           <span className="mb-1 flex items-center gap-1 text-xs text-ungrd-muted">
-            <Search className="h-3 w-3" /> Buscar OP
+            <Search className="h-3 w-3" /> {profile.searchLabel}
           </span>
           <input
-            value={opFilter}
-            onChange={(e) => setOpFilter(e.target.value)}
-            placeholder="GS-SMD-…"
+            value={keyFilter}
+            onChange={(e) => setKeyFilter(e.target.value)}
+            placeholder={profile.searchPlaceholder}
             className="rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-normal"
           />
         </label>
@@ -449,9 +676,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
         <span className="pb-2 text-xs text-ungrd-muted">
           {rows.length} filas · {columns.length} cols · pág. {safePage + 1}/
           {pageCount}
-          {opQuery
-            ? " · filtro OP: todas las capas de esa orden"
-            : ""}
+          {keyQuery ? profile.filterHint : ""}
         </span>
       </div>
 
@@ -539,9 +764,9 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                     </td>
                     <td
                       className={`sticky left-8 z-20 max-w-[6.5rem] truncate px-2 py-1 font-semibold text-ungrd-navy ${rowBg}`}
-                      title={capaOf(row)}
+                      title={capaOf(theme.id, row)}
                     >
-                      {capaOf(row)}
+                      {capaOf(theme.id, row)}
                     </td>
                     <td
                       className={`sticky left-[7.5rem] z-20 px-1 py-1 ${rowBg}`}
@@ -595,8 +820,8 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                     colSpan={columns.length + 3}
                     className="px-4 py-8 text-center text-sm text-ungrd-muted"
                   >
-                    No hay filas con estos filtros. Pruebe otra capa o quite el
-                    filtro de OP.
+                    No hay filas con estos filtros. Pruebe otra capa
+                    {profile.emptyHint}
                   </td>
                 </tr>
               ) : null}
@@ -623,8 +848,9 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                   Historial de cambios
                 </p>
                 <p className="mt-0.5 text-xs text-white/80">
-                  OP · {selectedOp} · del más reciente al más viejo. Volver crea
-                  una versión nueva (nada se elimina).
+                  {profile.searchLabel.replace(/^Buscar\s+/i, "")} · {selectedKey}{" "}
+                  · del más reciente al más viejo. Volver crea una versión nueva
+                  (nada se elimina).
                 </p>
               </div>
               <button

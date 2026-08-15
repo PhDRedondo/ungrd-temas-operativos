@@ -14,6 +14,8 @@ import {
   procesoSigla,
 } from "@/themes/puentes/asset-keys";
 import { normalizePuenteCapa } from "@/themes/puentes/capture-forms";
+import { normalizeCarroCapa } from "@/themes/carrotanques/capture-forms";
+import { normalizeSubsidiosCapa } from "@/themes/subsidios-de-arriendos/capture-forms";
 
 /** Opciones oficiales de capa por tema (alineadas a fields-from-source). */
 const THEME_CAPA_HINTS: Record<
@@ -59,6 +61,9 @@ const THEME_CAPA_HINTS: Record<
   ],
   "obras-por-impuestos": [
     { pattern: /./, capa: "Convenio obra por impuesto" },
+  ],
+  "subsidios-de-arriendos": [
+    { pattern: /./, capa: "Consolidado / envío" },
   ],
 };
 
@@ -204,6 +209,45 @@ export function prepareTrackingRow(
     }
   }
 
+  if (theme.id === "carrotanques") {
+    const normalizeCapa = (v: string) => normalizeCarroCapa(v) || v;
+    if (out.tipo_registro) {
+      out.tipo_registro = normalizeCapa(String(out.tipo_registro));
+    }
+    if (out.capa) out.capa = normalizeCapa(String(out.capa));
+    const placa = String(out.placa || "").trim();
+    const clave = String(out.clave_seguimiento || "").trim();
+    if (placa && !clave) out.clave_seguimiento = placa;
+    if (clave && !placa) out.placa = clave;
+    // Bitácora Excel: Ente receptor → entidad_receptora en maqueta sync
+    if (!out.ente_receptor && out.entidad_receptora) {
+      out.ente_receptor = out.entidad_receptora;
+    }
+    if (!out.fech_fin_estado_actual && out.fecha_fin) {
+      out.fech_fin_estado_actual = out.fecha_fin;
+    }
+    if (!out.fecha_inicio_estado_actual && out.fecha_inicio) {
+      out.fecha_inicio_estado_actual = out.fecha_inicio;
+    }
+    // Placeholders de la maqueta vacía → no fallar enum DIVIPOLA / selects
+    const blankish = /^(sin\s*registro|no\s*registra|n\/?a|-+|\.)$/i;
+    for (const key of [
+      "departamento",
+      "municipio",
+      "region",
+      "ubicacion_actual",
+      "estado",
+      "situacion_de_prestamo",
+      "entidad_receptora",
+      "observaciones",
+      "fecha_inicio_estado_actual",
+      "fech_fin_estado_actual",
+      "fecha_desde_ultm_estado",
+    ]) {
+      if (blankish.test(String(out[key] ?? "").trim())) out[key] = "";
+    }
+  }
+
   if (theme.id === "puentes") {
     const normalizeCapa = (v: string) => normalizePuenteCapa(v) || v;
     if (out.tipo_registro) {
@@ -318,6 +362,40 @@ export function prepareTrackingRow(
     }
   }
 
+  if (theme.id === "subsidios-de-arriendos") {
+    const normalizeCapa = (v: string) => normalizeSubsidiosCapa(v) || v;
+    if (out.tipo_registro) {
+      out.tipo_registro = normalizeCapa(String(out.tipo_registro));
+    }
+    if (out.capa) out.capa = normalizeCapa(String(out.capa));
+    if (!out.tipo_registro) out.tipo_registro = "Consolidado / envío";
+    if (!out.capa) out.capa = "Consolidado / envío";
+
+    let uuid = String(out.uuid || "").trim();
+    if (!uuid) {
+      uuid =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-subsidio`;
+      out.uuid = uuid;
+    }
+    const clave = String(out.clave_seguimiento || "").trim();
+    if (!clave) out.clave_seguimiento = uuid;
+    if (clave && !String(out.uuid || "").trim()) out.uuid = clave;
+
+    if (
+      (out.valor === undefined ||
+        out.valor === null ||
+        out.valor === "" ||
+        Number(out.valor) === 0) &&
+      out.valor_total_pagado != null &&
+      String(out.valor_total_pagado).trim() !== ""
+    ) {
+      out.valor = out.valor_total_pagado;
+    }
+    if (!out.fecha && out.fecha_inicio) out.fecha = out.fecha_inicio;
+  }
+
   const claveRaw =
     out.clave_seguimiento ??
     out.orden_de_proveeduria ??
@@ -360,17 +438,17 @@ export function feedingGuideForTheme(themeId: string): {
     carrotanques: {
       clave: "Placa",
       capas: ["Maqueta / inventario", "Bitácora estado", "Suministro / viajes"],
-      tip: "La maqueta es el inventario del vehículo; la bitácora registra cambios de estado, póliza o ubicación.",
+      tip: "B–J alta fija; K–L editables en maqueta; M–P y T–Z ← última bitácora; Q–R–S ← suma de suministros por placa.",
     },
     "banco-de-maquinaria": {
-      clave: "Serial / Nº máquina / convenio",
+      clave: "Nº convenio (raíz) · Serial (equipo)",
       capas: [
-        "Maqueta / inventario",
         "Convenio o proceso",
+        "Maqueta / inventario",
         "Bitácora convenio",
         "Entrega a beneficiario",
       ],
-      tip: "No mezcle maqueta y bitácora en la misma fila: use la misma clave y cambie solo la capa.",
+      tip: "Primero el convenio (una sola vez). F–I (cantidades/tiempo/acta) se actualizan sobre el mismo convenio. Luego detalle: cada máquina del convenio (serial). Bitácora → estado; entrega → ENTREGADA.",
     },
     "obras-de-emergencia": {
       clave: "OP o contrato de obra",
@@ -400,6 +478,11 @@ export function feedingGuideForTheme(themeId: string): {
       clave: "Nº convenio / BPIN",
       capas: ["Convenio obra por impuesto"],
       tip: "Una fila por convenio; use upsert para avances y vencimientos.",
+    },
+    "subsidios-de-arriendos": {
+      clave: "número de envío + n. orden",
+      capas: ["Consolidado / envío"],
+      tip: "Cargue el Excel consolidado (mismas columnas del archivo). El formulario es opcional y no pide uuid.",
     },
   };
   return (

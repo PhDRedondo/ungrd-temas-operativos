@@ -15,6 +15,13 @@ import {
 } from "@/lib/uploads/process-excel";
 import { syncAguaMaquetaFromLatest } from "@/themes/agua-y-saneamiento/maqueta-sync";
 import { syncPuenteInventarioFromLatest } from "@/themes/puentes/puente-sync";
+import { syncCarrotanqueMaquetaFromLatest } from "@/themes/carrotanques/maqueta-sync";
+import {
+  syncBmaqConvenioFromBitacora,
+  syncBmaqDetalleFromEntrega,
+} from "@/themes/banco-de-maquinaria/maqueta-sync";
+import { normalizeCarroCapa } from "@/themes/carrotanques/capture-forms";
+import { normalizeBmaqCapa } from "@/themes/banco-de-maquinaria/capture-forms";
 import { enforceProcesoChain } from "@/themes/puentes/proceso-chain";
 
 type Ctx = { params: Promise<{ slug: string }> };
@@ -158,8 +165,71 @@ export async function POST(req: Request, ctx: Ctx) {
       }
     }
 
+    let carroSync: { ok: boolean; changedFields?: string[] } | undefined;
+    if (theme.id === "carrotanques" && row) {
+      const placa = String(
+        (row as Record<string, unknown>).placa ||
+          (row as Record<string, unknown>).clave_seguimiento ||
+          prepared.placa ||
+          "",
+      ).trim();
+      const capa = normalizeCarroCapa(
+        String(
+          (row as Record<string, unknown>).tipo_registro ||
+            (row as Record<string, unknown>).capa ||
+            prepared.capa ||
+            "",
+        ),
+      );
+      if (
+        placa &&
+        (capa === "Bitácora estado" || capa === "Suministro / viajes")
+      ) {
+        carroSync = await syncCarrotanqueMaquetaFromLatest({
+          placa,
+          userId: authz.actor.userId,
+          sourceCapa: capa,
+        });
+      }
+    }
+
+    let bmaqSync: { ok: boolean; changedFields?: string[] } | undefined;
+    if (theme.id === "banco-de-maquinaria" && row) {
+      const capa = normalizeBmaqCapa(
+        String(
+          (row as Record<string, unknown>).tipo_registro ||
+            (row as Record<string, unknown>).capa ||
+            prepared.capa ||
+            "",
+        ),
+      );
+      if (capa === "Bitácora convenio") {
+        const noConvenio = String(
+          (row as Record<string, unknown>).no_convenio ||
+            (row as Record<string, unknown>).clave_seguimiento ||
+            prepared.no_convenio ||
+            "",
+        ).trim();
+        if (noConvenio) {
+          bmaqSync = await syncBmaqConvenioFromBitacora({
+            noConvenio,
+            userId: authz.actor.userId,
+            sourceCapa: capa,
+          });
+        }
+      }
+    }
+
     return NextResponse.json(
-      { ok: true, record: row, mode: "append", maquetaSync, inventarioSync },
+      {
+        ok: true,
+        record: row,
+        mode: "append",
+        maquetaSync,
+        inventarioSync,
+        carroSync,
+        bmaqSync,
+      },
       { status: 201 },
     );
   }
@@ -169,10 +239,15 @@ export async function POST(req: Request, ctx: Ctx) {
   const first = classified[0];
 
   if (mode === "create-once" && first?.action === "update") {
+    const dupMsg =
+      theme.id === "carrotanques"
+        ? "Ya existe un alta de maqueta para esta placa. Use el formulario de categorías u otra capa."
+        : theme.id === "banco-de-maquinaria"
+          ? "Ya existe un registro con esta clave (convenio o serial). Use avance F–I, operativo, bitácora o entrega según corresponda."
+          : "Ya existe un alta para esta orden de proveeduría. Use otro formulario para actualizar (T/U, líder, seguimiento, bitácora).";
     return NextResponse.json(
       {
-        error:
-          "Ya existe un alta para esta orden de proveeduría. Use otro formulario para actualizar (T/U, líder, seguimiento, bitácora).",
+        error: dupMsg,
         existingId: first.existingId,
       },
       { status: 409 },
@@ -205,12 +280,41 @@ export async function POST(req: Request, ctx: Ctx) {
     after: row || { id: first?.existingId, updated: true },
   });
 
+  let bmaqSync: { ok: boolean; changedFields?: string[] } | undefined;
+  if (theme.id === "banco-de-maquinaria") {
+    const capa = normalizeBmaqCapa(
+      String(
+        prepared.tipo_registro ||
+          prepared.capa ||
+          (row as Record<string, unknown> | null)?.tipo_registro ||
+          (row as Record<string, unknown> | null)?.capa ||
+          "",
+      ),
+    );
+    if (capa === "Entrega a beneficiario") {
+      const serial = String(
+        prepared.serial ||
+          prepared.clave_seguimiento ||
+          (row as Record<string, unknown> | null)?.serial ||
+          "",
+      ).trim();
+      if (serial) {
+        bmaqSync = await syncBmaqDetalleFromEntrega({
+          serial,
+          userId: authz.actor.userId,
+          sourceCapa: capa,
+        });
+      }
+    }
+  }
+
   return NextResponse.json(
     {
       ok: true,
       record: row,
       updated,
       mode,
+      bmaqSync,
     },
     { status: updated > 0 ? 200 : 201 },
   );

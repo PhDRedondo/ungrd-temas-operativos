@@ -17,6 +17,10 @@ import {
   AGUA_TABLAS_ACTUALIZABLES,
   normalizeAguaCapa,
 } from "@/themes/agua-y-saneamiento/capture-forms";
+import {
+  CARRO_TABLAS_ACTUALIZABLES,
+  normalizeCarroCapa,
+} from "@/themes/carrotanques/capture-forms";
 
 type VersionRow = {
   id: string;
@@ -38,8 +42,17 @@ type Props = {
   onChanged: () => void;
 };
 
-function capaOf(r: RecordRow): string {
-  return normalizeAguaCapa(String(r.tipo_registro || r.capa || ""));
+function capaOf(themeId: string, r: RecordRow): string {
+  const raw = String(r.tipo_registro || r.capa || "");
+  if (themeId === "carrotanques") return normalizeCarroCapa(raw);
+  return normalizeAguaCapa(raw);
+}
+
+function keyOf(themeId: string, r: RecordRow): string {
+  if (themeId === "carrotanques") {
+    return String(r.placa || r.clave_seguimiento || "").trim();
+  }
+  return String(r.orden_de_proveeduria || r.clave_seguimiento || "").trim();
 }
 
 function cellValue(row: RecordRow, name: string): string {
@@ -51,19 +64,28 @@ function cellValue(row: RecordRow, name: string): string {
 export function TrackingGrid({ theme, records, onChanged }: Props) {
   const { role } = useAuth();
   const writable = canWrite(role || undefined);
+  const carro = theme.id === "carrotanques";
 
   const trackingForms = useMemo(() => {
     const forms = theme.captureForms || [];
-    const prefer = new Set(AGUA_TABLAS_ACTUALIZABLES as readonly string[]);
-    const filtered = forms.filter((f) => prefer.has(f.capa) || f.mode === "append");
-    return filtered.length ? filtered : forms.filter((f) => f.mode === "append");
-  }, [theme.captureForms]);
+    const prefer = new Set(
+      (carro
+        ? CARRO_TABLAS_ACTUALIZABLES
+        : AGUA_TABLAS_ACTUALIZABLES) as readonly string[],
+    );
+    const filtered = forms.filter(
+      (f) => prefer.has(f.capa) || f.mode === "append",
+    );
+    return filtered.length
+      ? filtered
+      : forms.filter((f) => f.mode === "append");
+  }, [theme.captureForms, carro]);
 
   const [formId, setFormId] = useState(trackingForms[0]?.id || "");
   const activeForm: CaptureFormConfig | undefined =
     trackingForms.find((f) => f.id === formId) || trackingForms[0];
 
-  const [opFilter, setOpFilter] = useState("");
+  const [keyFilter, setKeyFilter] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,10 +95,15 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [newRow, setNewRow] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    setFormId(trackingForms[0]?.id || "");
+    setKeyFilter("");
+  }, [theme.id, trackingForms]);
+
   const columns = useMemo(() => {
     if (!activeForm) return [] as string[];
     return activeForm.fieldNames.filter(
-      (n) => n !== "tipo_registro" && n !== "capa",
+      (n) => n !== "tipo_registro" && n !== "capa" && n !== "marca",
     );
   }, [activeForm]);
 
@@ -88,16 +115,13 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
   const rows = useMemo(() => {
     if (!activeForm) return [];
     const capa = activeForm.capa;
-    const q = opFilter.trim().toLowerCase();
+    const q = keyFilter.trim().toLowerCase();
     return records.filter((r) => {
-      if (capaOf(r) !== capa) return false;
+      if (capaOf(theme.id, r) !== capa) return false;
       if (!q) return true;
-      const op = String(
-        r.orden_de_proveeduria || r.clave_seguimiento || "",
-      ).toLowerCase();
-      return op.includes(q);
+      return keyOf(theme.id, r).toLowerCase().includes(q);
     });
-  }, [records, activeForm, opFilter]);
+  }, [records, activeForm, keyFilter, theme.id]);
 
   useEffect(() => {
     setDrafts({});
@@ -221,9 +245,15 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
 
   async function addRow() {
     if (!writable || !activeForm) return;
-    const op = (newRow.orden_de_proveeduria || "").trim();
-    if (!op) {
-      setError("Indique la orden de proveeduría para la fila nueva.");
+    const key = carro
+      ? (newRow.placa || "").trim()
+      : (newRow.orden_de_proveeduria || "").trim();
+    if (!key) {
+      setError(
+        carro
+          ? "Indique la placa para la fila nueva."
+          : "Indique la orden de proveeduría para la fila nueva.",
+      );
       return;
     }
     setBusyId("__new__");
@@ -238,7 +268,12 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
       }
       values.tipo_registro = activeForm.capa;
       values.capa = activeForm.capa;
-      values.orden_de_proveeduria = op;
+      if (carro) {
+        values.placa = key;
+        values.clave_seguimiento = key;
+      } else {
+        values.orden_de_proveeduria = key;
+      }
 
       const res = await fetch(`/api/themes/${theme.id}/records`, {
         method: "POST",
@@ -372,11 +407,11 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-semibold text-ungrd-heading">
-          Filtrar OP
+          {carro ? "Filtrar placa" : "Filtrar OP"}
           <input
-            value={opFilter}
-            onChange={(e) => setOpFilter(e.target.value)}
-            placeholder="GS-SMD-…"
+            value={keyFilter}
+            onChange={(e) => setKeyFilter(e.target.value)}
+            placeholder={carro ? "OZJ943…" : "GS-SMD-…"}
             className="ml-2 rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-1.5 text-sm font-normal"
           />
         </label>

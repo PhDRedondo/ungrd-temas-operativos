@@ -31,6 +31,7 @@ import {
   type OrdenLookupHit,
 } from "@/components/OrdenLookup";
 import { normalizeAguaCapa } from "@/themes/agua-y-saneamiento/capture-forms";
+import { normalizeBmaqCapa } from "@/themes/banco-de-maquinaria/capture-forms";
 import { normalizePuenteCapa } from "@/themes/puentes/capture-forms";
 import {
   inheritFromInventario,
@@ -38,6 +39,26 @@ import {
   PUENTE_CONTEXT_KEYS,
   type PuenteLookupHit,
 } from "@/components/PuenteLookup";
+
+type OrdenLookupByMode = "orden" | "placa" | "serial" | "convenio" | "contrato";
+
+function resolveOrdenLookupBy(
+  form: CaptureFormConfig | undefined,
+  themeId: string,
+): OrdenLookupByMode {
+  if (form?.lookupBy) return form.lookupBy;
+  if (themeId === "carrotanques") return "placa";
+  return "orden";
+}
+
+function isAssetOrdenLookup(by: OrdenLookupByMode): boolean {
+  return (
+    by === "placa" ||
+    by === "serial" ||
+    by === "convenio" ||
+    by === "contrato"
+  );
+}
 import {
   ProcesoLookup,
   type ProcesoLookupHit,
@@ -49,6 +70,7 @@ import { PUENTES_ESTRUCTURA_ESTADO } from "@/themes/puentes/select-options";
 const HIDDEN_AFTER_LOOKUP = new Set<string>([
   "orden_de_proveeduria",
   "clave_seguimiento",
+  "placa",
   "nit",
   "departamento",
   "municipio",
@@ -57,6 +79,77 @@ const HIDDEN_AFTER_LOOKUP = new Set<string>([
   "provincia",
   "vigencia",
 ]);
+
+/**
+ * En Carrotanques el lookup oculta identidad y datos de alta (B–J) ya cargados.
+ * En Banco de Maquinaria:
+ *  - lookup por serial → oculta identidad del equipo
+ *  - lookup por convenio → oculta el nº convenio (heredado); el serial se captura
+ */
+function hiddenAfterOrdenLookup(
+  themeId: string,
+  lookupBy?: OrdenLookupByMode,
+): Set<string> {
+  if (themeId === "carrotanques") {
+    return new Set([
+      "orden_de_proveeduria",
+      "clave_seguimiento",
+      "placa",
+      "marca",
+      "placa_ungrd",
+      "clase",
+      "modelo",
+      "modelo_ref",
+      "serial",
+      "ano_compra",
+      "capacidad_lt",
+    ]);
+  }
+  if (themeId === "banco-de-maquinaria") {
+    if (lookupBy === "convenio" || lookupBy === "contrato") {
+      return new Set([
+        "orden_de_proveeduria",
+        "clave_seguimiento",
+        "no_convenio",
+        "objeto",
+        "valor_total",
+        "valor_aporte_municipio",
+        "valor_aporte_gobernacion",
+        "valor_aporte_ungrd",
+        "responsable_juridico",
+        "responsable_financiero",
+        "responsable_tecnico",
+        "no_cdp",
+        "no_rc",
+        "fecha_cdp",
+        "fecha_de_rc",
+      ]);
+    }
+    return new Set([
+      "orden_de_proveeduria",
+      "clave_seguimiento",
+      "serial",
+      "no_maquina",
+      "referencia",
+      "nit",
+      "clasificacion",
+      "empresa",
+      "tipo_maquinaria",
+      "valor",
+      "n_motor",
+      "ano_modelo",
+      "placa",
+      "chasis_camabaja",
+      "placa_camabaja",
+      "linea",
+      "modelo_y_o_referencia",
+      "modalidad",
+      "no_orden_de_compra",
+      "no_convenio",
+    ]);
+  }
+  return HIDDEN_AFTER_LOOKUP;
+}
 
 const HIDDEN_AFTER_PUENTE_LOOKUP = new Set<string>([
   "id_puente",
@@ -124,6 +217,11 @@ function sameCapa(a: string, b: string, themeId: string) {
   if (themeId === "puentes") {
     const na = normalizePuenteCapa(left);
     const nb = normalizePuenteCapa(right);
+    return Boolean(na && nb && na === nb);
+  }
+  if (themeId === "banco-de-maquinaria") {
+    const na = normalizeBmaqCapa(left);
+    const nb = normalizeBmaqCapa(right);
     return Boolean(na && nb && na === nb);
   }
   return left.toLowerCase() === right.toLowerCase();
@@ -234,6 +332,8 @@ type Props = {
   theme: ThemeConfig;
   records?: RecordRow[];
   onSaved: () => void;
+  /** form = captura puntual; excel = carga de archivo (pestaña propia). */
+  variant?: "form" | "excel";
 };
 
 type UploadError = {
@@ -296,13 +396,18 @@ function cellText(r: RecordRow, name: string) {
   return String(v);
 }
 
-export function CapturePanel({ theme, records = [], onSaved }: Props) {
+export function CapturePanel({
+  theme,
+  records = [],
+  onSaved,
+  variant = "form",
+}: Props) {
   const { role } = useAuth();
   const writable = canWrite(role || undefined);
   const captureForms = theme.captureForms || [];
   const hasCaptureForms = captureForms.length > 0;
 
-  const [mode, setMode] = useState<"form" | "excel">("form");
+  const mode = variant;
   const [activeFormId, setActiveFormId] = useState(captureForms[0]?.id || "");
   const [form, setForm] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -328,17 +433,19 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
   const [appendLayerRows, setAppendLayerRows] = useState<RecordRow[] | null>(
     null,
   );
-  /** Versiones del registro upsert (trazabilidad de etapa/estado del proceso). */
+  /** Versiones del registro upsert (trazabilidad). */
   const [upsertVersions, setUpsertVersions] = useState<
     {
       version: number;
       changedFields: string[];
       reason: string;
       createdAt: string;
+      createdBy?: string | null;
       payload?: Record<string, unknown>;
     }[]
   >([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
+  const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
   const feedGuide = useMemo(
     () => (isSourceTheme(theme.id) ? feedingGuideForTheme(theme.id) : null),
     [theme.id],
@@ -490,7 +597,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
       }
       if (
         needsOrdenLookup &&
-        HIDDEN_AFTER_LOOKUP.has(n) &&
+        hiddenAfterOrdenLookup(theme.id, resolveOrdenLookupBy(activeForm, theme.id)).has(n) &&
         n !== "orden_de_proveeduria"
       ) {
         return false;
@@ -521,6 +628,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
     setEditingRecordId(null);
     setAppendLayerRows(null);
     setUpsertVersions([]);
+    setExpandedVersion(null);
     const formCfg =
       captureForms.find((f) => f.id === activeFormId) || captureForms[0];
     if (hasCaptureForms && formCfg) {
@@ -573,7 +681,8 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
     if (hasCaptureForms && activeForm) {
       const names = activeForm.fieldNames.filter((n) => {
         if (n === "tipo_registro" || n === "capa") return false;
-        if (needsOrdenLookup && HIDDEN_AFTER_LOOKUP.has(n)) return false;
+        if (needsOrdenLookup && hiddenAfterOrdenLookup(theme.id, resolveOrdenLookupBy(activeForm, theme.id)).has(n))
+          return false;
         if (needsPuenteLookup && HIDDEN_AFTER_PUENTE_LOOKUP.has(n)) return false;
         if (isInheritedProcesoField(n)) return false;
         return true;
@@ -607,15 +716,30 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
 
   async function selectOrden(hit: OrdenLookupHit) {
     if (!activeForm) return;
-    const inherited = inheritFromAlta(hit, activeForm.fieldNames);
+    const lookupBy = resolveOrdenLookupBy(activeForm, theme.id);
+    const byPlaca = isAssetOrdenLookup(lookupBy);
+    const inherited = inheritFromAlta(hit, activeForm.fieldNames, {
+      byPlaca: lookupBy === "placa",
+      lookupBy,
+    });
     const deptName =
-      findDepartment(String(inherited.departamento || ""))?.name ||
-      String(inherited.departamento || "");
+      findDepartment(String(inherited.departamento || hit.departamento || ""))?.name ||
+      String(inherited.departamento || hit.departamento || "");
     const muniName =
-      findMunicipality(deptName, String(inherited.municipio || ""))?.name ||
-      String(inherited.municipio || "");
+      findMunicipality(deptName, String(inherited.municipio || hit.municipio || ""))?.name ||
+      String(inherited.municipio || hit.municipio || "");
     setSelectedOrden(hit);
-    setEditingRecordId(null);
+    // Si el lookup es la misma capa (p. ej. categorías sobre maqueta), el hit ya es el registro.
+    if (
+      activeForm.mode === "upsert" &&
+      activeForm.lookupCapa &&
+      activeForm.lookupCapa === activeForm.capa &&
+      hit.id
+    ) {
+      setEditingRecordId(hit.id);
+    } else {
+      setEditingRecordId(null);
+    }
     setAppendLayerRows(null);
     setError(null);
     setMessage(null);
@@ -627,6 +751,61 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
       tipo_registro: activeForm.capa,
       capa: activeForm.capa,
     };
+
+    // Siempre traer del payload de maqueta los campos del formulario (datos reales).
+    if (byPlaca && hit.payload) {
+      const payload = hit.payload as Record<string, unknown>;
+      for (const name of activeForm.fieldNames) {
+        if (name === "tipo_registro" || name === "capa") continue;
+        const v = payload[name];
+        if (v !== undefined && v !== null && String(v).trim() !== "") {
+          baseForm[name] = String(v);
+        }
+      }
+      if (!baseForm.placa) {
+        const placa = String(payload.placa || hit.orden_de_proveeduria || "").trim();
+        if (placa) baseForm.placa = placa;
+      }
+      // Marca se guarda en bitácora/suministro sin mostrarla; capacidad litros desde maqueta.
+      if (payload.marca != null && String(payload.marca).trim()) {
+        baseForm.marca = String(payload.marca);
+      }
+      if (
+        !baseForm.cap_lts &&
+        payload.capacidad_lt != null &&
+        String(payload.capacidad_lt).trim() !== ""
+      ) {
+        baseForm.cap_lts = String(payload.capacidad_lt);
+      }
+    }
+
+    // Precargar campos mutables desde el hit (misma capa) antes del refetch.
+    if (
+      activeForm.mode === "upsert" &&
+      activeForm.lookupCapa === activeForm.capa &&
+      hit.payload
+    ) {
+      const payload = hit.payload as Record<string, unknown>;
+      for (const name of activeForm.fieldNames) {
+        if (name === "tipo_registro" || name === "capa") continue;
+        if (
+          !byPlaca &&
+          hiddenAfterOrdenLookup(theme.id, resolveOrdenLookupBy(activeForm, theme.id)).has(name) &&
+          name !== "orden_de_proveeduria"
+        ) {
+          continue;
+        }
+        const v = payload[name];
+        if (v !== undefined && v !== null && String(v).trim() !== "") {
+          baseForm[name] = String(v);
+        }
+      }
+      if (byPlaca && activeForm.patchFieldNames?.length) {
+        setMessage(
+          "Maqueta seleccionada con datos reales. Edite Otras categorizaciones / Clasificación propiedad y guarde: se actualiza el mismo registro (B–J no cambian).",
+        );
+      }
+    }
 
     // Upsert: cargar datos de la capa; si no hay fila, tomar campos desde el Alta.
     if (activeForm.mode === "upsert") {
@@ -644,7 +823,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
 
         if (source) {
           setEditingRecordId(source.id);
-        } else {
+        } else if (!(activeForm.lookupCapa === activeForm.capa && hit.id)) {
           // Datos de líder/control suelen venir en la Maqueta/Alta
           const altaRes = await fetch(
             `/api/themes/${theme.id}/orders?op=${encodeURIComponent(hit.orden_de_proveeduria)}&capa=${encodeURIComponent(activeForm.lookupCapa || "Alta / orden")}`,
@@ -661,7 +840,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
           for (const name of activeForm.fieldNames) {
             if (name === "tipo_registro" || name === "capa") continue;
             if (
-              HIDDEN_AFTER_LOOKUP.has(name) &&
+              hiddenAfterOrdenLookup(theme.id, resolveOrdenLookupBy(activeForm, theme.id)).has(name) &&
               name !== "orden_de_proveeduria"
             ) {
               continue;
@@ -687,7 +866,9 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
           );
         } else {
           setMessage(
-            `OP seleccionada. Aún no hay datos en esta capa: complete y guarde.`,
+            byPlaca
+              ? `Placa seleccionada. Aún no hay datos en esta capa: complete y guarde.`
+              : `OP seleccionada. Aún no hay datos en esta capa: complete y guarde.`,
           );
         }
       } catch {
@@ -732,13 +913,25 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
           : hit;
         if (altaHit.id !== hit.id || altaHit.payload || hit.match_kind) {
           setSelectedOrden(altaHit);
-          const again = inheritFromAlta(altaHit, activeForm.fieldNames);
+          const again = inheritFromAlta(altaHit, activeForm.fieldNames, {
+            byPlaca,
+          });
           for (const [k, v] of Object.entries(again)) {
             if (v !== undefined && String(v).trim() !== "") {
               baseForm[k] = String(v);
             }
           }
-          if (altaHit.proveedor) baseForm.proveedor = altaHit.proveedor;
+          if (byPlaca && altaHit.payload) {
+            const payload = altaHit.payload as Record<string, unknown>;
+            for (const name of activeForm.fieldNames) {
+              if (name === "tipo_registro" || name === "capa") continue;
+              const v = payload[name];
+              if (v !== undefined && v !== null && String(v).trim() !== "") {
+                baseForm[name] = String(v);
+              }
+            }
+          }
+          if (!byPlaca && altaHit.proveedor) baseForm.proveedor = altaHit.proveedor;
           if (
             activeForm.fieldNames.includes("valor") &&
             altaHit.valor !== undefined &&
@@ -761,9 +954,13 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
         setAppendLayerRows(events.map(hitToRecordRow));
         const n = events.length;
         setMessage(
-          n > 0
-            ? `OP cargada con datos del alta. Hay ${n} evento${n === 1 ? "" : "s"} ya registrados en esta tabla (abajo). El nuevo guardado suma otra fila.`
-            : `OP cargada con datos del alta. Aún no hay eventos en esta tabla: complete y guarde el primero.`,
+          byPlaca
+            ? n > 0
+              ? `Placa cargada con datos de la maqueta. Hay ${n} evento${n === 1 ? "" : "s"} ya registrados en esta tabla (abajo). El nuevo guardado suma otra fila.`
+              : `Placa cargada con datos de la maqueta. Aún no hay eventos en esta tabla: complete y guarde el primero.`
+            : n > 0
+              ? `OP cargada con datos del alta. Hay ${n} evento${n === 1 ? "" : "s"} ya registrados en esta tabla (abajo). El nuevo guardado suma otra fila.`
+              : `OP cargada con datos del alta. Aún no hay eventos en esta tabla: complete y guarde el primero.`,
         );
       } catch {
         setAppendLayerRows([]);
@@ -1163,7 +1360,14 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
       procesoSoloEtapa && !PROCESO_EDITABLE_WHEN_EXISTING.has(field.name);
     const lockedByIdPuente =
       inventarioEditando && field.name === "id_puente";
-    const fieldLocked = isComputed || lockedByProceso || lockedByIdPuente;
+    const lockedByReadonlyEditing =
+      Boolean(activeForm?.readonlyWhenEditing?.includes(field.name)) &&
+      (Boolean(editingRecordId) || Boolean(selectedOrden));
+    const fieldLocked =
+      isComputed ||
+      lockedByProceso ||
+      lockedByIdPuente ||
+      lockedByReadonlyEditing;
     const common =
       "mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40";
     const computedClass = fieldLocked
@@ -1355,7 +1559,9 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
     }
     if (needsOrdenLookup && !selectedOrden) {
       setError(
-        "Busque y seleccione la orden de proveeduría del registro inicial antes de guardar.",
+        activeForm?.lookupBy === "placa" || theme.id === "carrotanques"
+          ? "Busque y seleccione la placa de la maqueta antes de guardar."
+          : "Busque y seleccione la orden de proveeduría del registro inicial antes de guardar.",
       );
       return;
     }
@@ -1401,6 +1607,71 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
       if (selectedOrden) {
         rawValues.orden_de_proveeduria = selectedOrden.orden_de_proveeduria;
         rawValues.clave_seguimiento = selectedOrden.orden_de_proveeduria;
+        {
+          const lookupBy = resolveOrdenLookupBy(activeForm, theme.id);
+          const payload = selectedOrden.payload as Record<string, unknown>;
+          if (lookupBy === "placa" || theme.id === "carrotanques") {
+            const placa =
+              String(payload?.placa || "").trim() ||
+              selectedOrden.orden_de_proveeduria;
+            rawValues.placa = placa;
+            rawValues.clave_seguimiento = placa;
+            if (!String(rawValues.marca || "").trim() && payload?.marca) {
+              rawValues.marca = payload.marca;
+            }
+          } else if (lookupBy === "serial") {
+            const serial =
+              String(payload?.serial || "").trim() ||
+              selectedOrden.orden_de_proveeduria;
+            rawValues.serial = serial;
+            rawValues.clave_seguimiento = serial;
+          } else if (lookupBy === "convenio" || lookupBy === "contrato") {
+            const convenio =
+              String(payload?.no_convenio || "").trim() ||
+              selectedOrden.orden_de_proveeduria;
+            rawValues.no_convenio = convenio;
+            const oc = String(
+              payload?.no_orden_de_compra ||
+                formForSave.no_orden_de_compra ||
+                "",
+            ).trim();
+            if (oc && !String(rawValues.no_orden_de_compra || "").trim()) {
+              rawValues.no_orden_de_compra = oc;
+            }
+            // Detalle / entrega: la llave del activo es el serial, no el convenio.
+            const serial = String(
+              rawValues.serial || formForSave.serial || "",
+            ).trim();
+            const capa = String(activeForm?.capa || "").trim();
+            if (
+              serial &&
+              (capa === "Maqueta / inventario" ||
+                capa === "Entrega a beneficiario")
+            ) {
+              rawValues.clave_seguimiento = serial;
+            } else {
+              rawValues.clave_seguimiento = convenio;
+            }
+          }
+        }
+        // Banco de Maquinaria: forzar clave según capa aunque no haya lookup.
+        if (theme.id === "banco-de-maquinaria") {
+          const capa = String(activeForm?.capa || rawValues.capa || "").trim();
+          const serial = String(rawValues.serial || "").trim();
+          const convenio = String(rawValues.no_convenio || "").trim();
+          if (
+            serial &&
+            (capa === "Maqueta / inventario" ||
+              capa === "Entrega a beneficiario")
+          ) {
+            rawValues.clave_seguimiento = serial;
+          } else if (
+            convenio &&
+            (capa === "Convenio o proceso" || capa === "Bitácora convenio")
+          ) {
+            rawValues.clave_seguimiento = convenio;
+          }
+        }
         for (const key of ALTA_CONTEXT_KEYS) {
           if (names.includes(key) && formForSave[key]) {
             rawValues[key] = formForSave[key];
@@ -1471,7 +1742,13 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                 clave_seguimiento: values.clave_seguimiento,
                 tipo_vinculo: values.tipo_vinculo,
               }
-            : values;
+            : activeForm?.patchFieldNames?.length
+              ? Object.fromEntries(
+                  activeForm.patchFieldNames
+                    .filter((n) => n in values)
+                    .map((n) => [n, values[n]]),
+                )
+              : values;
         const res = await fetch(
           `/api/themes/${theme.id}/records/${editingRecordId}`,
           {
@@ -1481,7 +1758,9 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
               values: patchValues,
               reason: lookupCanCreate
                 ? `cambio de etapa/estado · ${String(values.etapa || "")} · ${String(values.estado || "")}`
-                : `edición formulario · ${activeForm?.label || "capa"}`,
+                : activeForm?.patchFieldNames?.length
+                  ? `categorías maqueta (K–L) · ${activeForm.label}`
+                  : `edición formulario · ${activeForm?.label || "capa"}`,
             }),
           },
         );
@@ -1491,11 +1770,22 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
           return;
         }
         setMessage(
-          `Actualizado v${data.version || "—"}${
-            data.changedFields?.length
-              ? ` · cambió: ${data.changedFields.join(", ")}`
-              : " · sin cambios"
-          }. La trazabilidad queda en el historial de versiones abajo.`,
+          theme.id === "carrotanques"
+            ? `Maqueta actualizada (v${data.version || "—"})${
+                data.changedFields?.length
+                  ? ` · cambió: ${(data.changedFields as string[])
+                      .map(
+                        (n) =>
+                          theme.fields.find((f) => f.name === n)?.label || n,
+                      )
+                      .join(", ")}`
+                  : " · sin cambios de campos"
+              }. El detalle queda en el historial de trazabilidad abajo.`
+            : `Actualizado v${data.version || "—"}${
+                data.changedFields?.length
+                  ? ` · cambió: ${data.changedFields.join(", ")}`
+                  : " · sin cambios"
+              }. La trazabilidad queda en el historial de versiones abajo.`,
         );
         if (editingRecordId) {
           void loadUpsertVersions(editingRecordId);
@@ -1560,7 +1850,11 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
           setForm(
             applyComputedFields(
               {
-                ...inheritFromAlta(selectedOrden, activeForm?.fieldNames || []),
+                ...inheritFromAlta(selectedOrden, activeForm?.fieldNames || [], {
+                  lookupBy: resolveOrdenLookupBy(activeForm, theme.id),
+                  byPlaca:
+                    resolveOrdenLookupBy(activeForm, theme.id) === "placa",
+                }),
                 tipo_registro: activeForm?.capa || "",
                 capa: activeForm?.capa || "",
               },
@@ -1574,11 +1868,20 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                 ? "agregado"
                 : "guardado";
           const syncNote =
-            persistMode === "append" && data.maquetaSync?.ok
-              ? " La Maqueta (Alta) se actualizó con el último vigente."
-              : persistMode === "append"
-                ? " El historial queda debajo; la Maqueta refleja el último evento."
-                : "";
+            (persistMode === "append" || persistMode === "upsert") &&
+            (data.carroSync?.ok || data.maquetaSync?.ok || data.bmaqSync?.ok)
+              ? theme.id === "carrotanques"
+                ? " La maqueta (M–Z) se actualizó con el último evento de bitácora; Q–R–S con la suma de suministro."
+                : theme.id === "banco-de-maquinaria"
+                  ? " Se sincronizó el convenio/detalle según la capa (bitácora → estado convenio; entrega → ENTREGADA)."
+                  : " La Maqueta (Alta) se actualizó con el último vigente."
+              : persistMode === "append" && theme.id === "carrotanques"
+                ? " El historial queda debajo; al guardar bitácora/suministro la maqueta refleja el último evento (M–Z) y la suma (Q–R–S)."
+                : persistMode === "append" && theme.id === "banco-de-maquinaria"
+                  ? " El historial queda debajo; bitácora y entrega alimentan el detalle/convenio."
+                  : persistMode === "append"
+                    ? " El historial queda debajo; la Maqueta refleja el último evento."
+                    : "";
           setMessage(
             `Registro ${action} (${activeForm?.label || "formulario"}).${syncNote}`,
           );
@@ -1824,7 +2127,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
       setPendingFile(null);
       if (data.async) {
         setMessage(
-          `Carga encolada (${data.queued} filas, modo ${data.mode}). Vea progreso en Cargas Excel.`,
+          `Carga encolada (${data.queued} filas, modo ${data.mode}). El progreso queda en la bandeja de esta pestaña.`,
         );
       } else {
         const ins = data.inserted ?? data.accepted ?? 0;
@@ -1858,31 +2161,6 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
         </p>
       )}
 
-      <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-surface p-1">
-        <button
-          type="button"
-          onClick={() => setMode("form")}
-          className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
-            mode === "form"
-              ? "bg-ungrd-navy text-white"
-              : "text-ungrd-muted hover:text-ungrd-heading"
-          }`}
-        >
-          Carga individual
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("excel")}
-          className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
-            mode === "excel"
-              ? "bg-ungrd-navy text-white"
-              : "text-ungrd-muted hover:text-ungrd-heading"
-          }`}
-        >
-          Carga masiva (Excel)
-        </button>
-      </div>
-
       {message && (
         <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-ungrd-success">
           {message}
@@ -1898,14 +2176,39 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
         <form onSubmit={onSubmit} className="space-y-4">
           {hasCaptureForms ? (
             <div className="space-y-3">
+              {captureForms.length > 1 ? (
               <p className="rounded-xl border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-4 py-3 text-sm text-ungrd-muted">
-                Elija el formulario según cómo se alimenta la Maqueta. Cada uno
-                guarda en su capa con la misma{" "}
-                <strong className="text-ungrd-heading">
-                  orden de proveeduría
-                </strong>
-                .
+                {theme.id === "carrotanques" ? (
+                  <>
+                    Elija el formulario según cómo se alimenta la Maqueta. Cada
+                    uno guarda en su capa unidos por la misma{" "}
+                    <strong className="text-ungrd-heading">placa</strong>.
+                  </>
+                ) : theme.id === "banco-de-maquinaria" ? (
+                  <>
+                    Elija el formulario según la capa. El cruce es por{" "}
+                    <strong className="text-ungrd-heading">convenio</strong> o{" "}
+                    <strong className="text-ungrd-heading">serial</strong>.
+                  </>
+                ) : theme.id === "puentes" ? (
+                  <>
+                    Elija el formulario según la capa. El cruce es por{" "}
+                    <strong className="text-ungrd-heading">id puente</strong> o{" "}
+                    <strong className="text-ungrd-heading">contrato</strong>.
+                  </>
+                ) : (
+                  <>
+                    Elija el formulario según cómo se alimenta la Maqueta. Cada
+                    uno guarda en su capa con la misma{" "}
+                    <strong className="text-ungrd-heading">
+                      orden de proveeduría
+                    </strong>
+                    .
+                  </>
+                )}
               </p>
+              ) : null}
+              {captureForms.length > 1 ? (
               <div className="flex flex-wrap gap-2">
                 {captureForms.map((f) => (
                   <button
@@ -1935,6 +2238,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                   </button>
                 ))}
               </div>
+              ) : null}
               {activeForm ? (
                 <p className="text-sm text-ungrd-muted">
                   {activeForm.description}
@@ -1950,6 +2254,7 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                   onClear={clearOrden}
                   disabled={!writable || busy || loadingLayer}
                   expandPaymentOps={Boolean(activeForm.lookupExpandPaymentOps)}
+                  lookupBy={resolveOrdenLookupBy(activeForm, theme.id)}
                 />
               ) : null}
               {needsPuenteLookup && activeForm ? (
@@ -1983,7 +2288,10 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
                   {lookupCanCreate
                     ? "Contrato ya registrado: solo puede cambiar etapa y estado. El resto queda fijo. Cada cambio crea una versión (trazabilidad)."
-                    : "Editando un puente de la lista. Al guardar se crea versión (trazabilidad). Pulse «Nuevo puente» para un alta distinta."}
+                    : theme.id === "carrotanques" &&
+                        activeForm.patchFieldNames?.length
+                      ? "Editando la maqueta existente. Solo cambian Otras categorizaciones y Clasificación propiedad (mismo registro). Al guardar se crea versión."
+                      : "Editando un puente de la lista. Al guardar se crea versión (trazabilidad). Pulse «Nuevo puente» para un alta distinta."}
                 </p>
               ) : null}
               {!lookupCanCreate &&
@@ -2164,7 +2472,10 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
               {needsEntityLookup && !entityGateOpen ? (
                 <p className="mt-2 text-sm text-ungrd-muted">
                   {needsOrdenLookup
-                    ? "Seleccione primero la OP del registro inicial para habilitar los campos de este formulario."
+                    ? activeForm?.lookupBy === "placa" ||
+                      theme.id === "carrotanques"
+                      ? "Seleccione primero la placa de la maqueta para habilitar los campos de este formulario."
+                      : "Seleccione primero la OP del registro inicial para habilitar los campos de este formulario."
                     : needsPuenteLookup
                       ? "Seleccione primero el puente del inventario para habilitar los campos. El evento sigue a un puente ya registrado."
                       : "Seleccione el contrato o convenio ya estructurado para habilitar los campos. El proceso debe existir antes del puente."}
@@ -2189,7 +2500,9 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                 : editingRecordId
                   ? lookupCanCreate
                     ? `Actualizar etapa/estado · ${activeForm?.label.replace(/^\d+\s*·\s*/, "") || "proceso"}`
-                    : `Actualizar puente · ${form.id_puente || "inventario"}`
+                    : theme.id === "carrotanques"
+                      ? `Actualizar maqueta · ${form.placa || selectedOrden?.orden_de_proveeduria || "placa"}`
+                      : `Actualizar puente · ${form.id_puente || "inventario"}`
                   : lookupCanCreate && needsProcesoLookup
                     ? `Registrar · ${activeForm?.label.replace(/^\d+\s*·\s*/, "") || "proceso"}`
                     : needsProcesoLookup && !lookupCanCreate
@@ -2202,60 +2515,212 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
 
           {activeForm?.mode === "upsert" && editingRecordId ? (
             <div className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
-              <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
-                Trazabilidad · versiones
-              </p>
-              <p className="mt-1 text-sm text-ungrd-muted">
-                {lookupCanCreate
-                  ? "El contrato y sus datos quedan fijos; solo cambian etapa y estado. Cada cambio deja una versión. Nada se borra."
-                  : "Cada modificación de este puente deja una versión. Nada se borra."}
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
+                    {theme.id === "carrotanques"
+                      ? "Trazabilidad · historial de la maqueta"
+                      : lookupCanCreate
+                        ? "Trazabilidad · versiones del proceso"
+                        : "Trazabilidad · versiones"}
+                  </p>
+                  <p className="mt-1 max-w-2xl text-sm text-ungrd-muted">
+                    {theme.id === "carrotanques"
+                      ? "Cada guardado deja una foto del carrotanque (placa). Nada se borra: aquí ve qué cambió, de qué valor a cuál, y cuándo."
+                      : lookupCanCreate
+                        ? "El contrato y sus datos quedan fijos; solo cambian etapa y estado. Cada cambio deja una versión. Nada se borra."
+                        : "Cada modificación deja una versión con el detalle de campos. Nada se borra."}
+                  </p>
+                </div>
+                <span className="rounded-full bg-ungrd-navy/10 px-3 py-1 text-xs font-bold text-ungrd-navy">
+                  {upsertVersions.length} versión
+                  {upsertVersions.length === 1 ? "" : "es"}
+                  {theme.id === "carrotanques" &&
+                  (form.placa || selectedOrden?.orden_de_proveeduria)
+                    ? ` · ${form.placa || selectedOrden?.orden_de_proveeduria}`
+                    : ""}
+                </span>
+              </div>
+
               {loadingVersions ? (
-                <p className="mt-3 text-xs text-ungrd-muted">Cargando historial…</p>
-              ) : upsertVersions.length === 0 ? (
                 <p className="mt-3 text-xs text-ungrd-muted">
-                  Aún no hay versiones adicionales (solo el registro vigente).
+                  Cargando historial…
+                </p>
+              ) : upsertVersions.length === 0 ? (
+                <p className="mt-3 rounded-xl border border-dashed border-ungrd-border bg-white/60 px-4 py-6 text-center text-sm text-ungrd-muted">
+                  Aún no hay versiones guardadas. Al editar y guardar aparecerá
+                  aquí el historial completo.
                 </p>
               ) : (
-                <ul className="mt-3 max-h-56 space-y-2 overflow-auto">
-                  {upsertVersions.map((v) => {
-                    const etapa = String(v.payload?.etapa || "").trim();
-                    const estado = String(
-                      v.payload?.estado || v.payload?.estado_proceso || "",
-                    ).trim();
+                <ol className="relative mt-4 space-y-0 border-l-2 border-ungrd-navy/20 pl-4">
+                  {upsertVersions.map((v, idx) => {
+                    const prev = upsertVersions.find(
+                      (x) => x.version === v.version - 1,
+                    );
                     const when = v.createdAt
-                      ? new Date(v.createdAt).toLocaleString("es-CO")
+                      ? new Date(v.createdAt).toLocaleString("es-CO", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
                       : "—";
+                    const isLatest = idx === 0;
+                    const isInitial =
+                      !v.changedFields?.length ||
+                      /versi[oó]n inicial/i.test(v.reason || "");
+                    const focusKeys =
+                      theme.id === "carrotanques"
+                        ? [
+                            "otras_categorizaciones",
+                            "clasificacion_propiedad",
+                            "placa",
+                            "marca",
+                            "estado",
+                            "ubicacion_actual",
+                            "departamento",
+                            "municipio",
+                          ]
+                        : lookupCanCreate
+                          ? ["etapa", "estado", "estado_proceso"]
+                          : null;
+                    const changed = (v.changedFields || []).filter(Boolean);
+                    const detailKeys =
+                      changed.length > 0
+                        ? changed
+                        : focusKeys?.filter((k) => {
+                            const cur = String(v.payload?.[k] ?? "").trim();
+                            return cur !== "";
+                          }) || [];
+                    const open =
+                      expandedVersion === v.version ||
+                      (expandedVersion === null && isLatest);
+                    const labelOf = (name: string) =>
+                      theme.fields.find((f) => f.name === name)?.label || name;
+                    const fmt = (raw: unknown) => {
+                      if (raw === undefined || raw === null) return "—";
+                      const s = String(raw).trim();
+                      return s === "" ? "—" : s;
+                    };
+
                     return (
-                      <li
-                        key={`${v.version}-${v.createdAt}`}
-                        className="rounded-lg border border-ungrd-border bg-white px-3 py-2 text-xs"
-                      >
-                        <span className="font-extrabold text-ungrd-navy">
-                          v{v.version}
-                        </span>
-                        <span className="text-ungrd-muted"> · {when}</span>
-                        {etapa || estado ? (
-                          <span className="mt-0.5 block text-ungrd-heading">
-                            {etapa ? `Etapa: ${etapa}` : ""}
-                            {etapa && estado ? " · " : ""}
-                            {estado ? `Estado: ${estado}` : ""}
-                          </span>
-                        ) : null}
-                        {v.changedFields?.length ? (
-                          <span className="mt-0.5 block text-ungrd-muted">
-                            Cambió: {v.changedFields.join(", ")}
-                          </span>
-                        ) : null}
-                        {v.reason ? (
-                          <span className="mt-0.5 block text-ungrd-muted">
-                            {v.reason}
-                          </span>
+                      <li key={`${v.version}-${v.createdAt}`} className="relative pb-4">
+                        <span
+                          className={`absolute -left-[1.4rem] top-1.5 h-3 w-3 rounded-full border-2 ${
+                            isLatest
+                              ? "border-ungrd-navy bg-ungrd-yellow"
+                              : "border-ungrd-navy/40 bg-ungrd-surface"
+                          }`}
+                          aria-hidden
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedVersion(open ? -1 : v.version)
+                          }
+                          className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                            open
+                              ? "border-ungrd-navy/30 bg-white shadow-sm dark:bg-ungrd-surface"
+                              : "border-ungrd-border/80 bg-white/70 hover:border-ungrd-navy/25 dark:bg-ungrd-surface/60"
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-md bg-ungrd-navy px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-white">
+                              v{v.version}
+                            </span>
+                            {isLatest ? (
+                              <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-emerald-900 uppercase dark:bg-emerald-900/40 dark:text-emerald-100">
+                                Vigente
+                              </span>
+                            ) : null}
+                            {isInitial ? (
+                              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-slate-700 uppercase dark:bg-slate-800 dark:text-slate-200">
+                                Inicial
+                              </span>
+                            ) : null}
+                            <span className="text-xs text-ungrd-muted">{when}</span>
+                          </div>
+                          <p className="mt-1 text-sm font-semibold text-ungrd-heading">
+                            {isInitial
+                              ? theme.id === "carrotanques"
+                                ? "Foto inicial de la maqueta"
+                                : "Versión inicial del registro"
+                              : changed.length
+                                ? `${changed.length} campo${changed.length === 1 ? "" : "s"} modificado${changed.length === 1 ? "" : "s"}`
+                                : v.reason || "Cambio registrado"}
+                          </p>
+                          {!isInitial && changed.length > 0 ? (
+                            <p className="mt-0.5 text-xs text-ungrd-muted">
+                              {changed
+                                .slice(0, 4)
+                                .map((n) => labelOf(n))
+                                .join(" · ")}
+                              {changed.length > 4
+                                ? ` · +${changed.length - 4}`
+                                : ""}
+                            </p>
+                          ) : null}
+                        </button>
+
+                        {open ? (
+                          <div className="mt-2 space-y-2 rounded-xl border border-ungrd-border bg-ungrd-bg/40 p-3 dark:bg-ungrd-navy-deep/30">
+                            {v.reason ? (
+                              <p className="text-[11px] text-ungrd-muted">
+                                Motivo:{" "}
+                                <span className="font-semibold text-ungrd-heading">
+                                  {v.reason}
+                                </span>
+                              </p>
+                            ) : null}
+                            {detailKeys.length === 0 ? (
+                              <p className="text-xs text-ungrd-muted">
+                                Sin detalle de campos en esta versión.
+                              </p>
+                            ) : (
+                              <ul className="space-y-2">
+                                {detailKeys.map((name) => {
+                                  const after = fmt(v.payload?.[name]);
+                                  const before = prev
+                                    ? fmt(prev.payload?.[name])
+                                    : null;
+                                  const didChange =
+                                    changed.includes(name) &&
+                                    before !== null &&
+                                    before !== after;
+                                  return (
+                                    <li
+                                      key={name}
+                                      className="rounded-lg border border-ungrd-border/70 bg-white px-3 py-2 dark:bg-ungrd-surface"
+                                    >
+                                      <p className="text-[10px] font-bold tracking-wide text-ungrd-navy uppercase">
+                                        {labelOf(name)}
+                                      </p>
+                                      {didChange ? (
+                                        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                                          <span className="rounded bg-rose-50 px-1.5 py-0.5 font-medium text-rose-900 line-through decoration-rose-300 dark:bg-rose-950/40 dark:text-rose-100">
+                                            {before}
+                                          </span>
+                                          <span className="text-ungrd-muted" aria-hidden>
+                                            →
+                                          </span>
+                                          <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-950 dark:bg-emerald-950/40 dark:text-emerald-100">
+                                            {after}
+                                          </span>
+                                        </p>
+                                      ) : (
+                                        <p className="mt-1 text-sm font-semibold text-ungrd-heading">
+                                          {after}
+                                        </p>
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </div>
                         ) : null}
                       </li>
                     );
                   })}
-                </ul>
+                </ol>
               )}
             </div>
           ) : null}
@@ -2292,7 +2757,10 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
               {needsEntityLookup && !hasEntitySelected ? (
                 <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
                   {needsOrdenLookup
-                    ? "Seleccione la OP del alta para ver debajo todos sus eventos de esta tabla, en orden de fecha. Cada guardado suma una fila nueva (no borra las anteriores)."
+                    ? activeForm?.lookupBy === "placa" ||
+                      theme.id === "carrotanques"
+                      ? "Seleccione la placa de la maqueta para ver debajo todos sus eventos de esta tabla, en orden de fecha. Cada guardado suma una fila nueva (no borra las anteriores)."
+                      : "Seleccione la OP del alta para ver debajo todos sus eventos de esta tabla, en orden de fecha. Cada guardado suma una fila nueva (no borra las anteriores)."
                     : needsPuenteLookup
                       ? "Seleccione el puente para ver el historial de esta tabla. Cada guardado suma una fila nueva."
                       : "Seleccione el contrato/convenio para ver las etapas registradas. Cada guardado suma una fila nueva."}
@@ -2326,7 +2794,10 @@ export function CapturePanel({ theme, records = [], onSaved }: Props) {
                           className="px-3 py-8 text-center text-sm text-ungrd-muted"
                         >
                           {needsOrdenLookup
-                            ? "Elija una OP para cargar el historial de esta tabla actualizable."
+                            ? activeForm?.lookupBy === "placa" ||
+                              theme.id === "carrotanques"
+                              ? "Elija una placa para cargar el historial de esta tabla actualizable."
+                              : "Elija una OP para cargar el historial de esta tabla actualizable."
                             : needsPuenteLookup
                               ? "Elija un puente para cargar el historial de esta tabla."
                               : "Elija un contrato/convenio para cargar el historial."}
