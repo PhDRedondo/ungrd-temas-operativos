@@ -356,8 +356,8 @@ export async function POST(req: Request, ctx: Ctx) {
       })),
       tip:
         mode === "upsert"
-          ? "Modo actualizar: filas con la misma clave de seguimiento + capa se actualizarán. Si la capa venía vacía, se infirió del nombre del archivo/hoja."
-          : "Modo solo altas: no se actualizarán registros existentes (solo hash idéntico se omite).",
+          ? "Modo actualizar: si el identificador y el tipo de registro ya existen, se corrige esa fila. Si el tipo venía vacío, se tomó del nombre del archivo."
+          : "Modo solo nuevos: no se actualizarán registros existentes (solo se omite si el archivo es idéntico).",
       capaHint: capaHint || null,
     });
   }

@@ -316,7 +316,7 @@ export function buildRecordZod(theme: ThemeConfig) {
         ctx.addIssue({
           code: "custom",
           path: ["departamento"],
-          message: `Departamento no está en DIVIPOLA: ${dept}`,
+          message: `Departamento no reconocido: ${dept}`,
         });
       }
       return;
@@ -325,7 +325,7 @@ export function buildRecordZod(theme: ThemeConfig) {
       ctx.addIssue({
         code: "custom",
         path: ["municipio"],
-        message: `Municipio "${muni}" no pertenece a ${dept} (DIVIPOLA)`,
+        message: `Municipio "${muni}" no pertenece a ${dept}`,
       });
     }
   });

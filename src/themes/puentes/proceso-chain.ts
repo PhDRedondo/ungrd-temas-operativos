@@ -192,7 +192,7 @@ export async function enforceProcesoChain(
     if (!proceso) {
       return {
         ok: false,
-        error: `El puente ${idPuente} no está en el inventario. Regístrelo en «2 · Alta / inventario del puente» antes de abrir bitácora.`,
+        error: `El puente ${idPuente} no está en el inventario. Regístrelo en «Inventario del puente» antes de abrir la bitácora.`,
       };
     }
     // El evento nunca declara contrato: siempre el del puente.

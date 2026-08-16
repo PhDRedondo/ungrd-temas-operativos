@@ -39,7 +39,7 @@ export function ThemeBriefDetail({
           {brief.kpis.map((kpi) => (
             <div
               key={kpi.id}
-              className="rounded-lg border border-ungrd-border bg-white px-3 py-2"
+              className="rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-2 text-ungrd-text"
             >
               <p className="text-[10px] font-bold tracking-wide text-ungrd-muted uppercase">
                 {kpi.label}
@@ -63,7 +63,7 @@ export function ThemeBriefDetail({
               {brief.semaphores.map((s) => (
                 <li
                   key={s.level}
-                  className="flex justify-between gap-2 rounded-lg bg-white px-3 py-1.5 ring-1 ring-ungrd-border"
+                  className="flex justify-between gap-2 rounded-lg bg-ungrd-surface px-3 py-1.5 text-ungrd-text ring-1 ring-ungrd-border"
                 >
                   <span className="font-semibold text-ungrd-heading">
                     {s.label}
@@ -86,7 +86,7 @@ export function ThemeBriefDetail({
               {brief.alerts.map((a) => (
                 <li
                   key={a.id}
-                  className="rounded-lg border border-l-4 border-ungrd-border border-l-ungrd-navy bg-white px-3 py-2 text-sm"
+                  className="rounded-lg border border-l-4 border-ungrd-border border-l-ungrd-navy bg-ungrd-surface px-3 py-2 text-sm text-ungrd-text"
                 >
                   <p className="font-extrabold text-ungrd-heading">{a.title}</p>
                   <p className="mt-0.5 text-ungrd-muted">{a.detail}</p>

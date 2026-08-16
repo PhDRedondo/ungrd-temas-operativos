@@ -48,7 +48,7 @@ function severityMeta(s: DecisionAlert["severity"]) {
       icon: <Siren className="h-4 w-4" aria-hidden />,
       badge: "Crítica",
       badgeClass: "bg-[#c62828] text-white",
-      cardClass: "border-[#c62828]/35 bg-white",
+      cardClass: "border-[#c62828]/35 bg-ungrd-surface",
       accent: "border-l-[#c62828]",
     };
   if (s === "alta")
@@ -56,7 +56,7 @@ function severityMeta(s: DecisionAlert["severity"]) {
       icon: <ShieldAlert className="h-4 w-4" aria-hidden />,
       badge: "Alta",
       badgeClass: "bg-[#ef6c00] text-white",
-      cardClass: "border-[#ef6c00]/35 bg-white",
+      cardClass: "border-[#ef6c00]/35 bg-ungrd-surface",
       accent: "border-l-[#ef6c00]",
     };
   if (s === "media")
@@ -64,14 +64,14 @@ function severityMeta(s: DecisionAlert["severity"]) {
       icon: <AlertTriangle className="h-4 w-4" aria-hidden />,
       badge: "Media",
       badgeClass: "bg-[#f9a825] text-[#1a237e]",
-      cardClass: "border-[#f9a825]/50 bg-white",
+      cardClass: "border-[#f9a825]/50 bg-ungrd-surface",
       accent: "border-l-[#f9a825]",
     };
   return {
     icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
     badge: "Info",
     badgeClass: "bg-[#455a64] text-white",
-    cardClass: "border-slate-200 bg-white",
+    cardClass: "border-ungrd-border bg-ungrd-surface",
     accent: "border-l-[#455a64]",
   };
 }
@@ -119,12 +119,12 @@ export function DecisionDashboard({
   return (
     <section
       className="min-w-0 space-y-4 rounded-2xl border border-ungrd-navy/20 bg-[linear-gradient(160deg,#001a36_0%,#0a3d6b_45%,#002d5a_100%)] p-4 text-white shadow-[0_20px_50px_rgba(0,26,54,0.35)] sm:p-5"
-      aria-label={`Tablero de decisión ${themeName}`}
+      aria-label={`Dashboard operativo ${themeName}`}
     >
       <header className="flex min-w-0 flex-wrap items-end justify-between gap-3 border-b border-white/15 pb-4">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold tracking-[0.22em] text-ungrd-yellow uppercase">
-            Centro de mando · UNGRD
+            Dashboard Operativo · UNGRD
           </p>
           <h2 className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">
             {brief.title}
@@ -259,7 +259,7 @@ export function DecisionDashboard({
             Alertas para el tomador de decisión
           </h3>
           {visibleAlerts.length === 0 ? (
-            <p className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-white px-3 py-3 text-sm font-semibold text-emerald-900">
+            <p className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-ungrd-surface px-3 py-3 text-sm font-semibold text-ungrd-success">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               Sin alertas críticas con los datos actuales.
             </p>
@@ -385,7 +385,7 @@ export function DecisionDashboard({
       </div>
 
       {scale === "micro" && source ? (
-        <div className="rounded-xl border border-white/15 bg-white p-3 text-ungrd-heading">
+        <div className="rounded-xl border border-ungrd-border bg-ungrd-surface p-3 text-ungrd-heading">
           <p className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
             Ficha micro completa de la base
           </p>

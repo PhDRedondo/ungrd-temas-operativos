@@ -281,7 +281,7 @@ export function ColombiaMap({
   if (!mounted || (!geo && !geoError)) {
     return (
       <div className="flex h-[380px] items-center justify-center rounded-xl border border-ungrd-border bg-ungrd-bg text-sm text-ungrd-muted">
-        Cargando coropleta MGN…
+        Cargando mapa…
       </div>
     );
   }
@@ -289,7 +289,7 @@ export function ColombiaMap({
   if (geoError || !geo) {
     return (
       <div className="flex h-[380px] items-center justify-center rounded-xl border border-red-200 bg-red-50 text-sm text-ungrd-danger">
-        Error al cargar polígonos MGN: {geoError}
+        Error al cargar el mapa: {geoError}
       </div>
     );
   }
@@ -342,7 +342,7 @@ export function ColombiaMap({
           className="h-[280px] w-full sm:h-[420px]"
         >
           <TileLayer
-            attribution='&copy; OSM · MGN DANE 2024'
+            attribution='&copy; OpenStreetMap · DANE 2024'
             url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
           />
           <TileLayer
@@ -393,7 +393,7 @@ export function ColombiaMap({
               })}
         </MapContainer>
 
-        <div className="pointer-events-none absolute right-2 bottom-2 z-[500] max-w-[12.5rem] rounded-lg border border-ungrd-border/80 bg-white/95 p-2 shadow-md backdrop-blur-sm">
+        <div className="pointer-events-none absolute right-2 bottom-2 z-[500] max-w-[12.5rem] rounded-lg border border-ungrd-border/80 bg-ungrd-surface/95 p-2 text-ungrd-text shadow-md backdrop-blur-sm">
           <p className="mb-1.5 text-[10px] font-extrabold leading-tight tracking-wide text-ungrd-navy uppercase">
             {legendTitle ||
               (metric === "valor" ? "Valor (COP)" : "Nº registros")}

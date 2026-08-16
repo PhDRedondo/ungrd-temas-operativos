@@ -12,7 +12,7 @@ export const config = {
     name: "Agua y Saneamiento",
     shortName: "Agua",
     description:
-      "Alta OP, variables del líder, modificaciones (hoja Excel), bitácora, pagos, CDPS/RC, control — unidos por orden de proveeduría.",
+      "Órdenes de proveeduría: registro inicial, bitácora, pagos, CDP/RC y control de ejecución.",
     icon: "droplets",
     unit: "órdenes",
     valueLabel: "Órdenes",

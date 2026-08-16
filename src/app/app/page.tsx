@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import { readJson } from "@/lib/http/read-json";
+import { getThemeVisual } from "@/lib/theme-visuals";
 
 type AccessTheme = {
   id: string;
@@ -38,18 +39,10 @@ export default function AppHomePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-ungrd-heading">
-          Panel general
+          Temas operativos
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-ungrd-muted">
-          Solo ve los temas a los que tiene acceso. Use{" "}
-          <Link href="/app/cargas" className="font-semibold underline">
-            Cargas Excel
-          </Link>{" "}
-          para el historial auditable, o{" "}
-          <Link href="/app/admin/permisos" className="font-semibold underline">
-            Permisos
-          </Link>{" "}
-          (admin) para restringir por área.
+          Elija un tema para capturar o consultar información.
         </p>
       </div>
 
@@ -57,25 +50,37 @@ export default function AppHomePage() {
         <p className="text-sm text-ungrd-muted">Cargando temas…</p>
       ) : themes.length === 0 ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-950">
-          No tiene temas asignados. Un admin debe configurar permisos, o inicie
-          sesión sin ACL (modo local amplio).
+          No tiene temas asignados. Solicite acceso a un administrador.
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {themes.map((theme) => {
             const isTemplate = theme.id === "plantilla";
+            const visual = getThemeVisual(theme.id);
             return (
               <Link
                 key={theme.id}
                 href={`/app/temas/${theme.id}`}
                 className={
                   isTemplate
-                    ? "group rounded-2xl border border-dashed border-ungrd-navy/40 bg-ungrd-surface p-4 transition hover:border-ungrd-navy hover:shadow-[0_12px_30px_rgba(0,45,90,0.08)]"
-                    : "group rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 transition hover:border-ungrd-navy/30 hover:shadow-[0_12px_30px_rgba(0,45,90,0.08)]"
+                    ? "group rounded-2xl border border-dashed border-ungrd-navy/40 bg-ungrd-surface p-4 transition hover:-translate-y-0.5 hover:border-ungrd-navy hover:shadow-md"
+                    : "group rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--card-accent)_40%,var(--ungrd-border))] hover:shadow-md"
+                }
+                style={
+                  {
+                    "--card-accent": visual.accent,
+                    background: `linear-gradient(165deg, ${visual.wash} 0%, var(--ungrd-surface) 58%)`,
+                  } as CSSProperties
                 }
               >
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="inline-flex rounded-lg bg-ungrd-navy p-2 text-ungrd-yellow transition group-hover:bg-ungrd-navy-mid">
+                  <div
+                    className="inline-flex rounded-lg p-2"
+                    style={{
+                      background: visual.accent,
+                      color: visual.onAccent,
+                    }}
+                  >
                     <ThemeIcon name={theme.icon} className="h-5 w-5" />
                   </div>
                   {isTemplate && (
@@ -90,8 +95,11 @@ export default function AppHomePage() {
                 <p className="mt-1 line-clamp-2 text-sm text-ungrd-muted">
                   {theme.description}
                 </p>
-                <p className="mt-2 text-[11px] font-bold tracking-wide text-ungrd-navy uppercase">
-                  {theme.canWrite ? "Lectura + escritura" : "Solo lectura"}
+                <p
+                  className="mt-2 text-[11px] font-bold tracking-wide uppercase"
+                  style={{ color: visual.accent }}
+                >
+                  {theme.canWrite ? "Puede editar" : "Solo consulta"}
                 </p>
               </Link>
             );

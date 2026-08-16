@@ -12,7 +12,7 @@ export const config: ThemeModule["config"] = {
     name: "Carrotanques",
     shortName: "Carrotanques",
     description:
-      "Maqueta/inventario de carrotanques, bitácora de estados y suministro (litros/beneficiarios) — unidos por placa.",
+      "Inventario de carrotanques, bitácora de estado y registro de suministros, unidos por placa.",
     icon: "truck",
     unit: "unidades",
     valueLabel: "Carrotanques",

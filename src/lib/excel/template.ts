@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import type { ThemeConfig, FormField } from "@/themes/shared/types";
 import { schemaFingerprint } from "@/lib/validation/record-schema";
 import { DEPARTMENTS, departmentNames } from "@/lib/geo";
+import { feedingGuideForTheme } from "@/lib/uploads/capa-inference";
 
 function normKey(s: string): string {
   return String(s || "")
@@ -263,7 +264,7 @@ export async function buildThemeTemplate(
       `Tipo: ${field.type}`,
       field.required ? "Obligatorio" : "Opcional",
       field.name === "municipio"
-        ? "Debe existir en DIVIPOLA para el departamento"
+        ? "Debe existir para el departamento seleccionado"
         : "",
       field.options?.length ? `Opciones: ${field.options.length}` : "",
     ]
@@ -331,53 +332,43 @@ export async function buildThemeTemplate(
 
   const help = wb.addWorksheet("Instrucciones");
   help.getColumn(1).width = 96;
-  help.addRow(["Plantilla UNGRD — carga masiva (paso a paso)"]);
-  help.addRow([`Tema: ${theme.name} (${theme.id})`]);
-  help.addRow([`Versión de schema: ${version}`]);
-  help.addRow([`Huella: ${fingerprint}`]);
+  help.addRow(["Plantilla UNGRD — carga masiva"]);
+  help.addRow([`Tema: ${theme.name}`]);
   help.addRow([""]);
-  help.addRow(["CÓMO LLENAR (recomendado)"]);
+  help.addRow(["CÓMO LLENAR"]);
   help.addRow([
-    "1. Descargue SIEMPRE esta plantilla desde la plataforma (no reutilice archivos viejos).",
+    "1. Descargue siempre esta plantilla desde la plataforma (no use archivos viejos).",
   ]);
   help.addRow([
-    "2. No renombre columnas ni elimine hojas _meta / _listas / _catalogos / Instrucciones.",
+    "2. No renombre columnas ni elimine hojas de apoyo (_meta, _listas, etc.).",
   ]);
   help.addRow([
-    "3. Borre la fila de ejemplo y pegue sus datos debajo del encabezado (fila 1).",
+    "3. Borre la fila de ejemplo y pegue sus datos debajo del encabezado.",
   ]);
   help.addRow([
-    "4. Departamento/municipio: use las listas DIVIPOLA (hoja _catalogos).",
+    "4. Departamento y municipio: use las listas oficiales de la plantilla.",
   ]);
-  help.addRow(["5. Fechas en formato YYYY-MM-DD (ej. 2026-07-15)."]);
+  help.addRow(["5. Fechas en formato AAAA-MM-DD (ej. 2026-07-15)."]);
   help.addRow([
-    "6. En la plataforma: primero «Validar sin guardar», revise el resumen, luego «Subir y guardar».",
+    "6. En la plataforma: primero «Validar Excel», revise el resumen y luego «Subir y guardar».",
   ]);
   help.addRow([
-    "7. Si corrige datos ya cargados, active «Actualizar por clave de seguimiento» (OP/placa/CDP + capa).",
+    "7. Si el registro ya existe y quiere corregirlo, active «Actualizar si el registro ya existe».",
   ]);
   help.addRow([""]);
-  help.addRow(["SEGUIMIENTO (MAQUETA + BITÁCORA)"]);
+  const guide = feedingGuideForTheme(theme.id);
+  help.addRow(["IDENTIFICADOR Y FORMULARIOS DE ESTE TEMA"]);
+  help.addRow([`• Identificador: ${guide.clave}`]);
+  help.addRow([`• Formularios: ${guide.capas.join(" · ")}`]);
+  help.addRow([`• ${guide.tip}`]);
   help.addRow([
-    "• tipo_registro y capa deben ser la misma opción (Maqueta, Bitácora, Pago, etc.).",
-  ]);
-  help.addRow([
-    "• clave_seguimiento = OP / placa / CDP / serial / Nº declaratoria (sin sufijos tipo « / pago 1»).",
-  ]);
-  help.addRow([
-    "• Maqueta = foto actual de la entidad. Bitácora = evento de seguimiento. Misma clave, distinta capa.",
-  ]);
-  help.addRow([
-    "• Si deja capa vacía, la plataforma puede inferirla del nombre del archivo (ej. Bitacora.xlsx).",
-  ]);
-  help.addRow([
-    "• Cargas semanales: use upsert. Actualiza la misma clave+capa; no duplica maqueta.",
+    "• En la columna «Tipo de registro» / «Formulario» use exactamente una de las opciones de la lista (no invente nombres).",
   ]);
   help.addRow([""]);
   help.addRow(["Campos del tema:"]);
   for (const f of theme.fields) {
     help.addRow([
-      `- ${f.name} (${f.label}) · ${f.type}${f.required ? " · obligatorio" : ""}`,
+      `- ${f.label} · ${f.type}${f.required ? " · obligatorio" : ""}`,
     ]);
   }
 

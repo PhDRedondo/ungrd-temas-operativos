@@ -47,7 +47,7 @@ function severityMeta(s: NationalBrief["alerts"][number]["severity"]) {
       icon: <Siren className="h-4 w-4" aria-hidden />,
       badge: "Crítica",
       badgeClass: "bg-[#c62828] text-white",
-      cardClass: "border-[#c62828]/35 bg-white",
+      cardClass: "border-[#c62828]/35 bg-ungrd-surface",
       accent: "border-l-[#c62828]",
     };
   if (s === "alta")
@@ -55,7 +55,7 @@ function severityMeta(s: NationalBrief["alerts"][number]["severity"]) {
       icon: <ShieldAlert className="h-4 w-4" aria-hidden />,
       badge: "Alta",
       badgeClass: "bg-[#ef6c00] text-white",
-      cardClass: "border-[#ef6c00]/35 bg-white",
+      cardClass: "border-[#ef6c00]/35 bg-ungrd-surface",
       accent: "border-l-[#ef6c00]",
     };
   if (s === "media")
@@ -63,14 +63,14 @@ function severityMeta(s: NationalBrief["alerts"][number]["severity"]) {
       icon: <AlertTriangle className="h-4 w-4" aria-hidden />,
       badge: "Media",
       badgeClass: "bg-[#f9a825] text-[#1a237e]",
-      cardClass: "border-[#f9a825]/50 bg-white",
+      cardClass: "border-[#f9a825]/50 bg-ungrd-surface",
       accent: "border-l-[#f9a825]",
     };
   return {
     icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
     badge: "Info",
     badgeClass: "bg-[#455a64] text-white",
-    cardClass: "border-slate-200 bg-white",
+    cardClass: "border-ungrd-border bg-ungrd-surface",
     accent: "border-l-[#455a64]",
   };
 }
@@ -163,14 +163,13 @@ export function NationalCommandCenter() {
           <div className="min-w-0">
             <p className="inline-flex items-center gap-2 text-[10px] font-extrabold tracking-[0.22em] text-ungrd-yellow uppercase">
               <Radar className="h-3.5 w-3.5" />
-              Centro de mando nacional · UNGRD
+              Visión nacional · UNGRD
             </p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
               País en una sola vista
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/75">
-              Macro: presión país y briefing. Micro: despliegue cada una de las
-              8 bases, municipios y claves con todo el detalle.
+              Vea la presión por territorio o entre a cada tema con más detalle.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -184,7 +183,7 @@ export function NationalCommandCenter() {
                     : "text-white/80 hover:text-white"
                 }`}
               >
-                Macro
+                País
               </button>
               <button
                 type="button"
@@ -196,7 +195,7 @@ export function NationalCommandCenter() {
                 }`}
               >
                 <Microscope className="h-3.5 w-3.5" />
-                Micro
+                Por tema
               </button>
             </div>
             <button
@@ -424,7 +423,7 @@ export function NationalCommandCenter() {
                                 className={`w-full rounded-lg px-2 py-1.5 text-left text-xs ${
                                   selectedMuni === m.municipio
                                     ? "bg-ungrd-navy/10 font-bold"
-                                    : "hover:bg-white"
+                                    : "hover:bg-ungrd-row-hover"
                                 }`}
                               >
                                 <span className="text-ungrd-heading">
@@ -444,7 +443,7 @@ export function NationalCommandCenter() {
                   ) : null}
 
                   {selectedMuniCell ? (
-                    <div className="mt-3 rounded-lg border border-ungrd-navy/20 bg-white p-2.5">
+                    <div className="mt-3 rounded-lg border border-ungrd-navy/20 bg-ungrd-surface p-2.5">
                       <p className="text-xs font-extrabold text-ungrd-heading">
                         Micro · {selectedMuniCell.municipio}
                       </p>

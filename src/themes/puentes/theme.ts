@@ -12,7 +12,7 @@ export const config = {
     name: "Puentes",
     shortName: "Puentes",
     description:
-      "Inventario de puentes modulares SMD, bitácora de movimientos y seguimiento de contratos/convenios.",
+      "Contratos, inventario de puentes y bitácora de estado.",
     icon: "bridge",
     unit: "puentes",
     valueLabel: "Puentes",

@@ -845,7 +845,7 @@ SELECT
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
   r.payload->>'entidad_receptora' AS entidad_receptora,
-  r.payload->>'cantidad_maquinaria_expectativa' AS cantidad_maquinaria_expectativa,
+  coalesce(nullif(trim(r.payload->>'cantidad_maquinaria_expectativa'), ''), nullif(trim(r.payload->>'cantidad_maquinaria_espectativa'), '')) AS cantidad_maquinaria_expectativa,
   r.payload->>'cantidad_maquinaria_entregada' AS cantidad_maquinaria_entregada,
   r.payload->>'tiempo_de_ejecucion' AS tiempo_de_ejecucion,
   r.payload->>'fecha_acta_de_inicio' AS fecha_acta_de_inicio,
@@ -853,9 +853,9 @@ SELECT
   r.payload->>'fecha_cdp' AS fecha_cdp,
   r.payload->>'no_rc' AS no_rc,
   r.payload->>'fecha_de_rc' AS fecha_de_rc,
-  r.payload->>'valor_total' AS valor_total,
+  coalesce(nullif(trim(r.payload->>'valor_total'), ''), nullif(trim(r.payload->>'valor_sin_iva'), '')) AS valor_total,
   r.payload->>'valor_aporte_municipio' AS valor_aporte_municipio,
-  r.payload->>'valor_aporte_gobernacion' AS valor_aporte_gobernacion,
+  coalesce(nullif(trim(r.payload->>'valor_aporte_gobernacion'), '')) AS valor_aporte_gobernacion,
   r.payload->>'valor_aporte_ungrd' AS valor_aporte_ungrd,
   r.payload->>'responsable_juridico' AS responsable_juridico,
   r.payload->>'responsable_financiero' AS responsable_financiero,
@@ -911,7 +911,7 @@ SELECT
   r.payload->>'no_orden_de_compra' AS no_orden_de_compra,
   r.payload->>'encargado' AS encargado,
   r.payload->>'cargo_encargad' AS cargo_encargad,
-  r.payload->>'estado_maquina' AS estado_maquina,
+  coalesce(nullif(trim(r.payload->>'estado_maquina'), ''), nullif(trim(r.payload->>'estado'), '')) AS estado_maquina,
   r.payload->>'observaciones' AS observaciones
 FROM public.records r
 WHERE r.theme_id = 'banco-de-maquinaria'
@@ -937,7 +937,7 @@ SELECT
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
-  r.payload->>'fecha_de_estado' AS fecha_de_estado,
+  coalesce(nullif(trim(r.payload->>'fecha_de_estado'), ''), nullif(trim(r.payload->>'fecha'), '')) AS fecha_de_estado,
   r.payload->>'comentario' AS comentario
 FROM public.records r
 WHERE r.theme_id = 'banco-de-maquinaria'
@@ -1088,7 +1088,6 @@ SELECT
   r.payload->>'capa' AS capa,
   r.payload->>'tipo_registro' AS tipo_registro,
   coalesce(nullif(trim(r.payload->>'clave_seguimiento'), ''), nullif(trim(r.payload->>'uuid'), '')) AS clave_seguimiento,
-  coalesce(nullif(trim(r.payload->>'uuid'), ''), nullif(trim(r.payload->>'clave_seguimiento'), '')) AS uuid,
   r.payload->>'numero_envio' AS numero_envio,
   r.payload->>'n_orden' AS n_orden,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,

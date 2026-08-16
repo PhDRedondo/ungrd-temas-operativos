@@ -14,6 +14,7 @@ import type { ThemeConfig } from "@/lib/themes";
 import type { RecordRow } from "@/lib/records/types";
 import { useAuth } from "@/lib/auth";
 import { canWrite } from "@/lib/auth/roles";
+import { displayCapaLabel } from "@/lib/capa-display";
 
 import {
   AGUA_CAPAS_UI,
@@ -187,7 +188,7 @@ function profileFor(themeId: string): ThemeExcelProfile {
       searchLabel: "Buscar placa",
       searchPlaceholder: "OZJ943…",
       helpText:
-        "Capas: Maqueta / inventario, Bitácora estado y Suministro / viajes. Busque por placa. Clic en celda para editar; el botón vN abre el historial.",
+        "Busque por placa. Clic en una celda para editar; el botón de versión abre el historial.",
       filterHint: " · filtro placa: todas las capas de esa placa",
       emptyHint:
         " (Maqueta / Bitácora / Suministro) o quite el filtro de placa.",
@@ -204,7 +205,7 @@ function profileFor(themeId: string): ThemeExcelProfile {
       searchLabel: "Buscar convenio / serial",
       searchPlaceholder: "9677-… o serial…",
       helpText:
-        "Capas: Convenio o proceso, Detalle (maqueta), Bitácora y Entrega. Busque por nº convenio o serial. Clic en celda para editar; el botón vN abre el historial de versiones.",
+        "Busque por convenio o serial. Clic en una celda para editar; el botón de versión abre el historial.",
       filterHint: " · filtro: todas las capas de ese convenio/serial",
       emptyHint:
         " (Convenio / Detalle / Bitácora / Entrega) o quite el filtro de convenio/serial.",
@@ -222,7 +223,7 @@ function profileFor(themeId: string): ThemeExcelProfile {
       searchLabel: "Buscar id puente / contrato",
       searchPlaceholder: "id puente o contrato…",
       helpText:
-        "Capas: Contrato estructuración, Inventario puente y Bitácora estado. Busque por id puente o contrato. Clic en celda para editar; el botón vN abre el historial de versiones.",
+        "Busque por id de puente o contrato. Clic en una celda para editar; el botón de versión abre el historial.",
       filterHint: " · filtro: todas las capas de ese puente/contrato",
       emptyHint:
         " (Estructuración / Inventario / Bitácora) o quite el filtro de id/contrato.",
@@ -247,7 +248,7 @@ function profileFor(themeId: string): ThemeExcelProfile {
       searchLabel: "Buscar UUID / envío",
       searchPlaceholder: "uuid o número de envío…",
       helpText:
-        "Capa: Consolidado / envío. Cargue el Excel consolidado. Busque por UUID, número de envío o documento. Clic en celda para editar.",
+        "Busque por documento o número de envío. Clic en una celda para editar.",
       filterHint: " · filtro UUID/envío",
       emptyHint: " o quite el filtro.",
       normalizeCapa: (raw) => normalizeSubsidiosCapa(raw) || "Sin capa",
@@ -262,12 +263,12 @@ function profileFor(themeId: string): ThemeExcelProfile {
     capas: AGUA_CAPAS_UI,
     defaultCapa: "Alta / orden",
     pinLeft: PIN_LEFT_AGUA,
-    searchLabel: "Buscar OP",
+    searchLabel: "Buscar orden de proveeduría",
     searchPlaceholder: "GS-SMD-…",
     helpText:
-      "Capas oficiales Agua (Alta, Bitácora, Pagos, Modificaciones…). Busque por OP. Clic en celda para editar; el botón vN abre el historial de versiones.",
-    filterHint: " · filtro OP: todas las capas de esa orden",
-    emptyHint: " o quite el filtro de OP.",
+      "Busque por orden de proveeduría. Clic en una celda para editar; el botón de versión abre el historial.",
+    filterHint: " · filtro por orden: todos los formularios de esa orden",
+    emptyHint: " o quite el filtro de orden.",
     normalizeCapa: (raw) => normalizeAguaCapa(raw) || "Sin capa",
     isOfficial: (capa) => isAguaCapaOficial(capa),
     keyOf: (r) =>
@@ -305,7 +306,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
   const [keyQuery, setKeyQuery] = useState("");
   const [capaFilter, setCapaFilter] = useState<string>(defaultCapa);
   const [onlyChanged, setOnlyChanged] = useState(false);
-  const [showAllColumns, setShowAllColumns] = useState(false);
+  const [showAllColumns, setShowAllColumns] = useState(true);
   const [page, setPage] = useState(0);
   const [marks, setMarks] = useState<Record<string, ChangeMark>>({});
   const [marksReady, setMarksReady] = useState(false);
@@ -340,15 +341,28 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
     const names = theme.fields
       .map((f) => f.name)
       .filter((n) => !HIDDEN.has(n));
+    const formForCapa =
+      capaFilter !== "__todas__"
+        ? theme.captureForms?.find((f) => f.capa === capaFilter)
+        : undefined;
+    const formCols = (formForCapa?.fieldNames || []).filter(
+      (n) => names.includes(n) && !HIDDEN.has(n),
+    );
     const pinned = pinLeft.filter((n) => names.includes(n));
-    // Si no hay pins (tema sin esos campos), mostrar las primeras columnas útiles
+
+    // Por capa: columnas del formulario (completas para ver y seguir llenando)
+    if (formCols.length && !showAllColumns) return formCols;
+
     const base = pinned.length
       ? pinned
       : names.filter((n) => n !== "valor" && n !== "fecha").slice(0, 12);
+
     if (!showAllColumns) return base;
-    const rest = names.filter((n) => !base.includes(n));
-    return [...base, ...rest];
-  }, [theme.fields, showAllColumns, pinLeft]);
+
+    const prefer = formCols.length ? formCols : base;
+    const rest = names.filter((n) => !prefer.includes(n));
+    return [...prefer, ...rest];
+  }, [theme.fields, theme.captureForms, showAllColumns, pinLeft, capaFilter]);
 
   const capas = useMemo(() => [...profile.capas], [profile]);
 
@@ -558,12 +572,14 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
             if (!writable) return;
             setEditingCell(cellKey);
           }}
-          className={`block w-full max-w-[14rem] truncate px-1.5 py-1 text-left ${
-            writable ? "hover:bg-white hover:ring-1 hover:ring-ungrd-navy/30" : ""
+          className={`block w-full max-w-[14rem] truncate px-1.5 py-1 text-left text-ungrd-text ${
+            writable
+              ? "hover:bg-ungrd-input hover:ring-1 hover:ring-ungrd-navy/40"
+              : ""
           }`}
         >
           {changed ? (
-            <Sparkles className="mr-0.5 inline h-2.5 w-2.5 text-amber-700" />
+            <Sparkles className="mr-0.5 inline h-2.5 w-2.5 text-ungrd-warning" />
           ) : null}
           {value || <span className="text-ungrd-muted">—</span>}
         </button>
@@ -582,7 +598,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
             void saveCell(row, name, v);
           }}
           onBlur={() => setEditingCell(null)}
-          className="w-full rounded border border-ungrd-navy bg-white px-1 py-1 outline-none"
+          className="w-full rounded border border-ungrd-navy bg-ungrd-input px-1 py-1 text-ungrd-text outline-none"
         >
           <option value="">—</option>
           {field.options.map((o) => (
@@ -615,17 +631,17 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
             setEditingCell(null);
           }
         }}
-        className="w-full min-w-[7rem] rounded border border-ungrd-navy bg-white px-1.5 py-1 outline-none"
+        className="w-full min-w-[7rem] rounded border border-ungrd-navy bg-ungrd-input px-1.5 py-1 text-ungrd-text outline-none"
       />
     );
   }
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-ungrd-navy/20 bg-gradient-to-r from-ungrd-navy/[0.06] to-ungrd-yellow/10 px-4 py-3">
+      <div className="theme-hero rounded-xl px-4 py-3">
         <p className="inline-flex items-center gap-2 text-sm font-extrabold text-ungrd-heading">
-          <Table2 className="h-4 w-4 text-ungrd-navy" />
-          Base completa · vista Excel
+          <Table2 className="h-4 w-4 text-ungrd-heading" />
+          Todos los registros
         </p>
         <p className="mt-1 text-sm text-ungrd-muted">{profile.helpText}</p>
       </div>
@@ -643,16 +659,16 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
           />
         </label>
         <label className="text-sm font-semibold text-ungrd-heading">
-          <span className="mb-1 block text-xs text-ungrd-muted">Capa / tabla</span>
+          <span className="mb-1 block text-xs text-ungrd-muted">Formulario</span>
           <select
             value={capaFilter}
             onChange={(e) => setCapaFilter(e.target.value)}
             className="rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-normal"
           >
-            <option value="__todas__">Todas (puede ir lento)</option>
+            <option value="__todas__">Todos los formularios</option>
             {capas.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {displayCapaLabel(theme.id, c)}
               </option>
             ))}
           </select>
@@ -671,7 +687,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
             checked={showAllColumns}
             onChange={(e) => setShowAllColumns(e.target.checked)}
           />
-          Todas las columnas
+          Todas las columnas (base completa)
         </label>
         <span className="pb-2 text-xs text-ungrd-muted">
           {rows.length} filas · {columns.length} cols · pág. {safePage + 1}/
@@ -713,23 +729,23 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
         </p>
       )}
 
-      <div className="max-h-[70vh] overflow-auto rounded-xl border border-ungrd-border bg-white shadow-sm">
+      <div className="ungrd-data-table max-h-[70vh] overflow-auto rounded-xl border border-ungrd-border shadow-sm">
           <table className="min-w-max border-collapse text-left text-[11px]">
             <thead className="sticky top-0 z-20">
               <tr className="bg-ungrd-navy text-white">
-                <th className="sticky left-0 z-30 bg-ungrd-navy px-2 py-2 font-bold">
+                <th className="sticky left-0 z-30 bg-ungrd-navy px-2 py-2 font-bold text-white">
                   #
                 </th>
-                <th className="sticky left-8 z-30 bg-ungrd-navy px-2 py-2 font-bold">
-                  Capa
+                <th className="sticky left-8 z-30 bg-ungrd-navy px-2 py-2 font-bold text-white">
+                  Formulario
                 </th>
-                <th className="sticky left-[7.5rem] z-30 bg-ungrd-navy px-2 py-2 font-bold">
+                <th className="sticky left-[7.5rem] z-30 bg-ungrd-navy px-2 py-2 font-bold text-white">
                   Ver.
                 </th>
                 {columns.map((name) => (
                   <th
                     key={name}
-                    className="whitespace-nowrap px-2 py-2 font-bold"
+                    className="whitespace-nowrap px-2 py-2 font-bold text-white"
                     title={name}
                   >
                     {fieldsByName.get(name)?.label || name}
@@ -744,14 +760,14 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                 const selected = selectedId === row.id;
                 const absIdx = safePage * PAGE_SIZE + idx + 1;
                 const rowBg = selected
-                  ? "bg-amber-50"
+                  ? "bg-ungrd-row-selected"
                   : idx % 2
-                    ? "bg-slate-50"
-                    : "bg-white";
+                    ? "bg-ungrd-row-alt"
+                    : "bg-ungrd-row";
                 return (
                   <tr
                     key={row.id}
-                    className={`border-t border-slate-200 ${rowBg} hover:bg-ungrd-yellow/15`}
+                    className={`border-t border-ungrd-border text-ungrd-text ${rowBg} hover:bg-ungrd-row-hover`}
                   >
                     <td
                       className={`sticky left-0 z-20 px-2 py-1 text-ungrd-muted ${rowBg}`}
@@ -763,10 +779,10 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                       )}
                     </td>
                     <td
-                      className={`sticky left-8 z-20 max-w-[6.5rem] truncate px-2 py-1 font-semibold text-ungrd-navy ${rowBg}`}
-                      title={capaOf(theme.id, row)}
+                      className={`sticky left-8 z-20 max-w-[6.5rem] truncate px-2 py-1 font-semibold text-ungrd-heading ${rowBg}`}
+                      title={displayCapaLabel(theme.id, capaOf(theme.id, row))}
                     >
-                      {capaOf(theme.id, row)}
+                      {displayCapaLabel(theme.id, capaOf(theme.id, row))}
                     </td>
                     <td
                       className={`sticky left-[7.5rem] z-20 px-1 py-1 ${rowBg}`}
@@ -783,7 +799,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                           className={`relative z-40 inline-flex items-center gap-1 rounded-md border px-1.5 py-1 ${
                             selected && historyOpen
                               ? "border-ungrd-navy bg-ungrd-navy text-white"
-                              : "border-amber-300 bg-amber-100 text-amber-950 hover:border-ungrd-navy hover:bg-ungrd-navy hover:text-white"
+                              : "border-ungrd-warning/40 bg-ungrd-row-changed text-ungrd-heading hover:border-ungrd-navy hover:bg-ungrd-navy hover:text-white"
                           }`}
                         >
                           <span className="text-[10px] font-extrabold">
@@ -802,8 +818,8 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                       return (
                         <td
                           key={name}
-                          className={`relative min-w-[7rem] px-0.5 py-0.5 ${
-                            changed ? "bg-amber-100/80" : ""
+                          className={`relative min-w-[7rem] px-0.5 py-0.5 text-ungrd-text ${
+                            changed ? "bg-ungrd-row-changed" : ""
                           }`}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -838,7 +854,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
           onClick={closeHistory}
         >
           <div
-            className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-ungrd-border bg-white shadow-2xl"
+            className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-ungrd-border bg-ungrd-surface text-ungrd-text shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 border-b border-ungrd-border bg-ungrd-navy px-4 py-3 text-white">
@@ -876,7 +892,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
               ) : (
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-ungrd-border bg-slate-50 text-ungrd-heading">
+                    <tr className="border-b border-ungrd-border bg-ungrd-row-alt text-ungrd-heading">
                       <th className="px-2 py-2 font-bold">Ver.</th>
                       <th className="px-2 py-2 font-bold">Fecha</th>
                       <th className="px-2 py-2 font-bold">Motivo / campos</th>
@@ -889,8 +905,8 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                       return (
                         <tr
                           key={v.id}
-                          className={`border-b border-slate-200 ${
-                            isCurrent ? "bg-emerald-100" : "bg-white"
+                          className={`border-b border-ungrd-border ${
+                            isCurrent ? "bg-ungrd-success/20" : "bg-ungrd-row"
                           }`}
                         >
                           <td className="whitespace-nowrap px-2 py-2.5 font-extrabold text-ungrd-heading">

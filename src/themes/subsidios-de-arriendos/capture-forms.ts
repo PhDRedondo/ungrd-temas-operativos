@@ -62,9 +62,9 @@ const CONSOLIDADO_FIELDS = [
 export const SUBSIDIOS_CAPTURE_FORMS: CaptureFormConfig[] = [
   {
     id: "consolidado",
-    label: "Registro consolidado (envío)",
+    label: "Registro de envío",
     description:
-      "Misma estructura del Excel consolidado. Preferible cargar el archivo de envío; use este formulario para un alta puntual.",
+      "Complete los datos de un hogar del envío. Si tiene el archivo completo, preferible cargarlo por Excel.",
     capa: "Consolidado / envío",
     mode: "upsert",
     fieldNames: [...CONSOLIDADO_FIELDS],

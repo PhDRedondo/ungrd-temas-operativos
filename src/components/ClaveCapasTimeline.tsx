@@ -82,11 +82,10 @@ export function ClaveCapasTimeline({
   return (
     <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
       <h3 className="text-sm font-extrabold text-ungrd-heading">
-        Seguimiento por clave · {themeName}
+        Buscar en {themeName}
       </h3>
       <p className="mt-1 text-xs text-ungrd-muted">
-        Escriba una OP, placa, CDP o Nº declaratoria para ver maqueta, bitácora
-        y demás capas cargadas en este tema.
+        Escriba una orden, placa, CDP o número de declaratoria.
       </p>
       <div className="mt-3 flex gap-2">
         <div className="relative min-w-0 flex-1">
@@ -102,15 +101,15 @@ export function ClaveCapasTimeline({
 
       {query.trim().length >= 2 && capas.length > 0 ? (
         <p className="mt-2 text-xs text-ungrd-muted">
-          Capas encontradas:{" "}
+          Formularios:{" "}
           {capas.map(([c, n]) => `${c} (${n})`).join(" · ")}
         </p>
       ) : null}
 
       {query.trim().length >= 2 && events.length === 0 ? (
         <p className="mt-3 text-sm text-ungrd-muted">
-          Sin coincidencias en {themeName}. Verifique la clave o cargue la capa
-          (maqueta/bitácora) en Captura.
+          Sin coincidencias en {themeName}. Verifique el dato o capture el
+          registro primero.
         </p>
       ) : null}
 

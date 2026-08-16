@@ -49,8 +49,7 @@ export function UploadsInbox({ themeId, compact }: Props) {
           </h2>
           {!compact && (
             <p className="text-sm text-ungrd-muted">
-              Historial auditable: archivo, usuario, aceptados/rechazados y CSV
-              de errores.
+              Archivos cargados, quién los subió y resultado de la validación.
             </p>
           )}
         </div>

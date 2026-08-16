@@ -29,6 +29,16 @@
   --ungrd-hero-muted: rgba(255, 255, 255, 0.75);
   --ungrd-card-glass: rgba(255, 255, 255, 0.06);
   --ungrd-card-border: rgba(255, 255, 255, 0.12);
+  /* Filas de tablas de datos (legibles en claro y oscuro) */
+  --ungrd-row: #ffffff;
+  --ungrd-row-alt: #e8eef5;
+  --ungrd-row-selected: #fff3bf;
+  --ungrd-row-changed: #fde68a;
+  --ungrd-row-hover: color-mix(in srgb, var(--ungrd-yellow) 18%, transparent);
+  /* Franja institucional Colombia / UNGRD */
+  --colombia-yellow: #ffd100;
+  --colombia-blue: #002d5a;
+  --colombia-red: #ce1126;
 }
 
 .dark {
@@ -56,6 +66,11 @@
   --ungrd-hero-muted: rgba(255, 255, 255, 0.72);
   --ungrd-card-glass: rgba(255, 255, 255, 0.05);
   --ungrd-card-border: rgba(255, 255, 255, 0.12);
+  --ungrd-row: #121c2c;
+  --ungrd-row-alt: #1a2638;
+  --ungrd-row-selected: #3d3420;
+  --ungrd-row-changed: #4a3f1a;
+  --ungrd-row-hover: color-mix(in srgb, var(--ungrd-yellow) 14%, transparent);
 }
 
 :root:not(.dark) {
@@ -91,6 +106,11 @@
   --color-ungrd-hero-muted: var(--ungrd-hero-muted);
   --color-ungrd-card-glass: var(--ungrd-card-glass);
   --color-ungrd-card-border: var(--ungrd-card-border);
+  --color-ungrd-row: var(--ungrd-row);
+  --color-ungrd-row-alt: var(--ungrd-row-alt);
+  --color-ungrd-row-selected: var(--ungrd-row-selected);
+  --color-ungrd-row-changed: var(--ungrd-row-changed);
+  --color-ungrd-row-hover: var(--ungrd-row-hover);
   --font-sans: var(--font-nunito);
 }
 
@@ -193,3 +213,711 @@ body {
 .dark .scroll-thin::-webkit-scrollbar-thumb {
   background: #4a6d8c;
 }
+
+/* Franja tricolor Colombia (amarillo · azul · rojo) */
+.ungrd-tricolor-bar {
+  background: linear-gradient(
+    90deg,
+    var(--colombia-yellow) 0%,
+    var(--colombia-yellow) 33.333%,
+    var(--colombia-blue) 33.333%,
+    var(--colombia-blue) 66.666%,
+    var(--colombia-red) 66.666%,
+    var(--colombia-red) 100%
+  );
+}
+
+.ungrd-app-header {
+  position: relative;
+  border-bottom: 1px solid var(--ungrd-border);
+  background: color-mix(in srgb, var(--ungrd-surface) 95%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.ungrd-menu-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  padding: 0.5rem;
+  background: var(--ungrd-surface);
+  color: var(--ungrd-heading);
+  isolation: isolate;
+}
+
+.ungrd-menu-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--colombia-yellow) 0%,
+    var(--colombia-yellow) 32%,
+    var(--colombia-blue) 32%,
+    var(--colombia-blue) 68%,
+    var(--colombia-red) 68%,
+    var(--colombia-red) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ungrd-menu-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tablas de datos: texto siempre sobre fondos de fila del tema */
+.ungrd-data-table {
+  background: var(--ungrd-surface);
+  color: var(--ungrd-text);
+}
+.ungrd-data-table tbody td,
+.ungrd-data-table tbody th {
+  color: var(--ungrd-text);
+}
+.ungrd-data-table input,
+.ungrd-data-table select,
+.ungrd-data-table textarea {
+  background: var(--ungrd-input);
+  color: var(--ungrd-text);
+  border-color: var(--ungrd-border);
+}
+.ungrd-data-table input:focus,
+.ungrd-data-table select:focus,
+.ungrd-data-table textarea:focus {
+  border-color: var(--ungrd-navy);
+  outline: none;
+}
+
+/* Acento temático (solo cromado; no cambia captura ni datos) */
+:root {
+  --theme-accent: #ffd100;
+  --theme-accent-soft: #ffe566;
+  --theme-wash: transparent;
+  --theme-ink: #001a36;
+  --theme-on-accent: #001a36;
+}
+
+[data-theme-visual] {
+  --theme-on-accent: #ffffff;
+}
+
+[data-theme-visual] main {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--theme-wash) 70%, transparent) 0%,
+    transparent 14rem
+  );
+  background-repeat: no-repeat;
+}
+
+.theme-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  /* Mezclar wash con superficie del tema (no con blanco fijo) */
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--theme-wash) 82%, var(--ungrd-surface)) 0%,
+      var(--ungrd-surface) 78%
+    );
+  border: 1px solid
+    color-mix(in srgb, var(--theme-accent) 28%, var(--ungrd-border));
+  color: var(--ungrd-text);
+}
+
+.theme-hero h1,
+.theme-hero .theme-hero-title {
+  color: var(--ungrd-heading);
+}
+
+.theme-hero .theme-hero-desc,
+.theme-hero .theme-hero-meta {
+  color: color-mix(in srgb, var(--ungrd-heading) 55%, var(--ungrd-muted));
+}
+
+.dark .theme-hero .theme-hero-desc,
+.dark .theme-hero .theme-hero-meta {
+  color: color-mix(in srgb, var(--ungrd-heading) 70%, var(--ungrd-muted));
+}
+
+.theme-hero::before {
+  content: "";
+  position: absolute;
+  inset: auto -8% -40% 42%;
+  height: 160%;
+  background: var(--theme-motif, none);
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: min(42%, 280px) auto;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .theme-hero::before {
+  opacity: 0.28;
+}
+
+.theme-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-mark {
+  background: var(--theme-accent);
+  color: var(--theme-on-accent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--theme-on-accent) 12%, transparent);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.theme-mark * {
+  color: inherit;
+}
+
+.theme-mark svg {
+  stroke: currentColor;
+}
+
+.theme-mark-soft {
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  color: var(--theme-ink);
+}
+
+.theme-seg {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ungrd-border);
+  background: var(--ungrd-surface);
+}
+
+.theme-seg > button {
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.theme-seg > button[aria-pressed="true"],
+.theme-seg > button[data-active="true"] {
+  background: var(--theme-accent);
+  color: var(--theme-on-accent);
+}
+
+.theme-seg > button:not([aria-pressed="true"]):not([data-active="true"]) {
+  color: var(--ungrd-muted);
+}
+
+.theme-seg > button:not([aria-pressed="true"]):not([data-active="true"]):hover {
+  color: var(--ungrd-heading);
+  background: var(--ungrd-bg);
+}
+
+.theme-tab-active::after {
+  background: var(--theme-accent);
+}
+
+.theme-save-bar {
+  position: sticky;
+  bottom: 0.75rem;
+  /* Por debajo de desplegables de búsqueda (órdenes, placas, etc.) */
+  z-index: 10;
+  border: 1px solid
+    color-mix(in srgb, var(--theme-accent) 35%, var(--ungrd-border));
+  background: color-mix(in srgb, var(--ungrd-surface) 92%, var(--theme-wash));
+  color: var(--ungrd-text);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--theme-accent) 8%, transparent);
+}
+
+.theme-fieldset {
+  border-radius: 1rem;
+  border: 1px solid
+    color-mix(in srgb, var(--theme-accent) 30%, var(--ungrd-border));
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--theme-wash) 42%, var(--ungrd-surface)) 0%,
+      var(--ungrd-surface) 52%
+    );
+  padding: 1rem 1.1rem 1.2rem;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ungrd-heading) 5%, transparent),
+    0 10px 28px color-mix(in srgb, var(--theme-accent) 6%, transparent);
+}
+
+.theme-fieldset:disabled {
+  opacity: 0.72;
+}
+
+.theme-fieldset > legend {
+  float: none;
+  width: auto;
+  padding: 0.15rem 0.55rem;
+  margin-left: 0.15rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--ungrd-surface));
+  color: var(--theme-ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.theme-field {
+  display: block;
+  min-width: 0;
+  border-radius: 0.9rem;
+  border: 1px solid var(--ungrd-border);
+  background: color-mix(in srgb, var(--ungrd-bg) 78%, var(--ungrd-surface));
+  padding: 0.7rem 0.85rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ungrd-heading);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.theme-field:hover:not(:focus-within) {
+  border-color: color-mix(in srgb, var(--theme-accent) 35%, var(--ungrd-border));
+}
+
+.theme-field:focus-within {
+  border-color: color-mix(in srgb, var(--theme-accent) 65%, var(--ungrd-border));
+  background: var(--ungrd-surface);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--theme-accent) 16%, transparent);
+}
+
+.theme-field .theme-input {
+  margin-top: 0.45rem;
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid var(--ungrd-border);
+  background: var(--ungrd-input);
+  color: var(--ungrd-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.65rem 0.8rem;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.theme-field .theme-input:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--theme-accent) 22%, transparent);
+}
+
+.theme-field .theme-input:disabled,
+.theme-field .theme-input:read-only {
+  cursor: not-allowed;
+  opacity: 0.85;
+  background: color-mix(in srgb, var(--ungrd-surface) 70%, var(--ungrd-bg));
+  color: var(--ungrd-muted);
+}
+
+/* Ficha de entidad seleccionada (orden, placa, convenio, puente…) */
+.lookup-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 1.15rem;
+  border: 1px solid
+    color-mix(in srgb, var(--theme-accent, #0e7490) 32%, var(--ungrd-border));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--theme-wash, #e4f4f8) 55%, var(--ungrd-surface))
+        0%,
+      var(--ungrd-surface) 58%
+    );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ungrd-heading) 4%, transparent),
+    0 14px 36px color-mix(in srgb, var(--theme-accent, #0e7490) 10%, transparent);
+}
+
+.lookup-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(
+    180deg,
+    var(--theme-accent, #0e7490),
+    color-mix(in srgb, var(--theme-accent, #0e7490) 40%, var(--ungrd-yellow))
+  );
+  z-index: 1;
+}
+
+.lookup-card__body {
+  position: relative;
+  z-index: 1;
+  padding: 1.05rem 1.15rem 1.15rem 1.25rem;
+}
+
+.lookup-card__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-accent, #0e7490) 14%, transparent);
+  color: var(--theme-ink, var(--ungrd-heading));
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lookup-card__title {
+  margin-top: 0.55rem;
+  color: var(--ungrd-heading);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.lookup-card__sub {
+  margin-top: 0.25rem;
+  color: var(--ungrd-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lookup-card__grid {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .lookup-card__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .lookup-card__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.lookup-card__cell {
+  min-width: 0;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--ungrd-border) 85%, transparent);
+  background: color-mix(in srgb, var(--ungrd-bg) 55%, var(--ungrd-surface));
+  padding: 0.55rem 0.7rem;
+}
+
+.lookup-card__cell dt {
+  color: var(--ungrd-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lookup-card__cell dd {
+  margin-top: 0.15rem;
+  color: var(--ungrd-heading);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.lookup-card__objeto {
+  grid-column: 1 / -1;
+  border-radius: 0.85rem;
+  border: 1px dashed
+    color-mix(in srgb, var(--theme-accent, #0e7490) 28%, var(--ungrd-border));
+  background: color-mix(in srgb, var(--ungrd-surface) 88%, var(--theme-wash, transparent));
+  padding: 0.7rem 0.85rem;
+}
+
+.lookup-card__objeto dt {
+  color: var(--ungrd-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lookup-card__objeto dd {
+  margin-top: 0.35rem;
+  color: var(--ungrd-text);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.45;
+  text-transform: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lookup-card__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  border-radius: 0.65rem;
+  border: 1px solid var(--ungrd-border);
+  background: var(--ungrd-surface);
+  color: var(--ungrd-heading);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.lookup-card__clear:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--theme-accent, #0e7490) 45%, var(--ungrd-border));
+  background: color-mix(in srgb, var(--theme-wash, transparent) 40%, var(--ungrd-surface));
+}
+
+.lookup-card__clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.theme-input:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--theme-accent) 28%, transparent);
+}
+
+.theme-btn-primary {
+  border-radius: 0.5rem;
+  background: var(--ungrd-yellow);
+  color: var(--ungrd-navy-deep);
+  font-weight: 800;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.theme-btn-primary:hover:not(:disabled) {
+  background: var(--ungrd-yellow-soft);
+  box-shadow: 0 4px 14px rgba(0, 45, 90, 0.12);
+}
+
+.theme-btn-ghost {
+  border-radius: 0.5rem;
+  border: 1px solid var(--ungrd-border);
+  background: color-mix(in srgb, var(--ungrd-surface) 80%, transparent);
+  color: var(--ungrd-heading);
+  font-weight: 700;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-btn-ghost:hover {
+  background: var(--ungrd-bg);
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, var(--ungrd-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-hero::before {
+    transition: none;
+  }
+}
+
+[data-theme-visual="agua-y-saneamiento"] {
+  --theme-accent: #0e7490;
+  --theme-accent-soft: #67e8f9;
+  --theme-wash: #e4f4f8;
+  --theme-ink: #083344;
+  --theme-motif: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120' fill='none'><path d='M0 70c30-22 50 22 80 0s50 22 80 0 50 22 80 0' stroke='%230e7490' stroke-width='8' stroke-linecap='round'/><path d='M0 94c30-18 50 18 80 0s50 18 80 0 50 18 80 0' stroke='%230e7490' stroke-width='5' opacity='.45' stroke-linecap='round'/></svg>");
+}
+
+[data-theme-visual="puentes"] {
+  --theme-accent: #b45309;
+  --theme-accent-soft: #fbbf24;
+  --theme-wash: #f6efe6;
+  --theme-ink: #431407;
+  --theme-motif: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120' fill='none'><path d='M20 88h40V48h120v40h40' stroke='%23b45309' stroke-width='8' stroke-linejoin='round'/><path d='M60 48c20-28 100-28 120 0' stroke='%23b45309' stroke-width='7'/><circle cx='60' cy='48' r='6' fill='%23b45309'/><circle cx='180' cy='48' r='6' fill='%23b45309'/></svg>");
+}
+
+[data-theme-visual="carrotanques"] {
+  --theme-accent: #a16207;
+  --theme-accent-soft: #facc15;
+  --theme-wash: #f7f1dc;
+  --theme-ink: #422006;
+  --theme-motif: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120' fill='none'><rect x='28' y='38' width='150' height='52' rx='26' stroke='%23a16207' stroke-width='8'/><circle cx='64' cy='98' r='12' stroke='%23a16207' stroke-width='6'/><circle cx='148' cy='98' r='12' stroke='%23a16207' stroke-width='6'/><path d='M178 52h22v24H178' stroke='%23a16207' stroke-width='7' stroke-linejoin='round'/></svg>");
+}
+
+[data-theme-visual="banco-de-maquinaria"] {
+  --theme-accent: #c2410c;
+  --theme-accent-soft: #fdba74;
+  --theme-wash: #f8ece4;
+  --theme-ink: #431407;
+  --theme-motif: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120' fill='none'><circle cx='120' cy='60' r='28' stroke='%23c2410c' stroke-width='8'/><path d='M120 18v16M120 86v16M62 60h16M162 60h16M78 28l12 12M150 80l12 12M78 92l12-12M150 40l12-12' stroke='%23c2410c' stroke-width='8' stroke-linecap='round'/></svg>");
+}
+
+[data-theme-visual="subsidios-de-arriendos"] {
+  --theme-accent: #9a3412;
+  --theme-accent-soft: #fdba74;
+  --theme-wash: #f7ebe4;
+  --theme-ink: #431407;
+  --theme-motif: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 120' fill='none'><path d='M40 78V52l80-32 80 32v26' stroke='%239a3412' stroke-width='8' stroke-linejoin='round'/><rect x='88' y='70' width='64' height='28' stroke='%239a3412' stroke-width='7'/></svg>");
+}
+
+[data-theme-visual="obras-de-emergencia"] {
+  --theme-accent: #1d4ed8;
+  --theme-accent-soft: #93c5fd;
+  --theme-wash: #e8eef8;
+  --theme-ink: #1e3a8a;
+}
+
+[data-theme-visual="obras-por-impuestos"] {
+  --theme-accent: #0f766e;
+  --theme-accent-soft: #5eead4;
+  --theme-wash: #e7f4f2;
+  --theme-ink: #134e4a;
+}
+
+[data-theme-visual="declaratoria-de-emergencia"] {
+  --theme-accent: #b91c1c;
+  --theme-accent-soft: #fca5a5;
+  --theme-wash: #f8eaea;
+  --theme-ink: #7f1d1d;
+}
+
+[data-theme-visual="asistencia-humanitaria"] {
+  --theme-accent: #be185d;
+  --theme-accent-soft: #f9a8d4;
+  --theme-wash: #f8eaf1;
+  --theme-ink: #831843;
+}
+
+[data-theme-visual="gestion-de-servicios"] {
+  --theme-accent: #4338ca;
+  --theme-accent-soft: #a5b4fc;
+  --theme-wash: #eceef8;
+  --theme-ink: #312e81;
+}
+
+[data-theme-visual="alertas-tempranas"] {
+  --theme-accent: #ca8a04;
+  --theme-accent-soft: #fde047;
+  --theme-wash: #f7f3de;
+  --theme-ink: #713f12;
+}
+
+[data-theme-visual="asistencia-tecnica"] {
+  --theme-accent: #3f6212;
+  --theme-accent-soft: #bef264;
+  --theme-wash: #eef4e6;
+  --theme-ink: #365314;
+}
+
+[data-theme-visual="equipo-de-respuesta"] {
+  --theme-accent: #0369a1;
+  --theme-accent-soft: #7dd3fc;
+  --theme-wash: #e6f1f7;
+  --theme-ink: #0c4a6e;
+}
+
+[data-theme-visual="compra-de-materiales"] {
+  --theme-accent: #0f766e;
+  --theme-accent-soft: #5eead4;
+  --theme-wash: #e8f4f2;
+  --theme-ink: #134e4a;
+}
+
+[data-theme-visual="fic"] {
+  --theme-accent: #1e40af;
+  --theme-accent-soft: #93c5fd;
+  --theme-wash: #e8eef8;
+  --theme-ink: #1e3a8a;
+}
+
+[data-theme-visual="convenios"] {
+  --theme-accent: #6d28d9;
+  --theme-accent-soft: #c4b5fd;
+  --theme-wash: #f0eaf8;
+  --theme-ink: #4c1d95;
+}
+
+[data-theme-visual="presupuesto"] {
+  --theme-accent: #047857;
+  --theme-accent-soft: #6ee7b7;
+  --theme-wash: #e7f4ee;
+  --theme-ink: #064e3b;
+}
+
+[data-theme-visual="ejecucion-financiera"] {
+  --theme-accent: #0f766e;
+  --theme-accent-soft: #5eead4;
+  --theme-wash: #e6f3f1;
+  --theme-ink: #134e4a;
+}
+
+[data-theme-visual="materiales"] {
+  --theme-accent: #57534e;
+  --theme-accent-soft: #d6d3d1;
+  --theme-wash: #f0eeeb;
+  --theme-ink: #292524;
+}
+
+[data-theme-visual="plantilla"] {
+  --theme-accent: #64748b;
+  --theme-accent-soft: #cbd5e1;
+  --theme-wash: #eef1f4;
+  --theme-ink: #334155;
+}
+
+/* Wash / tinta en oscuro: fondo de tarjeta siempre oscuro, texto claro */
+.dark [data-theme-visual] {
+  --theme-wash: color-mix(in srgb, var(--theme-accent) 22%, var(--ungrd-surface));
+  --theme-ink: var(--ungrd-heading);
+}
+.dark [data-theme-visual="agua-y-saneamiento"] { --theme-wash: #0b2a32; --theme-ink: #ecfeff; }
+.dark [data-theme-visual="puentes"] { --theme-wash: #2a1a0c; --theme-ink: #fff7ed; }
+.dark [data-theme-visual="carrotanques"] { --theme-wash: #2a220c; --theme-ink: #fefce8; }
+.dark [data-theme-visual="banco-de-maquinaria"] { --theme-wash: #2c140c; --theme-ink: #fff7ed; }
+.dark [data-theme-visual="subsidios-de-arriendos"] { --theme-wash: #2a140e; --theme-ink: #fff7ed; }
+.dark [data-theme-visual="obras-de-emergencia"] { --theme-wash: #0f1c3d; --theme-ink: #dbeafe; }
+.dark [data-theme-visual="obras-por-impuestos"] { --theme-wash: #0c2a28; --theme-ink: #ccfbf1; }
+.dark [data-theme-visual="declaratoria-de-emergencia"] { --theme-wash: #2a1010; --theme-ink: #fee2e2; }
+.dark [data-theme-visual="asistencia-humanitaria"] { --theme-wash: #2a1020; --theme-ink: #fce7f3; }
+.dark [data-theme-visual="gestion-de-servicios"] { --theme-wash: #1a1740; --theme-ink: #e0e7ff; }
+.dark [data-theme-visual="alertas-tempranas"] { --theme-wash: #2a220c; --theme-ink: #fef9c3; }
+.dark [data-theme-visual="asistencia-tecnica"] { --theme-wash: #1a2a10; --theme-ink: #ecfccb; }
+.dark [data-theme-visual="equipo-de-respuesta"] { --theme-wash: #0c2233; --theme-ink: #e0f2fe; }
+.dark [data-theme-visual="compra-de-materiales"] { --theme-wash: #0c2a28; --theme-ink: #ccfbf1; }
+.dark [data-theme-visual="fic"] { --theme-wash: #0f1c3d; --theme-ink: #dbeafe; }
+.dark [data-theme-visual="convenios"] { --theme-wash: #1f1238; --theme-ink: #ede9fe; }
+.dark [data-theme-visual="presupuesto"] { --theme-wash: #0c2a20; --theme-ink: #d1fae5; }
+.dark [data-theme-visual="ejecucion-financiera"] { --theme-wash: #0c2a28; --theme-ink: #ccfbf1; }
+.dark [data-theme-visual="materiales"] { --theme-wash: #1c1a18; --theme-ink: #e7e5e4; }
+.dark [data-theme-visual="plantilla"] { --theme-wash: #1a222c; --theme-ink: #e2e8f0; }

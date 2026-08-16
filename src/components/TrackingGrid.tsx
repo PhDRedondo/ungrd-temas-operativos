@@ -320,7 +320,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
             onChange(v);
             setTimeout(onCommit, 0);
           }}
-          className="min-w-[10rem] w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-xs outline-none hover:border-ungrd-border focus:border-ungrd-navy focus:bg-white"
+          className="min-w-[10rem] w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-xs outline-none hover:border-ungrd-border focus:border-ungrd-navy focus:bg-ungrd-input"
         >
           <option value="">—</option>
           {field.options.map((o) => (
@@ -344,7 +344,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
           disabled={disabled || !writable}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onCommit}
-          className="min-h-[2rem] w-full min-w-[10rem] rounded border border-transparent bg-transparent px-1.5 py-1 text-xs text-ungrd-text outline-none hover:border-ungrd-border focus:border-ungrd-navy focus:bg-white"
+          className="min-h-[2rem] w-full min-w-[10rem] rounded border border-transparent bg-transparent px-1.5 py-1 text-xs text-ungrd-text outline-none hover:border-ungrd-border focus:border-ungrd-navy focus:bg-ungrd-input"
           rows={2}
         />
       );
@@ -361,7 +361,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
             e.currentTarget.blur();
           }
         }}
-        className="w-full min-w-[7rem] rounded border border-transparent bg-transparent px-1.5 py-1 text-xs text-ungrd-text outline-none hover:border-ungrd-border focus:border-ungrd-navy focus:bg-white"
+        className="w-full min-w-[7rem] rounded border border-transparent bg-transparent px-1.5 py-1 text-xs text-ungrd-text outline-none hover:border-ungrd-border focus:border-ungrd-navy focus:bg-ungrd-input"
       />
     );
   }
@@ -379,12 +379,11 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
       <div className="rounded-xl border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-4 py-3 text-sm text-ungrd-muted">
         <p className="inline-flex items-center gap-2 font-extrabold text-ungrd-heading">
           <Table2 className="h-4 w-4 text-ungrd-navy" />
-          Seguimiento tipo Excel
+          Edición en tabla
         </p>
         <p className="mt-1">
-          Edite celdas y al salir se guarda con <strong>versión</strong>. Use el
-          panel Historial para ver cambios y restaurar. Fila vacía abajo = nuevo
-          registro (append).
+          Edite una celda y, al salir, se guarda. Use Historial para ver cambios
+          o restaurar. La fila vacía al final sirve para agregar un registro.
         </p>
       </div>
 
@@ -396,8 +395,8 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
             onClick={() => setFormId(f.id)}
             className={`rounded-lg border px-3 py-2 text-xs font-bold sm:text-sm ${
               activeForm?.id === f.id
-                ? "border-ungrd-navy bg-ungrd-navy text-white"
-                : "border-ungrd-border bg-ungrd-surface text-ungrd-heading"
+                ? "theme-mark border-transparent"
+                : "border-ungrd-border bg-ungrd-surface text-ungrd-heading hover:border-[color-mix(in_srgb,var(--theme-accent)_45%,var(--ungrd-border))]"
             }`}
           >
             {f.label.replace(/^\d+\s*·\s*/, "")}
@@ -407,7 +406,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-semibold text-ungrd-heading">
-          {carro ? "Filtrar placa" : "Filtrar OP"}
+          {carro ? "Filtrar placa" : "Filtrar orden de proveeduría"}
           <input
             value={keyFilter}
             onChange={(e) => setKeyFilter(e.target.value)}
@@ -432,7 +431,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-        <div className="overflow-auto rounded-xl border border-ungrd-border bg-ungrd-surface">
+        <div className="ungrd-data-table overflow-auto rounded-xl border border-ungrd-border">
           <table className="min-w-full border-collapse text-left text-xs">
             <thead className="sticky top-0 z-10 bg-ungrd-navy text-white">
               <tr>
@@ -454,11 +453,11 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
                   onClick={() => selectRow(row.id)}
                   className={`border-t border-ungrd-border ${
                     selectedId === row.id
-                      ? "bg-ungrd-yellow/20"
+                      ? "bg-ungrd-row-selected"
                       : idx % 2
-                        ? "bg-ungrd-bg/40"
-                        : "bg-white"
-                  } ${busyId === row.id ? "opacity-60" : ""}`}
+                        ? "bg-ungrd-row-alt"
+                        : "bg-ungrd-row"
+                  } text-ungrd-text ${busyId === row.id ? "opacity-60" : ""}`}
                 >
                   <td className="px-2 py-1 text-ungrd-muted">
                     {busyId === row.id ? (
@@ -524,7 +523,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
           </p>
           {!selectedId ? (
             <p className="mt-3 text-sm text-ungrd-muted">
-              Seleccione una fila de la tabla para ver su trazabilidad.
+              Seleccione una fila para ver su historial.
             </p>
           ) : versionsLoading ? (
             <p className="mt-3 flex items-center gap-2 text-sm text-ungrd-muted">
@@ -563,7 +562,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
                       type="button"
                       disabled={busyId === selectedId}
                       onClick={() => void restoreVersion(v.version)}
-                      className="mt-2 inline-flex items-center gap-1 rounded border border-ungrd-border px-2 py-1 font-bold text-ungrd-heading hover:bg-white disabled:opacity-50"
+                      className="mt-2 inline-flex items-center gap-1 rounded border border-ungrd-border px-2 py-1 font-bold text-ungrd-heading hover:bg-ungrd-input disabled:opacity-50"
                     >
                       <RotateCcw className="h-3 w-3" />
                       Restaurar

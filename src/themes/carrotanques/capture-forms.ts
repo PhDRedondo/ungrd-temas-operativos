@@ -80,9 +80,9 @@ const LOOKUP_MAQUETA = {
 export const CARRO_CAPTURE_FORMS: CaptureFormConfig[] = [
   {
     id: "alta-maqueta",
-    label: "1 · Alta maqueta (B–J)",
+    label: "1 · Registrar vehículo",
     description:
-      "Registro inicial del carrotanque (placa, UNGRD, clase, marca, modelo, serial, año, capacidad). Estos datos no se modifican después. Departamento, municipio y región se capturan en Bitácora (M–P) y se reflejan en la maqueta con el último evento.",
+      "Registre el vehículo por primera vez (placa, marca, modelo, capacidad). Esos datos no se cambian después.",
     capa: "Maqueta / inventario",
     mode: "create-once",
     requiredNames: ["placa"],
@@ -90,9 +90,9 @@ export const CARRO_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "actualizar-categorias",
-    label: "2 · Categorías (K–L) · mismo registro",
+    label: "2 · Actualizar categorías",
     description:
-      "Otras categorizaciones (K) y Clasificación propiedad (L) cambian sobre la misma fila de maqueta. Busque la placa, edite y guarde: no crea otro registro ni toca B–J.",
+      "Busque la placa y actualice categorizaciones o clasificación de propiedad.",
     capa: "Maqueta / inventario",
     mode: "upsert",
     ...LOOKUP_MAQUETA,
@@ -104,7 +104,7 @@ export const CARRO_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "bitacora",
     label: "3 · Bitácora de estado",
     description:
-      "Nuevo evento de la placa: ubicación, región, departamento, municipio, estado carrotanque, situación, fechas inicio/fin, ente y observaciones. Marca y datos de alta (B–J) ya vienen de la maqueta; no se vuelven a pedir. Al guardar, la maqueta refleja el último evento.",
+      "Busque la placa y registre un cambio de estado o ubicación. El inventario se actualiza con el último evento.",
     capa: "Bitácora estado",
     mode: "append",
     ...LOOKUP_MAQUETA,
@@ -140,7 +140,7 @@ export const CARRO_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "suministro",
     label: "4 · Suministro / viajes",
     description:
-      "Cada suministro/viaje de la placa. No se pide marca (viene de la maqueta). Al guardar, la maqueta acumula Q–R–S (litros, personas, comunidades) sumando todos los registros de esa placa.",
+      "Busque la placa y registre un viaje o suministro (litros, personas, comunidades).",
     capa: "Suministro / viajes",
     mode: "append",
     ...LOOKUP_MAQUETA,

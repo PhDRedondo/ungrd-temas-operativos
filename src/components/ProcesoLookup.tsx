@@ -137,63 +137,72 @@ export function ProcesoLookup({
 
   if (selected) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase">
-              <Link2 className="h-3.5 w-3.5" />
-              {catalog === "inventario"
-                ? "Contrato · puentes atados"
-                : selected.estructurado && selected.id
-                  ? "Proceso existente · modificar"
-                  : "Proceso nuevo · registrar"}
-            </p>
-            <p className="mt-1 text-base font-extrabold text-ungrd-heading">
-              {selected.contrato_convenio}
-            </p>
-            {selected.descripcion_proceso ? (
-              <p className="mt-0.5 line-clamp-2 text-xs text-ungrd-text">
-                {selected.descripcion_proceso}
+      <div className="lookup-card">
+        <div className="lookup-card__body">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="lookup-card__eyebrow">
+                <Link2 className="h-3.5 w-3.5" />
+                {catalog === "inventario"
+                  ? "Contrato · puentes atados"
+                  : selected.estructurado && selected.id
+                    ? "Proceso existente · modificar"
+                    : "Proceso nuevo · registrar"}
               </p>
-            ) : null}
-            <p className="mt-1 text-xs text-ungrd-muted">
-              Clave: {selected.clave_proceso} · vínculo: {selected.tipo_vinculo}
-              {catalog === "inventario"
-                ? ` · ${selected.puentes_vinculados || 0} puente(s) con ID único`
-                : ""}
-            </p>
-            {catalog === "inventario" ? (
-              <p className="mt-1 text-xs font-semibold text-emerald-800">
-                Elija un puente de la lista o pulse «Nuevo puente» para atar otro
-                ID único a este contrato.
-              </p>
-            ) : !selected.estructurado || !selected.id ? (
-              <p className="mt-1 text-xs font-semibold text-amber-800">
-                Aún no está en Estructuración: al guardar se registran todos los
-                datos.
-              </p>
-            ) : (
-              <p className="mt-1 text-xs font-semibold text-emerald-800">
-                Ya existe: al modificar solo cambian etapa y estado (el resto
-                queda fijo, con trazabilidad).
-              </p>
-            )}
+              <p className="lookup-card__title">{selected.contrato_convenio}</p>
+              {selected.descripcion_proceso ? (
+                <p className="lookup-card__sub line-clamp-2">
+                  {selected.descripcion_proceso}
+                </p>
+              ) : null}
+              <dl className="lookup-card__grid">
+                <div className="lookup-card__cell">
+                  <dt>Clave</dt>
+                  <dd>{selected.clave_proceso}</dd>
+                </div>
+                <div className="lookup-card__cell">
+                  <dt>Vínculo</dt>
+                  <dd>{selected.tipo_vinculo}</dd>
+                </div>
+                {catalog === "inventario" ? (
+                  <div className="lookup-card__cell">
+                    <dt>Puentes</dt>
+                    <dd>{selected.puentes_vinculados || 0}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              {catalog === "inventario" ? (
+                <p className="lookup-card__sub mt-2">
+                  Elija un puente de la lista o pulse «Nuevo puente» para atar
+                  otro ID a este contrato.
+                </p>
+              ) : !selected.estructurado || !selected.id ? (
+                <p className="lookup-card__sub mt-2">
+                  Aún no está en estructuración: al guardar se registran todos
+                  los datos.
+                </p>
+              ) : (
+                <p className="lookup-card__sub mt-2">
+                  Ya existe: al modificar solo cambian etapa y estado.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                onClear();
+                setQ("");
+                setHits([]);
+                setTouched(false);
+                setOpen(false);
+              }}
+              className="lookup-card__clear"
+            >
+              <X className="h-3.5 w-3.5" />
+              Cambiar
+            </button>
           </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onClear();
-              setQ("");
-              setHits([]);
-              setTouched(false);
-              setOpen(false);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-xs font-bold text-ungrd-heading"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cambiar
-          </button>
         </div>
       </div>
     );
@@ -245,7 +254,7 @@ export function ProcesoLookup({
       {err ? <p className="text-xs text-red-700">{err}</p> : null}
 
       {open && touched ? (
-        <ul className="max-h-56 overflow-auto rounded-xl border border-ungrd-border bg-white shadow-lg">
+        <ul className="max-h-56 overflow-auto rounded-xl border border-ungrd-border bg-ungrd-surface text-ungrd-text shadow-lg">
           {hits.length === 0 && !loading ? (
             <li className="px-3 py-2 text-sm text-ungrd-muted">
               {q.trim()

@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { CSSProperties } from "react";
 import {
   BellRing,
   Briefcase,
@@ -48,10 +49,12 @@ const MAP: Record<string, LucideIcon> = {
 export function ThemeIcon({
   name,
   className,
+  style,
 }: {
   name: string;
   className?: string;
+  style?: CSSProperties;
 }) {
   const Icon = MAP[name] ?? Package;
-  return <Icon className={className} aria-hidden />;
+  return <Icon className={className} style={style} aria-hidden />;
 }
