@@ -1,139 +1,52 @@
-/* Login — fondo institucional Subdirección de Manejo */
+/* Login — fondo limpio institucional */
 
 .login-space {
-  background-color: #001428 !important;
+  background-color: #e8eef5 !important;
   background-image: linear-gradient(
-    155deg,
-    #00101f 0%,
-    #001a36 35%,
-    #002d5a 70%,
-    #0a3d6b 100%
+    160deg,
+    #f4f7fb 0%,
+    #e4ecf5 45%,
+    #d6e2ef 100%
   ) !important;
 }
 
-.login-bg-photo {
+.login-space-glow {
   position: absolute;
   inset: 0;
-  background-image: url("/branding/hero-manejo.png");
-  background-size: cover;
-  background-position: 68% 40%;
-  background-repeat: no-repeat;
-  opacity: 0.42;
-  filter: saturate(0.85) contrast(1.05);
   pointer-events: none;
-}
-
-.login-bg-veil {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    rgba(0, 16, 32, 0.92) 0%,
-    rgba(0, 26, 54, 0.78) 42%,
-    rgba(0, 45, 90, 0.55) 72%,
-    rgba(0, 26, 54, 0.7) 100%
-  );
-  pointer-events: none;
-}
-
-.login-bg-grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.14;
-  background-image:
-    linear-gradient(rgba(255, 209, 0, 0.35) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 209, 0, 0.35) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(90deg, transparent, black 20%, black 80%, transparent);
-  pointer-events: none;
-}
-
-.login-brand-mark {
-  position: absolute;
-  left: clamp(1rem, 4vw, 2.5rem);
-  top: clamp(4.5rem, 12vh, 7rem);
-  z-index: 5;
-  max-width: min(20rem, 40vw);
-  color: rgba(255, 255, 255, 0.94);
-  pointer-events: none;
-}
-
-.login-brand-mark .kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: 1px solid rgba(255, 209, 0, 0.4);
-  background: rgba(0, 26, 54, 0.6);
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #ffd100;
-}
-
-.login-brand-mark .title {
-  margin-top: 0.85rem;
-  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.login-brand-mark .sub {
-  margin-top: 0.55rem;
-  font-size: 0.875rem;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-@media (max-width: 900px) {
-  .login-brand-mark {
-    display: none;
-  }
-
-  .login-bg-photo {
-    opacity: 0.28;
-    background-position: center 35%;
-  }
+  background:
+    radial-gradient(ellipse 55% 40% at 15% 10%, rgba(255, 209, 0, 0.18), transparent 55%),
+    radial-gradient(ellipse 50% 45% at 90% 85%, rgba(0, 45, 90, 0.12), transparent 55%);
 }
 
 .login-card-head {
   background: linear-gradient(
-    145deg,
-    #001428 0%,
-    #002d5a 40%,
-    #0a4a7a 72%,
-    color-mix(in srgb, #ffd100 20%, #0a3d6b) 100%
+    135deg,
+    #001a36 0%,
+    #002d5a 48%,
+    #0a3d6b 100%
   );
   position: relative;
-}
-
-.login-card-head::before {
-  content: "";
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 3px;
-  background: linear-gradient(90deg, #ffd100 0%, #002d5a 50%, #ce1126 100%);
-  opacity: 0.9;
-  pointer-events: none;
 }
 
 .login-card-head::after {
   content: "";
   position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.07) 0%,
-    transparent 48%,
-    rgba(0, 16, 32, 0.25) 100%
-  );
+  inset: auto 0 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ffd100 0%, #002d5a 50%, #ce1126 100%);
   pointer-events: none;
 }
 
-.login-card-head > * {
-  position: relative;
-  z-index: 1;
+.login-logo-plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 1rem 1.5rem 1.1rem;
+  border-radius: 1.1rem;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
 }
