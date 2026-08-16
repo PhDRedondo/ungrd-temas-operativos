@@ -1,11 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { resolveLoginEmail } from "@/lib/accounts";
-import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import "./login.css";
 
@@ -54,43 +54,33 @@ function LoginForm() {
 
   return (
     <main className="login-space relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-      <div className="login-bg-photo" aria-hidden />
-      <div className="login-bg-veil" aria-hidden />
-      <div className="login-bg-grid" aria-hidden />
-
-      <div className="login-brand-mark" aria-hidden>
-        <p className="kicker">UNGRD</p>
-        <p className="title">
-          Subdirección de Manejo
-          <span className="mt-1 block text-ungrd-yellow">
-            del Riesgo de Desastres
-          </span>
-        </p>
-        <p className="sub">
-          Plataforma de temas operativos para el seguimiento territorial.
-        </p>
-      </div>
+      <div className="login-space-glow" aria-hidden />
 
       <div className="absolute top-4 right-4 z-20">
-        <ThemeToggle variant="hero" />
+        <ThemeToggle />
       </div>
 
-      <div className="relative z-10 w-full max-w-md animate-fade-up overflow-hidden rounded-2xl border border-white/15 bg-ungrd-surface shadow-[0_28px_80px_rgba(0,0,0,0.55)]">
-        <div className="ungrd-tricolor-bar h-1 w-full" aria-hidden />
-        <div className="login-card-head px-6 py-8 text-center text-white">
-          <BrandLogo
-            width={160}
-            height={190}
-            className="mx-auto h-24 w-auto object-contain sm:h-28"
-            priority
-          />
-          <p className="mt-4 inline-flex items-center rounded-full border border-ungrd-yellow/40 bg-black/20 px-3 py-1 text-[10px] font-extrabold tracking-[0.16em] text-ungrd-yellow uppercase">
+      <div className="relative z-10 w-full max-w-md animate-fade-up overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface shadow-[0_24px_60px_rgba(0,45,90,0.14)]">
+        <div className="ungrd-tricolor-bar h-1.5 w-full" aria-hidden />
+        <div className="login-card-head px-6 py-7 text-center text-white">
+          {/* Placa blanca: el logo color se lee siempre */}
+          <div className="login-logo-plate">
+            <Image
+              src="/branding/UNGRD-Vertical.png"
+              alt="UNGRD — Unidad Nacional para la Gestión del Riesgo de Desastres"
+              width={180}
+              height={210}
+              className="h-[7.5rem] w-auto object-contain sm:h-36"
+              priority
+            />
+          </div>
+          <p className="mt-4 inline-flex items-center rounded-full border border-ungrd-yellow/50 bg-black/25 px-3 py-1 text-[10px] font-extrabold tracking-[0.16em] text-ungrd-yellow uppercase">
             Subdirección de Manejo
           </p>
           <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
             Acceso operativo
           </h1>
-          <p className="mt-1.5 text-sm text-white/75">
+          <p className="mt-1.5 text-sm text-white/80">
             Gestión de Temas Operativos · UNGRD
           </p>
         </div>
@@ -178,7 +168,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="login-space flex min-h-screen items-center justify-center text-white/70">
+        <div className="login-space flex min-h-screen items-center justify-center text-ungrd-muted">
           Cargando…
         </div>
       }
