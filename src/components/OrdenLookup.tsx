@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Search, X, Link2 } from "lucide-react";
 import { formatCop } from "@/lib/records/types";
 
@@ -21,6 +21,68 @@ export type OrdenLookupHit = {
   fecha: string;
   payload: Record<string, string | number>;
 };
+
+function LookupSelectedCard({
+  eyebrow,
+  title,
+  subtitle,
+  rows,
+  objeto,
+  clearLabel,
+  onClear,
+  disabled,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: ReactNode;
+  rows: { label: string; value: string }[];
+  objeto?: string;
+  clearLabel: string;
+  onClear: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="lookup-card">
+      <div className="lookup-card__body">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="lookup-card__eyebrow">
+              <Link2 className="h-3.5 w-3.5" />
+              {eyebrow}
+            </p>
+            <p className="lookup-card__title">{title}</p>
+            {subtitle ? (
+              <div className="lookup-card__sub">{subtitle}</div>
+            ) : null}
+            <dl className="lookup-card__grid">
+              {rows.map((row) => (
+                <div key={row.label} className="lookup-card__cell">
+                  <dt>{row.label}</dt>
+                  <dd>{row.value || "—"}</dd>
+                </div>
+              ))}
+              {objeto !== undefined ? (
+                <div className="lookup-card__objeto">
+                  <dt>Objeto</dt>
+                  <dd>{objeto || "—"}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onClear}
+            className="lookup-card__clear"
+          >
+            <X className="h-3.5 w-3.5" />
+            {clearLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function formatOrdenValor(valor: number | string | undefined): string {
   if (valor === undefined || valor === null || valor === "") return "—";
@@ -169,44 +231,18 @@ export function OrdenLookup({
     if (clase) rows.splice(placaUngrd ? 2 : 1, 0, { label: "Clase", value: clase });
 
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800 dark:bg-emerald-950/50">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase dark:text-emerald-200">
-              <Link2 className="h-3.5 w-3.5" />
-              Placa de la maqueta
-            </p>
-            <p className="mt-1 text-lg font-extrabold text-emerald-950 dark:text-emerald-50">
-              {placa}
-            </p>
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((row) => (
-                <div key={row.label}>
-                  <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                    {row.label}
-                  </dt>
-                  <dd className="font-semibold break-all text-emerald-950 dark:text-emerald-50">
-                    {row.value || "—"}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onClear();
-              setQ("");
-              setHits([]);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-ungrd-surface px-3 py-1.5 text-xs font-bold text-ungrd-heading hover:border-ungrd-navy/40 dark:border-emerald-700"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cambiar placa
-          </button>
-        </div>
-      </div>
+      <LookupSelectedCard
+        eyebrow="Vehículo seleccionado"
+        title={placa}
+        rows={rows}
+        clearLabel="Cambiar placa"
+        disabled={disabled}
+        onClear={() => {
+          onClear();
+          setQ("");
+          setHits([]);
+        }}
+      />
     );
   }
 
@@ -228,44 +264,18 @@ export function OrdenLookup({
       { label: "Placa", value: String(p.placa || "").trim() },
     ];
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800 dark:bg-emerald-950/50">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase dark:text-emerald-200">
-              <Link2 className="h-3.5 w-3.5" />
-              Serial del equipo
-            </p>
-            <p className="mt-1 text-lg font-extrabold break-all text-emerald-950 dark:text-emerald-50">
-              {serial}
-            </p>
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((row) => (
-                <div key={row.label}>
-                  <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                    {row.label}
-                  </dt>
-                  <dd className="font-semibold break-all text-emerald-950 dark:text-emerald-50">
-                    {row.value || "—"}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onClear();
-              setQ("");
-              setHits([]);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-ungrd-surface px-3 py-1.5 text-xs font-bold text-ungrd-heading hover:border-ungrd-navy/40 dark:border-emerald-700"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cambiar serial
-          </button>
-        </div>
-      </div>
+      <LookupSelectedCard
+        eyebrow="Serial del equipo"
+        title={serial}
+        rows={rows}
+        clearLabel="Cambiar serial"
+        disabled={disabled}
+        onClear={() => {
+          onClear();
+          setQ("");
+          setHits([]);
+        }}
+      />
     );
   }
 
@@ -317,60 +327,28 @@ export function OrdenLookup({
             { label: "Estado convenio (detalle)", value: estado },
           ];
       return (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800 dark:bg-emerald-950/50">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase dark:text-emerald-200">
-                <Link2 className="h-3.5 w-3.5" />
-                {fromConvenio ? "Convenio o proceso" : "Contrato / convenio (solo en Detalle)"}
-              </p>
-              <p className="mt-1 text-lg font-extrabold break-all text-emerald-950 dark:text-emerald-50">
-                {contrato || oc || convenio}
-              </p>
-              {!fromConvenio ? (
-                <p className="mt-1 text-xs font-medium text-emerald-900/80 dark:text-emerald-200/80">
-                  Esta clave no está en la hoja CONVENIOS O PROCESOS del Excel; solo
-                  hay equipos en DETALLE. No se inventan objeto ni cantidades.
-                </p>
-              ) : null}
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                {rows.map((row) => (
-                  <div key={row.label}>
-                    <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                      {row.label}
-                    </dt>
-                    <dd className="font-semibold break-all text-emerald-950 dark:text-emerald-50">
-                      {row.value || "—"}
-                    </dd>
-                  </div>
-                ))}
-                {fromConvenio ? (
-                  <div className="sm:col-span-2 lg:col-span-3">
-                    <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                      Objeto
-                    </dt>
-                    <dd className="whitespace-pre-wrap break-words font-semibold text-emerald-950 dark:text-emerald-50">
-                      {objeto || "—"}
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => {
-                onClear();
-                setQ("");
-                setHits([]);
-              }}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-ungrd-surface px-3 py-1.5 text-xs font-bold text-ungrd-heading hover:border-ungrd-navy/40 dark:border-emerald-700"
-            >
-              <X className="h-3.5 w-3.5" />
-              Cambiar filtro
-            </button>
-          </div>
-        </div>
+        <LookupSelectedCard
+          eyebrow={
+            fromConvenio
+              ? "Convenio o proceso"
+              : "Contrato / convenio (solo en Detalle)"
+          }
+          title={contrato || oc || convenio}
+          subtitle={
+            !fromConvenio
+              ? "Esta clave no está en la hoja de convenios; solo hay equipos en detalle."
+              : undefined
+          }
+          rows={rows}
+          objeto={fromConvenio ? objeto : undefined}
+          clearLabel="Cambiar filtro"
+          disabled={disabled}
+          onClear={() => {
+            onClear();
+            setQ("");
+            setHits([]);
+          }}
+        />
       );
     }
 
@@ -395,52 +373,19 @@ export function OrdenLookup({
       },
     ];
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800 dark:bg-emerald-950/50">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase dark:text-emerald-200">
-              <Link2 className="h-3.5 w-3.5" />
-              Nº convenio o proceso
-            </p>
-            <p className="mt-1 text-lg font-extrabold break-all text-emerald-950 dark:text-emerald-50">
-              {convenio}
-            </p>
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-              {rows.map((row) => (
-                <div key={row.label}>
-                  <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                    {row.label}
-                  </dt>
-                  <dd className="font-semibold break-all text-emerald-950 dark:text-emerald-50">
-                    {row.value || "—"}
-                  </dd>
-                </div>
-              ))}
-              <div className="sm:col-span-2">
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  Objeto
-                </dt>
-                <dd className="whitespace-pre-wrap break-words font-semibold text-emerald-950 dark:text-emerald-50">
-                  {String(p.objeto || selected.objeto || "") || "—"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onClear();
-              setQ("");
-              setHits([]);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-ungrd-surface px-3 py-1.5 text-xs font-bold text-ungrd-heading hover:border-ungrd-navy/40 dark:border-emerald-700"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cambiar convenio
-          </button>
-        </div>
-      </div>
+      <LookupSelectedCard
+        eyebrow="Nº convenio o proceso"
+        title={convenio}
+        rows={rows}
+        objeto={String(p.objeto || selected.objeto || "")}
+        clearLabel="Cambiar convenio"
+        disabled={disabled}
+        onClear={() => {
+          onClear();
+          setQ("");
+          setHits([]);
+        }}
+      />
     );
   }
 
@@ -450,121 +395,68 @@ export function OrdenLookup({
     const estado = String(
       selected.payload?.estado_actual || selected.payload?.estado || "",
     ).trim();
+    const rows: { label: string; value: string }[] = [
+      { label: "Proveedor", value: selected.proveedor || "" },
+      { label: "NIT", value: selected.nit || "" },
+      { label: "Valor de la orden", value: formatOrdenValor(selected.valor) },
+    ];
+    if (estado) rows.push({ label: "Estado actual", value: estado });
+    rows.push(
+      {
+        label: "Tipo de orden",
+        value:
+          selected.tipo_de_orden ||
+          String(selected.payload?.tipo_de_orden || "") ||
+          "",
+      },
+      {
+        label: "Ubicación",
+        value:
+          [selected.municipio, selected.departamento]
+            .filter(Boolean)
+            .join(", ") || "",
+      },
+    );
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800 dark:bg-emerald-950/50">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase dark:text-emerald-200">
-              <Link2 className="h-3.5 w-3.5" />
-              {isPago
-                ? "OP por pago (ligada al alta)"
-                : "OP del registro inicial"}
-            </p>
-            <p className="mt-1 text-lg font-extrabold text-emerald-950 dark:text-emerald-50">
-              {shown}
-            </p>
-            {isPago &&
-            selected.orden_de_proveeduria &&
-            selected.orden_de_proveeduria !== shown ? (
-              <p className="mt-0.5 text-xs font-semibold text-emerald-800/80 dark:text-emerald-300/90">
-                OP única: {selected.orden_de_proveeduria}
-              </p>
-            ) : null}
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  Proveedor
-                </dt>
-                <dd className="font-semibold text-emerald-950 dark:text-emerald-50">
-                  {selected.proveedor || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  NIT
-                </dt>
-                <dd className="font-semibold text-emerald-950 dark:text-emerald-50">
-                  {selected.nit || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  Valor de la orden
-                </dt>
-                <dd className="font-semibold text-emerald-950 dark:text-emerald-50">
-                  {formatOrdenValor(selected.valor)}
-                </dd>
-              </div>
-              {estado ? (
-                <div>
-                  <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                    Estado actual
-                  </dt>
-                  <dd className="font-semibold text-emerald-950 dark:text-emerald-50">
-                    {estado}
-                  </dd>
-                </div>
-              ) : null}
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  Tipo de orden
-                </dt>
-                <dd className="font-semibold text-emerald-950 dark:text-emerald-50">
-                  {selected.tipo_de_orden ||
-                    String(selected.payload?.tipo_de_orden || "") ||
-                    "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  Ubicación
-                </dt>
-                <dd className="font-semibold text-emerald-950 dark:text-emerald-50">
-                  {[selected.municipio, selected.departamento]
-                    .filter(Boolean)
-                    .join(", ") || "—"}
-                </dd>
-              </div>
-              <div className="sm:col-span-2 lg:col-span-3">
-                <dt className="text-[10px] font-bold uppercase text-emerald-800/70 dark:text-emerald-300/80">
-                  Objeto
-                </dt>
-                <dd className="whitespace-pre-wrap break-words font-semibold text-emerald-950 dark:text-emerald-50">
-                  {selected.objeto || "—"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onClear();
-              setQ("");
-              setHits([]);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-ungrd-surface px-3 py-1.5 text-xs font-bold text-ungrd-heading hover:border-ungrd-navy/40 dark:border-emerald-700"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cambiar OP
-          </button>
-        </div>
-      </div>
+      <LookupSelectedCard
+        eyebrow={
+          isPago
+            ? "Orden por pago (ligada al registro inicial)"
+            : "Orden de proveeduría (registro inicial)"
+        }
+        title={shown}
+        subtitle={
+          isPago &&
+          selected.orden_de_proveeduria &&
+          selected.orden_de_proveeduria !== shown
+            ? `Orden de negocio: ${selected.orden_de_proveeduria}`
+            : undefined
+        }
+        rows={rows}
+        objeto={selected.objeto || ""}
+        clearLabel="Cambiar orden"
+        disabled={disabled}
+        onClear={() => {
+          onClear();
+          setQ("");
+          setHits([]);
+        }}
+      />
     );
   }
 
   return (
-    <div ref={boxRef} className="relative space-y-2">
+    <div ref={boxRef} className="relative z-30 space-y-2">
       <label className="block text-sm font-semibold text-ungrd-heading">
         {byPlaca
-          ? "Buscar placa de la maqueta"
+          ? "Buscar placa del vehículo"
           : bySerial
             ? "Buscar serial del equipo"
             : byContrato
               ? "Buscar orden de compra o contrato"
               : byConvenio
-                ? "Buscar nº convenio o proceso"
-                : "Buscar orden del registro inicial"}
+                ? "Buscar número de convenio"
+                : "Buscar orden de proveeduría"}
         <span className="ml-1 text-ungrd-danger" aria-hidden>
           *
         </span>
@@ -580,13 +472,13 @@ export function OrdenLookup({
               byPlaca
                 ? "Ej. OZJ943… marca, municipio"
                 : bySerial
-                  ? "Serial, referencia, empresa, nº máquina…"
+                  ? "Serial, referencia, empresa…"
                   : byContrato
-                    ? "Nº orden de compra o contrato de adquisición…"
+                    ? "Orden de compra o contrato…"
                     : byConvenio
-                      ? "Nº convenio, departamento, entidad…"
+                      ? "Número de convenio, departamento…"
                       : expandPaymentOps
-                        ? "OP única o OP x pago… proveedor, municipio, NIT"
+                        ? "Orden de proveeduría o orden por pago…"
                         : "Ej. GS-SMD-006… proveedor, municipio, NIT"
             }
             className="w-full rounded-lg border border-ungrd-border bg-ungrd-input py-2.5 pr-3 pl-10 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
@@ -596,16 +488,16 @@ export function OrdenLookup({
       </label>
       <p className="text-xs text-ungrd-muted">
         {byPlaca
-          ? "Escriba la placa y seleccione el carrotanque; no se reescribe el alta (B–J)."
+          ? "Escriba la placa y seleccione el vehículo. Los datos del registro inicial no se reescriben."
           : bySerial
-            ? "Seleccione el equipo del detalle; la identidad (serial) no se reescribe."
+            ? "Seleccione el equipo; el serial no se reescribe."
             : byContrato
-              ? "Filtre por nº de convenio/contrato u orden de compra (claves de Detalle maquinaria)."
+              ? "Filtre por convenio, contrato u orden de compra."
               : byConvenio
                 ? "Seleccione el convenio; los eventos de bitácora se ligan a ese número."
                 : expandPaymentOps
-                  ? "Órdenes del alta: aparece la OP única y, si existe, la OP por pago. Al elegir cualquiera se hereda el contexto de la OP de negocio."
-                  : "Órdenes de la base real (Maqueta / Alta). Escriba GS- u otra OP y seleccione; los datos comunes se heredan."}
+                  ? "Puede buscar la orden de negocio o la orden por pago. Al elegir, se heredan proveedor y datos comunes."
+                  : "Escriba parte de la orden de proveeduría o el proveedor y seleccione; los datos comunes se heredan."}
       </p>
       {loading ? (
         <p className="text-xs font-semibold text-ungrd-muted">Buscando…</p>
@@ -614,7 +506,7 @@ export function OrdenLookup({
         <p className="text-xs font-semibold text-ungrd-danger">{err}</p>
       ) : null}
       {open && hits.length > 0 ? (
-        <ul className="absolute z-20 mt-1 max-h-96 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-900">
+        <ul className="absolute z-50 mt-1 max-h-96 w-full overflow-auto rounded-xl border border-ungrd-border bg-ungrd-surface text-ungrd-text shadow-lg">
           {hits.map((h) => {
             const shown = displayOpOf(h);
             const isPago = h.match_kind === "x_pago";
@@ -624,7 +516,7 @@ export function OrdenLookup({
               <li key={rowKey}>
                 <button
                   type="button"
-                  className="w-full border-b border-slate-100 px-3 py-2.5 text-left last:border-0 hover:bg-slate-50 dark:border-slate-700/80 dark:hover:bg-slate-800"
+                  className="w-full border-b border-ungrd-border/60 px-3 py-2.5 text-left last:border-0 hover:bg-ungrd-row-hover"
                   onClick={() => {
                     onSelect(h);
                     setOpen(false);
@@ -632,7 +524,7 @@ export function OrdenLookup({
                   }}
                 >
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="break-words text-sm font-extrabold tracking-wide text-slate-900 dark:text-slate-50">
+                    <span className="break-words text-sm font-extrabold tracking-wide text-ungrd-heading">
                       {shown}
                     </span>
                     {!byAsset && expandPaymentOps ? (
@@ -643,7 +535,7 @@ export function OrdenLookup({
                             : "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100"
                         }`}
                       >
-                        {isPago ? "OP x pago" : "OP única"}
+                        {isPago ? "Por pago" : "Orden"}
                       </span>
                     ) : null}
                   </span>
@@ -652,7 +544,7 @@ export function OrdenLookup({
                       !byAsset &&
                       isPago &&
                       h.orden_de_proveeduria !== shown
-                        ? `OP única: ${h.orden_de_proveeduria}`
+                        ? `Orden de negocio: ${h.orden_de_proveeduria}`
                         : null,
                       byPlaca
                         ? marca || null
@@ -713,7 +605,7 @@ export function OrdenLookup({
                 ? `No hay coincidencias con «${q.trim()}». Pruebe nº de orden de compra o contrato de adquisición.`
                 : byConvenio
                   ? `No hay coincidencias con «${q.trim()}». Pruebe otro nº de convenio o departamento.`
-                  : `No hay coincidencias con «${q.trim()}». Pruebe otro fragmento de OP (p. ej. GS-SMD) o el nombre del proveedor.`}
+                  : `No hay coincidencias con «${q.trim()}». Pruebe parte de la orden (ej. GS-SMD) o el nombre del proveedor.`}
         </p>
       ) : null}
     </div>

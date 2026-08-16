@@ -459,8 +459,9 @@ export function AnalyticsPanel({
         estadoOptions={estadoOptions}
         capaOptions={capaOptions}
         municipioOptions={municipioOptions}
+        themeId={theme.id}
         capaLabel={
-          tipoRegistroField?.label || categoryField?.label || "Capa / tipo"
+          tipoRegistroField?.label || categoryField?.label || "Tipo de registro"
         }
         matched={filtered.length}
         total={workingRecords.length}
@@ -487,34 +488,26 @@ export function AnalyticsPanel({
       {sourceTheme ? (
         <aside className="rounded-2xl border border-ungrd-navy/15 bg-ungrd-surface px-4 py-3 text-sm text-ungrd-muted sm:px-5">
           <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
-            Cómo interpretar este tablero
+            Cómo usar este tablero
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
             <li>
-              El <strong className="font-bold text-ungrd-heading">centro de mando</strong>{" "}
-              (arriba) es la lectura ejecutiva: semáforos, alertas y prioridades.
+              El <strong className="font-bold text-ungrd-heading">resumen</strong>{" "}
+              muestra alertas y prioridades del tema.
             </li>
             <li>
-              Bitácoras y pagos suelen llegar sin municipio: el sistema{" "}
-              <strong className="font-bold text-ungrd-heading">
-                completa ubicación y valor
-              </strong>{" "}
-              cruzando la misma orden/placa/CDP de la maqueta.
+              Si un registro no trae municipio, el sistema completa ubicación y
+              valor con la misma orden, placa o CDP.
             </li>
             <li>
-              Mapa, barras y calor muestran{" "}
-              <strong className="font-bold text-ungrd-heading">
-                valor en pesos
-              </strong>{" "}
+              Mapa y gráficos muestran{" "}
+              <strong className="font-bold text-ungrd-heading">valor en pesos</strong>{" "}
               cuando existe; si no, muestran{" "}
-              <strong className="font-bold text-ungrd-heading">
-                cantidad de registros
-              </strong>{" "}
-              (actividad operativa).
+              <strong className="font-bold text-ungrd-heading">cantidad de registros</strong>.
             </li>
             <li>
-              La tabla inferior lista la base filtrada con columnas propias del
-              tema (clave, capa, estado real). Use «Detalle» para el expediente.
+              La tabla inferior lista los registros filtrados. Use «Detalle» para
+              ver más información.
             </li>
           </ul>
         </aside>
@@ -523,15 +516,15 @@ export function AnalyticsPanel({
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ungrd-muted">
         <span>
           {sourceTheme
-            ? "Exploración geográfica y cortes sobre la base oficial"
-            : "Gráficos y mapa desde PostgreSQL"}
+            ? "Mapa y cortes sobre los registros del tema"
+            : "Mapa y gráficos del tema"}
           {sqlAgg
-            ? ` · SQL: ${formatNumber(sqlAgg.totals.count)} filas / ${formatCop(sqlAgg.totals.valor)}`
+            ? ` · ${formatNumber(sqlAgg.totals.count)} filas / ${formatCop(sqlAgg.totals.valor)}`
             : ""}
         </span>
         {sqlSynced ? (
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-800">
-            Cliente ↔ SQL sincronizados
+            Datos al día
           </span>
         ) : null}
       </div>
@@ -567,14 +560,13 @@ export function AnalyticsPanel({
         <div className="mb-3 flex min-w-0 flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-sm font-extrabold text-ungrd-heading">
-              Mapa coroplético ·{" "}
+              Mapa ·{" "}
               {departamento ? `${departamento} (municipios)` : "Colombia (departamentos)"}
             </h3>
             <p className="mt-1 text-xs text-ungrd-muted">
-              Polígonos MGN DANE 2024 · nombres alineados a DIVIPOLA · clic en
-              territorio filtra todo el tablero
+              Clic en un territorio para filtrar el tablero
               {spatial.unmatched
-                ? ` · ${formatNumber(spatial.unmatched)} filas sin geo resoluble`
+                ? ` · ${formatNumber(spatial.unmatched)} filas sin ubicación`
                 : ""}
               .
             </p>
@@ -594,7 +586,7 @@ export function AnalyticsPanel({
                 title={label}
                 className={`max-w-[11rem] truncate rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
                   mapMetricOverride === id
-                    ? "bg-ungrd-navy text-white"
+                    ? "theme-mark"
                     : "text-ungrd-muted hover:text-ungrd-heading"
                 }`}
               >
@@ -827,7 +819,7 @@ export function AnalyticsPanel({
                     onClick={() => setSeriesMetricOverride(id)}
                     className={`max-w-[10rem] truncate rounded-lg px-2.5 py-1 text-[11px] font-extrabold transition ${
                       seriesMetricOverride === id
-                        ? "bg-ungrd-navy text-white"
+                        ? "theme-mark"
                         : "text-ungrd-muted hover:text-ungrd-heading"
                     }`}
                   >
@@ -1087,13 +1079,10 @@ export function AnalyticsPanel({
 
       {sqlAgg && !hasFilters ? (
         <p className="text-xs text-ungrd-muted">
-          Agregación SQL: {sqlAgg.byDepartamento.length} deptos ·{" "}
+          {sqlAgg.byDepartamento.length} departamentos ·{" "}
           {sqlAgg.byEstado.length} estados · {sqlAgg.byMonth.length} meses
           {sqlAgg.byTipoRegistro?.length
-            ? ` · ${sqlAgg.byTipoRegistro.length} capas (maqueta/bitácora)`
-            : ""}
-          {sqlAgg.byClaveSeguimiento?.length
-            ? ` · top ${sqlAgg.byClaveSeguimiento.length} claves de seguimiento`
+            ? ` · ${sqlAgg.byTipoRegistro.length} tipos de registro`
             : ""}
           .
         </p>

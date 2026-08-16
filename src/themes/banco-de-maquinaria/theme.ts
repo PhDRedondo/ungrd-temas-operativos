@@ -13,7 +13,7 @@ export const config: ThemeModule["config"] = {
     name: "Banco de Maquinaria",
     shortName: "Maquinaria",
     description:
-      "Convenios o procesos de adquisición (raíz) y el detalle de maquinaria que cada uno adquiere — unidos por nº convenio / serial.",
+      "Convenios de adquisición, detalle de maquinaria y bitácora de seguimiento.",
     icon: "cog",
     unit: "equipos",
     valueLabel: "Equipos",

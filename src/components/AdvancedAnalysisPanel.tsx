@@ -187,7 +187,7 @@ export function AdvancedAnalysisPanel({
       title: "Densidad de la red",
       detail: interpretDensity(metrics.density),
       action:
-        "Seleccione un nodo en el grafo y filtre ese territorio o estado en el Centro de mando.",
+        "Seleccione un elemento en el mapa y filtre ese territorio o estado en Resumen.",
     });
     if (metrics.giantComponentShare < 0.95) {
       out.push({
@@ -257,6 +257,7 @@ export function AdvancedAnalysisPanel({
         estadoOptions={estadoOptions}
         capaOptions={capaOptions}
         municipioOptions={municipioOptions}
+        themeId={theme.id}
         matched={working.length}
         total={enriched.length}
         showDates
@@ -277,7 +278,7 @@ export function AdvancedAnalysisPanel({
             {decision.kpis.map((k) => (
               <article
                 key={k.id}
-                className="rounded-xl border border-ungrd-border bg-white p-3"
+                className="rounded-xl border border-ungrd-border bg-ungrd-surface p-3"
               >
                 <p className="text-[11px] font-bold tracking-wide text-ungrd-muted uppercase">
                   {k.label}
@@ -303,7 +304,7 @@ export function AdvancedAnalysisPanel({
                   {decision.alerts.slice(0, 4).map((a) => (
                     <li
                       key={a.id}
-                      className="rounded-xl border border-ungrd-border bg-white px-3 py-2.5 text-sm"
+                      className="rounded-xl border border-ungrd-border bg-ungrd-surface px-3 py-2.5 text-sm text-ungrd-text"
                     >
                       <p className="inline-flex items-center gap-1.5 font-extrabold text-ungrd-heading">
                         <Siren className="h-3.5 w-3.5 shrink-0 text-[#c62828]" />
@@ -329,7 +330,7 @@ export function AdvancedAnalysisPanel({
                   {spatial.areas.slice(0, 8).map((a, i) => (
                     <li
                       key={a.name}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-sm"
+                      className="flex items-center justify-between gap-2 rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-1.5 text-sm text-ungrd-text"
                     >
                       <span className="truncate font-semibold text-ungrd-heading">
                         {i + 1}. {a.name}
@@ -351,7 +352,7 @@ export function AdvancedAnalysisPanel({
                   {decision.priorityList.slice(0, 6).map((p, i) => (
                     <li
                       key={p.key}
-                      className="rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-sm"
+                      className="rounded-lg border border-ungrd-border bg-ungrd-surface px-3 py-1.5 text-sm text-ungrd-text"
                     >
                       <p className="font-bold text-ungrd-heading">
                         {i + 1}. {p.label}
@@ -372,22 +373,20 @@ export function AdvancedAnalysisPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold tracking-[0.2em] text-ungrd-yellow uppercase">
-              Análisis de red · {theme.name}
+              Análisis · {theme.name}
             </p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight">
-              Red de coocurrencia operativa
+              Relaciones entre registros
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/80">
-              Grafo construido a partir de registros: se enlazan{" "}
+              Muestra cómo se conectan{" "}
               <strong className="text-white">departamento</strong>,{" "}
               <strong className="text-white">municipio</strong>,{" "}
               <strong className="text-white">estado</strong> y{" "}
               <strong className="text-white">
                 {network.categoryLabel.toLowerCase()}
               </strong>{" "}
-              cuando coocurren en la misma fila. Permite medir grado
-              (conectividad local) e intermediación (betweenness) sobre la
-              muestra cargada.
+              cuando aparecen juntos en los mismos registros.
             </p>
           </div>
           <button
@@ -395,7 +394,7 @@ export function AdvancedAnalysisPanel({
             onClick={() => setShowHelp((v) => !v)}
             className="rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-xs font-extrabold text-white hover:bg-white/15"
           >
-            {showHelp ? "Ocultar método" : "Ver método"}
+            {showHelp ? "Ocultar ayuda" : "Ver ayuda"}
           </button>
         </div>
         {showHelp ? (
@@ -403,22 +402,20 @@ export function AdvancedAnalysisPanel({
             <li className="rounded-xl bg-white/10 px-3 py-3">
               <p className="font-extrabold text-ungrd-yellow">1 · Entrada</p>
               <p className="mt-1">
-                Cada registro aporta aristas entre sus valores de territorio,
-                estado y capa.
+                Cada registro conecta su departamento, municipio, estado y tipo.
               </p>
             </li>
             <li className="rounded-xl bg-white/10 px-3 py-3">
-              <p className="font-extrabold text-ungrd-yellow">2 · Métricas</p>
+              <p className="font-extrabold text-ungrd-yellow">2 · Lectura</p>
               <p className="mt-1">
-                Grado = número de vecinos. Intermediación = fracción de caminos
-                más cortos que pasan por el nodo.
+                Más conexiones = aparece junto a más cosas. Más «puente» = une
+                distintas partes de la operación.
               </p>
             </li>
             <li className="rounded-xl bg-white/10 px-3 py-3">
               <p className="font-extrabold text-ungrd-yellow">3 · Uso</p>
               <p className="mt-1">
-                Seleccione un nodo, revise vecinos y filtre ese valor en el
-                Centro de mando.
+                Seleccione un elemento y filtre ese valor en Resumen.
               </p>
             </li>
           </ol>
@@ -489,11 +486,10 @@ export function AdvancedAnalysisPanel({
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <h3 className="text-sm font-extrabold text-ungrd-heading">
-                Grafo de coocurrencia
+                Mapa de relaciones
               </h3>
               <p className="text-xs text-ungrd-muted">
-                Tamaño del nodo ∝ grado. Grosor de arista ∝ peso de
-                coocurrencia. Clic para inspeccionar.
+                El tamaño indica cuántas conexiones tiene. Clic para inspeccionar.
               </p>
             </div>
             {selected && (
@@ -516,7 +512,7 @@ export function AdvancedAnalysisPanel({
 
         <section className="min-w-0 rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="text-sm font-extrabold text-ungrd-heading">
-            Nodo seleccionado
+            Selección
           </h3>
           {selected ? (
             <div className="mt-3 space-y-3">
@@ -539,24 +535,24 @@ export function AdvancedAnalysisPanel({
               <dl className="grid grid-cols-2 gap-2 text-sm">
                 {[
                   [
-                    "Grado",
+                    "Conexiones",
                     formatNumber(selected.degree),
-                    "Número de nodos vecinos",
+                    "Cuántos elementos se relacionan con este",
                   ],
                   [
-                    "Fuerza",
+                    "Peso",
                     formatNumber(selected.strength),
-                    "Suma de pesos de aristas incidentes",
+                    "Fuerza total de esas relaciones",
                   ],
                   [
-                    "Intermediación",
+                    "Puente",
                     betweennessLevel(selected.betweenness),
-                    `Betweenness: ${fmt(selected.betweenness)}`,
+                    `Índice: ${fmt(selected.betweenness)}`,
                   ],
                   [
-                    "Clustering",
+                    "Agrupación",
                     fmt(selected.clustering),
-                    "Coeficiente de agrupamiento local",
+                    "Qué tan unidos están sus vecinos entre sí",
                   ],
                 ].map(([k, v, tip]) => (
                   <div
@@ -576,8 +572,7 @@ export function AdvancedAnalysisPanel({
             </div>
           ) : (
             <p className="mt-4 text-sm text-ungrd-muted">
-              Seleccione un nodo en el grafo para ver grado, fuerza,
-              intermediación y clustering.
+              Seleccione un elemento en el mapa para ver el detalle.
             </p>
           )}
         </section>
@@ -586,18 +581,18 @@ export function AdvancedAnalysisPanel({
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="text-sm font-extrabold text-ungrd-heading">
-            Ranking por grado
+            Más conectados
           </h3>
           <p className="mt-1 mb-3 text-xs text-ungrd-muted">
-            Nodos con más vecinos (mayor coocurrencia con otras entidades).
+            Elementos que aparecen junto a más valores distintos.
           </p>
           <div className="scroll-thin overflow-x-auto">
             <table className="w-full min-w-[20rem] text-left text-sm">
               <thead className="text-xs tracking-wide text-ungrd-muted uppercase">
                 <tr>
-                  <th className="px-2 py-2">Nodo</th>
+                  <th className="px-2 py-2">Elemento</th>
                   <th className="px-2 py-2">Tipo</th>
-                  <th className="px-2 py-2 text-right">Grado</th>
+                  <th className="px-2 py-2 text-right">Conexiones</th>
                   <th className="px-2 py-2 text-right">Nivel</th>
                 </tr>
               </thead>
@@ -629,19 +624,18 @@ export function AdvancedAnalysisPanel({
 
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-4">
           <h3 className="text-sm font-extrabold text-ungrd-heading">
-            Ranking por intermediación
+            Más centrales
           </h3>
           <p className="mt-1 mb-3 text-xs text-ungrd-muted">
-            Nodos con mayor betweenness: aparecen con más frecuencia en caminos
-            cortos entre pares de nodos.
+            Elementos que unen distintas partes de la operación.
           </p>
           <div className="scroll-thin overflow-x-auto">
             <table className="w-full min-w-[20rem] text-left text-sm">
               <thead className="text-xs tracking-wide text-ungrd-muted uppercase">
                 <tr>
-                  <th className="px-2 py-2">Nodo</th>
+                  <th className="px-2 py-2">Elemento</th>
                   <th className="px-2 py-2">Tipo</th>
-                  <th className="px-2 py-2 text-right">Betweenness</th>
+                  <th className="px-2 py-2 text-right">Puente</th>
                   <th className="px-2 py-2 text-right">Nivel</th>
                 </tr>
               </thead>
@@ -674,16 +668,12 @@ export function AdvancedAnalysisPanel({
 
       <details className="rounded-xl border border-ungrd-border bg-ungrd-bg/40 px-4 py-3 text-xs text-ungrd-muted">
         <summary className="cursor-pointer font-bold text-ungrd-heading">
-          Parámetros del modelo
+          Detalle técnico
         </summary>
         <p className="mt-2 leading-relaxed">
-          Red no dirigida de coocurrencia: departamento ↔ municipio ↔ estado ↔{" "}
-          {network.categoryLabel.toLowerCase()}. Densidad {fmt(metrics.density)};
-          clustering medio {fmt(metrics.avgClustering)}; camino medio{" "}
-          {metrics.avgPathLength == null ? "—" : fmt(metrics.avgPathLength, 2)};
-          diámetro{" "}
-          {metrics.diameter == null ? "—" : formatNumber(metrics.diameter)}.
-          Rankings: grado (degree) e intermediación (betweenness centrality).
+          Se relacionan departamento, municipio, estado y{" "}
+          {network.categoryLabel.toLowerCase()} cuando aparecen juntos. Densidad{" "}
+          {fmt(metrics.density)}; agrupación media {fmt(metrics.avgClustering)}.
         </p>
       </details>
     </div>

@@ -149,6 +149,7 @@ Orden cronológico reciente (commits + trabajo contractual):
 14. **Banco de Maquinaria multi-capa (ago 2026)** — `schemaVersion` 6: **convenio raíz** (como Puentes); F–I editables; detalle por `serial` cuelga del convenio; sync bitácora/entrega; lookup `serial`/`convenio`.
 15. **Carrotanques multi-capa (ago 2026)** — maqueta por `placa`; bitácora→M–P/T–Z; suministro→suma Q–R–S; formularios B–J / K–L.
 16. **Subsidios de Arriendos (ago 2026)** — consolidado de envíos: identidad `uuid`; `numero_envio` + `n_orden` del archivo; ingesta Excel + formulario opcional; medallón `subsidios_arriendos.consolidado`.
+17. **Reader = 1 tabla por formulario (ago 2026)** — cada `captureForms` de Agua/Puentes/Carrotanques/Banco/Subsidios tiene vista homónima en la URL `medallion_reader` con los mismos `fieldNames`. Incluye `carrotanques.actualizar_categorias` (K–L). Banco: columnas canónicas del form (`cantidad_maquinaria_expectativa`, `valor_total`, `estado_maquina`, `fecha_de_estado`) con coalesce a alias Excel. Catálogo: `medallion.v_connections`.
 
 ### Hubs del grafo (core abstractions)
 `requireSession` · `getTheme` · `ThemeConfig`/`ThemeModule` · `RecordRow` · `process-excel` · `buildDecisionBrief` · `enrichRecordsForDecision` · `NationalCommandCenter` · `guard` (security)

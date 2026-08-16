@@ -7,15 +7,12 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
-  FolderOpen,
   Info,
   LogOut,
   Menu,
   Radar,
   Route,
   Shield,
-  Upload,
   X,
 } from "lucide-react";
 import clsx from "clsx";
@@ -26,6 +23,7 @@ import { ThemeIcon } from "@/components/ThemeIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { startGuidedTour } from "@/lib/tour";
 import { readJson } from "@/lib/http/read-json";
+import { getThemeVisual, themeIdFromPath } from "@/lib/theme-visuals";
 
 const SIDEBAR_KEY = "ungrd-sidebar-collapsed";
 
@@ -105,13 +103,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const admin = canAdmin(role || undefined);
 
   function renderNav(compact: boolean) {
+    const visibleThemes = themes.filter((theme) => theme.id !== "plantilla");
     const linkClass = (active: boolean) =>
       clsx(
         "group flex items-center rounded-lg text-sm transition",
         compact ? "justify-center px-2 py-2.5" : "gap-2 px-3 py-2",
         active
-          ? "bg-ungrd-sidebar-active text-white"
-          : "text-[#9db5c8] hover:bg-ungrd-sidebar-hover hover:text-white",
+          ? "bg-ungrd-sidebar-active font-semibold text-white"
+          : "text-[#c5d4e0] hover:bg-ungrd-sidebar-hover hover:text-white",
       );
 
     return (
@@ -157,39 +156,42 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setThemesOpen((v) => !v)}
-              className="mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-bold tracking-wider text-ungrd-yellow uppercase"
+              className="mb-2 flex w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition hover:border-ungrd-yellow/35 hover:bg-white/[0.07]"
               id="tour-temas"
+              aria-expanded={themesOpen}
             >
-              Temas ({themes.length})
-              <ChevronLeft
-                className={clsx(
-                  "h-4 w-4 transition",
-                  themesOpen ? "-rotate-90" : "rotate-180",
-                )}
-              />
+              <span className="min-w-0">
+                <span className="block text-[10px] font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
+                  Portafolio
+                </span>
+                <span className="mt-0.5 block truncate text-sm font-extrabold text-white">
+                  Frentes operativos
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                <span className="rounded-md bg-ungrd-yellow px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums text-ungrd-navy-deep">
+                  {visibleThemes.length}
+                </span>
+                <ChevronLeft
+                  className={clsx(
+                    "h-4 w-4 text-ungrd-yellow transition",
+                    themesOpen ? "-rotate-90" : "rotate-180",
+                  )}
+                />
+              </span>
             </button>
           )}
 
           {(compact || themesOpen) && (
             <ul className={clsx("mb-3", compact ? "space-y-1" : "space-y-0.5")}>
-              {themes.map((theme) => {
+              {visibleThemes.map((theme) => {
                 const href = `/app/temas/${theme.id}`;
                 const active = pathname.startsWith(href);
-                const isTemplate = theme.id === "plantilla";
                 return (
                   <li key={theme.id}>
-                    {isTemplate && !compact && (
-                      <p className="mt-2 mb-1 px-3 text-[10px] font-bold tracking-wider text-[#7f98ad] uppercase">
-                        Referencia
-                      </p>
-                    )}
                     <Link
                       href={href}
-                      title={
-                        isTemplate
-                          ? `${theme.name} · línea base (no modificar)`
-                          : theme.name
-                      }
+                      title={theme.name}
                       aria-label={theme.name}
                       className={linkClass(active)}
                     >
@@ -198,18 +200,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                         className={clsx(
                           "shrink-0",
                           compact ? "h-5 w-5" : "h-4 w-4",
-                          active ? "text-ungrd-yellow" : "text-[#7f98ad]",
                         )}
+                        style={{
+                          color: active
+                            ? "#ffd100"
+                            : getThemeVisual(theme.id).accentSoft,
+                        }}
                       />
                       {!compact && (
-                        <span className="truncate">
-                          {theme.name}
-                          {isTemplate
-                            ? " · base"
-                            : theme.canWrite
-                              ? ""
-                              : " · L"}
-                        </span>
+                        <span className="truncate">{theme.name}</span>
                       )}
                     </Link>
                   </li>
@@ -226,39 +225,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Link
               href="/app/mando-nacional"
-              title="Mando nacional"
-              aria-label="Mando nacional"
+              title="Visión nacional"
+              aria-label="Visión nacional"
               className={linkClass(pathname.startsWith("/app/mando-nacional"))}
             >
               <Radar className={compact ? "h-5 w-5" : "h-4 w-4"} />
-              {!compact && "Mando nacional"}
-            </Link>
-            <Link
-              href="/app/tareas"
-              title="Mis tareas"
-              aria-label="Mis tareas"
-              className={linkClass(pathname.startsWith("/app/tareas"))}
-            >
-              <ClipboardList className={compact ? "h-5 w-5" : "h-4 w-4"} />
-              {!compact && "Mis tareas"}
-            </Link>
-            <Link
-              href="/app/casos"
-              title="Mis casos"
-              aria-label="Mis casos"
-              className={linkClass(pathname.startsWith("/app/casos"))}
-            >
-              <FolderOpen className={compact ? "h-5 w-5" : "h-4 w-4"} />
-              {!compact && "Mis casos"}
-            </Link>
-            <Link
-              href="/app/cargas"
-              title="Cargas Excel"
-              aria-label="Cargas Excel"
-              className={linkClass(pathname.startsWith("/app/cargas"))}
-            >
-              <Upload className={compact ? "h-5 w-5" : "h-4 w-4"} />
-              {!compact && "Cargas Excel"}
+              {!compact && "Visión nacional"}
             </Link>
             {admin && (
               <Link
@@ -297,12 +269,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
             <Link
               href="/app"
-              title="Panel general"
-              aria-label="Panel general"
+              title="Inicio"
+              aria-label="Inicio"
               className={linkClass(pathname === "/app")}
             >
               <BookOpen className={compact ? "h-5 w-5" : "h-4 w-4"} />
-              {!compact && "Panel general"}
+              {!compact && "Inicio"}
             </Link>
           </div>
         </nav>
@@ -335,8 +307,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const visualId = themeIdFromPath(pathname);
+
   return (
-    <div className="flex min-h-screen bg-ungrd-bg">
+    <div
+      className="flex min-h-screen bg-ungrd-bg"
+      data-theme-visual={visualId || undefined}
+    >
+      <div
+        className="ungrd-tricolor-bar pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px]"
+        title="UNGRD · Colombia"
+        aria-hidden
+      />
       <aside
         className={clsx(
           "relative z-40 hidden shrink-0 bg-ungrd-sidebar text-white transition-[width] duration-300 ease-out lg:block",
@@ -389,14 +371,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-ungrd-border bg-ungrd-surface/95 px-4 py-3 backdrop-blur lg:px-6">
+        <header className="ungrd-app-header sticky top-0 z-30 flex items-center gap-3 px-4 py-3 lg:px-6">
           <button
             type="button"
-            className="rounded-lg border border-ungrd-border p-2 lg:hidden"
+            className="ungrd-menu-btn lg:hidden"
             onClick={() => setMobileOpen(true)}
             aria-label="Abrir menú"
           >
-            <Menu className="h-5 w-5 text-ungrd-heading" />
+            <Menu className="h-5 w-5" />
           </button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-extrabold text-ungrd-heading">
@@ -407,9 +389,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </p>
           </div>
           <ThemeToggle />
-          <div className="hidden h-2 w-16 overflow-hidden rounded-full sm:block">
-            <div className="h-full w-full bg-[linear-gradient(90deg,#ffd100_0%,#002d5a_100%)]" />
-          </div>
+          <div
+            className="ungrd-tricolor-bar hidden h-2 w-16 shrink-0 overflow-hidden rounded-full sm:block"
+            title="UNGRD · Colombia"
+            aria-hidden
+          />
         </header>
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 lg:px-6 lg:py-6">{children}</main>
       </div>

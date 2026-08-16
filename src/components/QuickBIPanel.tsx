@@ -15,16 +15,11 @@ export function QuickBIPanel({ theme }: Props) {
       <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold tracking-[0.18em] text-ungrd-navy uppercase">
-              QuickBI
-            </p>
-            <h2 className="mt-1 text-lg font-extrabold text-ungrd-heading sm:text-xl">
-              Tablero ejecutivo — {theme.name}
+            <h2 className="text-lg font-extrabold text-ungrd-heading sm:text-xl">
+              QuickBI — {theme.name}
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-ungrd-muted">
-              Espacio para el tablero Quick BI del tema (Alibaba Cloud). Cuando
-              haya una URL de publicación o embed, el informe se muestra aquí
-              embebido a pantalla completa del panel.
+              Informe ejecutivo del tema. Si está configurado, se muestra aquí.
             </p>
           </div>
           {embedUrl && (
@@ -34,7 +29,7 @@ export function QuickBIPanel({ theme }: Props) {
               rel="noreferrer"
               className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-ungrd-border bg-ungrd-bg px-3 py-2 text-xs font-extrabold text-ungrd-heading transition hover:border-ungrd-navy/30"
             >
-              Abrir en Quick BI
+              Abrir en otra ventana
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           )}
@@ -59,17 +54,16 @@ export function QuickBIPanel({ theme }: Props) {
           </div>
           <div className="max-w-md space-y-2">
             <h3 className="text-base font-extrabold text-ungrd-heading">
-              Tablero Quick BI pendiente de configurar
+              QuickBI pendiente de configurar
             </h3>
             <p className="text-sm text-ungrd-muted">
-              Defina <code className="text-xs font-bold">quickBiUrl</code> en la
-              configuración del tema para incrustar el informe publicado de
-              Quick BI.
+              Un administrador debe asociar el informe de este tema. Mientras
+              tanto puede usar el Dashboard Operativo.
             </p>
           </div>
           <div className="mt-2 flex items-center gap-2 text-xs font-bold text-ungrd-muted">
             <BarChart3 className="h-3.5 w-3.5" />
-            {theme.shortName} · embed no asignado
+            {theme.shortName}
           </div>
         </section>
       )}

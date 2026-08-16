@@ -65,6 +65,10 @@ import {
 } from "@/components/ProcesoLookup";
 import { applyProcesoKeys } from "@/themes/puentes/process-keys";
 import { PUENTES_ESTRUCTURA_ESTADO } from "@/themes/puentes/select-options";
+import {
+  CaptureFormStepper,
+  CaptureIdentityFicha,
+} from "@/components/capture-chrome";
 
 /** Campos de identidad del alta: no se muestran de nuevo tras el lookup. */
 const HIDDEN_AFTER_LOOKUP = new Set<string>([
@@ -353,12 +357,6 @@ type DrySummary = {
   withoutTrackingKey: number;
   tip?: string;
 };
-
-function modeLabel(mode: CaptureFormConfig["mode"]) {
-  if (mode === "create-once") return "Alta única";
-  if (mode === "upsert") return "Actualiza vigente";
-  return "Agrega evento";
-}
 
 function rowCapa(r: RecordRow) {
   return String(r.tipo_registro || r.capa || "").trim();
@@ -802,7 +800,7 @@ export function CapturePanel({
       }
       if (byPlaca && activeForm.patchFieldNames?.length) {
         setMessage(
-          "Maqueta seleccionada con datos reales. Edite Otras categorizaciones / Clasificación propiedad y guarde: se actualiza el mismo registro (B–J no cambian).",
+          "Registro seleccionado. Actualice categorías o clasificación y guarde.",
         );
       }
     }
@@ -861,14 +859,14 @@ export function CapturePanel({
           }
           setMessage(
             fromExistingLayer
-              ? `Datos precargados de «${activeForm.label.replace(/^\d+\s*·\s*/, "")}». Edite y guarde: queda versionado.`
-              : `Datos precargados desde el alta/maqueta. Al guardar se crea esta capa con trazabilidad.`,
+              ? `Datos cargados de «${activeForm.label.replace(/^\d+\s*·\s*/, "")}». Edite y guarde.`
+              : `Datos cargados del registro inicial. Complete y guarde.`,
           );
         } else {
           setMessage(
             byPlaca
-              ? `Placa seleccionada. Aún no hay datos en esta capa: complete y guarde.`
-              : `OP seleccionada. Aún no hay datos en esta capa: complete y guarde.`,
+              ? `Placa seleccionada. Complete los campos y guarde.`
+              : `Orden seleccionada. Complete los campos y guarde.`,
           );
         }
       } catch {
@@ -956,16 +954,16 @@ export function CapturePanel({
         setMessage(
           byPlaca
             ? n > 0
-              ? `Placa cargada con datos de la maqueta. Hay ${n} evento${n === 1 ? "" : "s"} ya registrados en esta tabla (abajo). El nuevo guardado suma otra fila.`
-              : `Placa cargada con datos de la maqueta. Aún no hay eventos en esta tabla: complete y guarde el primero.`
+              ? `Placa seleccionada. Hay ${n} evento${n === 1 ? "" : "s"} en este formulario. El nuevo guardado agrega otra fila.`
+              : `Placa seleccionada. Aún no hay eventos aquí: complete y guarde el primero.`
             : n > 0
-              ? `OP cargada con datos del alta. Hay ${n} evento${n === 1 ? "" : "s"} ya registrados en esta tabla (abajo). El nuevo guardado suma otra fila.`
-              : `OP cargada con datos del alta. Aún no hay eventos en esta tabla: complete y guarde el primero.`,
+              ? `Orden seleccionada. Hay ${n} evento${n === 1 ? "" : "s"} en este formulario. El nuevo guardado agrega otra fila.`
+              : `Orden seleccionada. Aún no hay eventos aquí: complete y guarde el primero.`,
         );
       } catch {
         setAppendLayerRows([]);
         setMessage(
-          `OP seleccionada. Complete el evento; si hay historial en base, aparecerá al recargar.`,
+          `Orden seleccionada. Complete los datos; el historial aparecerá debajo.`,
         );
       } finally {
         setLoadingLayer(false);
@@ -1221,8 +1219,8 @@ export function CapturePanel({
         const n = puentes.length;
         setMessage(
           n > 0
-            ? `Contrato ${hit.contrato_convenio}: ${n} puente${n === 1 ? "" : "s"}. Elija uno en la lista para modificarlo, o pulse «Nuevo puente» para un alta.`
-            : `Contrato ${hit.contrato_convenio} sin puentes aún. Complete el alta del primero.`,
+            ? `Contrato ${hit.contrato_convenio}: ${n} puente${n === 1 ? "" : "s"}. Elija uno en la lista para modificarlo, o pulse «Nuevo puente» para agregar otro.`
+            : `Contrato ${hit.contrato_convenio} sin puentes aún. Complete el registro del primero.`,
         );
       } catch {
         setAppendLayerRows([]);
@@ -1293,7 +1291,7 @@ export function CapturePanel({
       ),
     );
     setMessage(
-      "Alta de puente nuevo. Complete ID y datos; el contrato ya está vinculado.",
+      "Nuevo puente. Complete el ID y los datos; el contrato ya está vinculado.",
     );
   }
 
@@ -1369,10 +1367,8 @@ export function CapturePanel({
       lockedByIdPuente ||
       lockedByReadonlyEditing;
     const common =
-      "mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40";
-    const computedClass = fieldLocked
-      ? `${common} bg-ungrd-surface/60 text-ungrd-muted cursor-not-allowed`
-      : common;
+      "theme-input";
+    const computedClass = common;
 
     // Estado del proceso: select solo en Estructuración (no valida inventario).
     if (field.name === "estado" && lookupCanCreate) {
@@ -1384,7 +1380,7 @@ export function CapturePanel({
       return (
         <label
           key={field.name}
-          className="block text-sm font-semibold text-ungrd-heading"
+          className="theme-field"
         >
           {field.label}
           {required ? (
@@ -1416,7 +1412,7 @@ export function CapturePanel({
       return (
         <label
           key={field.name}
-          className="block text-sm font-semibold text-ungrd-heading"
+          className="theme-field"
         >
           {field.label}
           {required ? (
@@ -1450,7 +1446,7 @@ export function CapturePanel({
       return (
         <label
           key={field.name}
-          className="block text-sm font-semibold text-ungrd-heading"
+          className="theme-field"
         >
           {field.label}
           {required ? (
@@ -1483,7 +1479,7 @@ export function CapturePanel({
     return (
       <label
         key={field.name}
-        className={`block text-sm font-semibold text-ungrd-heading ${
+        className={`theme-field ${
           field.type === "textarea" ? "md:col-span-2" : ""
         }`}
       >
@@ -1560,8 +1556,8 @@ export function CapturePanel({
     if (needsOrdenLookup && !selectedOrden) {
       setError(
         activeForm?.lookupBy === "placa" || theme.id === "carrotanques"
-          ? "Busque y seleccione la placa de la maqueta antes de guardar."
-          : "Busque y seleccione la orden de proveeduría del registro inicial antes de guardar.",
+          ? "Busque y seleccione la placa del vehículo antes de guardar."
+          : "Busque y seleccione la orden de proveeduría antes de guardar.",
       );
       return;
     }
@@ -1759,7 +1755,7 @@ export function CapturePanel({
               reason: lookupCanCreate
                 ? `cambio de etapa/estado · ${String(values.etapa || "")} · ${String(values.estado || "")}`
                 : activeForm?.patchFieldNames?.length
-                  ? `categorías maqueta (K–L) · ${activeForm.label}`
+                  ? `categorías · ${activeForm.label}`
                   : `edición formulario · ${activeForm?.label || "capa"}`,
             }),
           },
@@ -1771,7 +1767,7 @@ export function CapturePanel({
         }
         setMessage(
           theme.id === "carrotanques"
-            ? `Maqueta actualizada (v${data.version || "—"})${
+            ? `Registro actualizado${
                 data.changedFields?.length
                   ? ` · cambió: ${(data.changedFields as string[])
                       .map(
@@ -1779,13 +1775,13 @@ export function CapturePanel({
                           theme.fields.find((f) => f.name === n)?.label || n,
                       )
                       .join(", ")}`
-                  : " · sin cambios de campos"
-              }. El detalle queda en el historial de trazabilidad abajo.`
-            : `Actualizado v${data.version || "—"}${
+                  : ""
+              }.`
+            : `Registro actualizado${
                 data.changedFields?.length
                   ? ` · cambió: ${data.changedFields.join(", ")}`
-                  : " · sin cambios"
-              }. La trazabilidad queda en el historial de versiones abajo.`,
+                  : ""
+              }.`,
         );
         if (editingRecordId) {
           void loadUpsertVersions(editingRecordId);
@@ -1871,17 +1867,13 @@ export function CapturePanel({
             (persistMode === "append" || persistMode === "upsert") &&
             (data.carroSync?.ok || data.maquetaSync?.ok || data.bmaqSync?.ok)
               ? theme.id === "carrotanques"
-                ? " La maqueta (M–Z) se actualizó con el último evento de bitácora; Q–R–S con la suma de suministro."
+                ? " También se actualizó el inventario con el último evento."
                 : theme.id === "banco-de-maquinaria"
-                  ? " Se sincronizó el convenio/detalle según la capa (bitácora → estado convenio; entrega → ENTREGADA)."
-                  : " La Maqueta (Alta) se actualizó con el último vigente."
-              : persistMode === "append" && theme.id === "carrotanques"
-                ? " El historial queda debajo; al guardar bitácora/suministro la maqueta refleja el último evento (M–Z) y la suma (Q–R–S)."
-                : persistMode === "append" && theme.id === "banco-de-maquinaria"
-                  ? " El historial queda debajo; bitácora y entrega alimentan el detalle/convenio."
-                  : persistMode === "append"
-                    ? " El historial queda debajo; la Maqueta refleja el último evento."
-                    : "";
+                  ? " También se actualizó el convenio o detalle relacionado."
+                  : " También se actualizó el registro principal."
+              : persistMode === "append"
+                ? " El historial queda debajo."
+                : "";
           setMessage(
             `Registro ${action} (${activeForm?.label || "formulario"}).${syncNote}`,
           );
@@ -2173,72 +2165,26 @@ export function CapturePanel({
       )}
 
       {mode === "form" ? (
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form
+          onSubmit={onSubmit}
+          className={
+            captureForms.length > 1
+              ? "space-y-4 lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0"
+              : "space-y-4"
+          }
+        >
+          <CaptureFormStepper
+            forms={captureForms}
+            activeId={activeForm?.id || ""}
+            onSelect={(id) => {
+              setActiveFormId(id);
+              setError(null);
+              setMessage(null);
+            }}
+          />
+          <div className="min-w-0 space-y-4">
           {hasCaptureForms ? (
             <div className="space-y-3">
-              {captureForms.length > 1 ? (
-              <p className="rounded-xl border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-4 py-3 text-sm text-ungrd-muted">
-                {theme.id === "carrotanques" ? (
-                  <>
-                    Elija el formulario según cómo se alimenta la Maqueta. Cada
-                    uno guarda en su capa unidos por la misma{" "}
-                    <strong className="text-ungrd-heading">placa</strong>.
-                  </>
-                ) : theme.id === "banco-de-maquinaria" ? (
-                  <>
-                    Elija el formulario según la capa. El cruce es por{" "}
-                    <strong className="text-ungrd-heading">convenio</strong> o{" "}
-                    <strong className="text-ungrd-heading">serial</strong>.
-                  </>
-                ) : theme.id === "puentes" ? (
-                  <>
-                    Elija el formulario según la capa. El cruce es por{" "}
-                    <strong className="text-ungrd-heading">id puente</strong> o{" "}
-                    <strong className="text-ungrd-heading">contrato</strong>.
-                  </>
-                ) : (
-                  <>
-                    Elija el formulario según cómo se alimenta la Maqueta. Cada
-                    uno guarda en su capa con la misma{" "}
-                    <strong className="text-ungrd-heading">
-                      orden de proveeduría
-                    </strong>
-                    .
-                  </>
-                )}
-              </p>
-              ) : null}
-              {captureForms.length > 1 ? (
-              <div className="flex flex-wrap gap-2">
-                {captureForms.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveFormId(f.id);
-                      setError(null);
-                      setMessage(null);
-                    }}
-                    className={`rounded-lg border px-3 py-2 text-left text-xs font-bold transition sm:text-sm ${
-                      activeForm?.id === f.id
-                        ? "border-ungrd-navy bg-ungrd-navy text-white"
-                        : "border-ungrd-border bg-ungrd-surface text-ungrd-heading hover:border-ungrd-navy/40"
-                    }`}
-                  >
-                    <span className="block">{f.label}</span>
-                    <span
-                      className={`mt-0.5 block text-[10px] font-semibold tracking-wide uppercase ${
-                        activeForm?.id === f.id
-                          ? "text-white/70"
-                          : "text-ungrd-muted"
-                      }`}
-                    >
-                      {modeLabel(f.mode)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              ) : null}
               {activeForm ? (
                 <p className="text-sm text-ungrd-muted">
                   {activeForm.description}
@@ -2279,19 +2225,25 @@ export function CapturePanel({
                   catalog={lookupCanCreate ? "estructuracion" : "inventario"}
                 />
               ) : null}
+              <CaptureIdentityFicha
+                lookupBy={resolveOrdenLookupBy(activeForm, theme.id)}
+                orden={selectedOrden}
+                puente={selectedPuente}
+                proceso={selectedProceso}
+              />
               {loadingLayer ? (
                 <p className="text-xs font-semibold text-ungrd-muted">
                   Cargando datos existentes de esta capa…
                 </p>
               ) : null}
               {editingRecordId && activeForm?.mode === "upsert" ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
                   {lookupCanCreate
-                    ? "Contrato ya registrado: solo puede cambiar etapa y estado. El resto queda fijo. Cada cambio crea una versión (trazabilidad)."
+                    ? "Registro existente: aquí solo se actualizan etapa y estado."
                     : theme.id === "carrotanques" &&
                         activeForm.patchFieldNames?.length
-                      ? "Editando la maqueta existente. Solo cambian Otras categorizaciones y Clasificación propiedad (mismo registro). Al guardar se crea versión."
-                      : "Editando un puente de la lista. Al guardar se crea versión (trazabilidad). Pulse «Nuevo puente» para un alta distinta."}
+                      ? "Registro existente: aquí solo se actualizan categorías y clasificación."
+                      : "Editando este puente. Para agregar otro, use «Nuevo puente»."}
                 </p>
               ) : null}
               {!lookupCanCreate &&
@@ -2299,16 +2251,15 @@ export function CapturePanel({
               selectedProceso &&
               !editingRecordId &&
               activeForm?.mode === "upsert" ? (
-                <p className="rounded-lg border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-3 py-2 text-xs font-semibold text-ungrd-navy">
-                  Formulario vacío para alta nueva. O elija un puente en la lista
-                  para modificarlo.
+                <p className="rounded-lg border border-ungrd-border bg-ungrd-row-alt px-3 py-2 text-xs font-semibold text-ungrd-heading">
+                  Formulario listo para un puente nuevo, o elija uno de la lista
+                  para editarlo.
                 </p>
               ) : null}
               {lookupCanCreate && !selectedProceso && !editingRecordId ? (
-                <p className="rounded-lg border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-3 py-2 text-xs font-semibold text-ungrd-navy">
-                  Complete los campos abajo para registrar un proceso nuevo, o
-                  abra la lista de arriba para elegir uno existente y modificar
-                  su etapa/estado.
+                <p className="rounded-lg border border-ungrd-border bg-ungrd-row-alt px-3 py-2 text-xs font-semibold text-ungrd-heading">
+                  Complete los campos para un proceso nuevo, o elija uno de la
+                  lista para actualizar etapa y estado.
                 </p>
               ) : null}
               {lookupCanCreate && selectedProceso && !editingRecordId ? (
@@ -2320,8 +2271,8 @@ export function CapturePanel({
             </div>
           ) : isSourceTheme(theme.id) ? (
             <p className="rounded-xl border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-4 py-3 text-sm text-ungrd-muted">
-              Formulario organizado por capas de la base oficial. Los campos
-              coinciden con la plantilla Excel v{theme.schemaVersion ?? 1}.
+              Complete los campos y guarde. También puede cargar un Excel en la
+              pestaña correspondiente.
             </p>
           ) : null}
 
@@ -2332,18 +2283,17 @@ export function CapturePanel({
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
                   <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
-                    Puentes vinculados · inventario
+                    Puentes del contrato
                   </p>
                   <p className="mt-1 text-sm text-ungrd-muted">
-                    Base General completa del contrato (todos los del Excel).
-                    Clic en una fila para modificar; «Nuevo puente» para un alta.
+                    Lista de puentes de este contrato. Clic en una fila para
+                    editar; «Nuevo puente» para agregar otro.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-ungrd-navy/10 px-3 py-1 text-xs font-bold text-ungrd-navy">
                     {puentesVinculados.length} puente
-                    {puentesVinculados.length === 1 ? "" : "s"} · Base General
-                    completa
+                    {puentesVinculados.length === 1 ? "" : "s"}
                     {selectedProceso
                       ? ` · ${selectedProceso.contrato_convenio.slice(0, 28)}${selectedProceso.contrato_convenio.length > 28 ? "…" : ""}`
                       : ""}
@@ -2353,7 +2303,7 @@ export function CapturePanel({
                       type="button"
                       onClick={startNuevoInventarioPuente}
                       disabled={!writable || busy}
-                      className="rounded-lg border border-ungrd-navy/30 bg-white px-3 py-1.5 text-xs font-extrabold text-ungrd-navy transition hover:bg-ungrd-navy/5 disabled:opacity-50"
+                      className="rounded-lg border border-ungrd-navy/30 bg-ungrd-surface px-3 py-1.5 text-xs font-extrabold text-ungrd-heading transition hover:bg-ungrd-row-hover disabled:opacity-50"
                     >
                       Nuevo puente
                     </button>
@@ -2374,7 +2324,7 @@ export function CapturePanel({
                 </p>
               ) : (
                 <>
-                <div className="mt-3 overflow-x-auto rounded-xl border border-ungrd-border bg-white">
+                <div className="ungrd-data-table mt-3 overflow-x-auto rounded-xl border border-ungrd-border">
                   <table className="min-w-full border-collapse text-left text-xs">
                     <thead className="bg-ungrd-surface">
                       <tr>
@@ -2419,7 +2369,7 @@ export function CapturePanel({
                             className={
                               selected
                                 ? "cursor-pointer bg-ungrd-yellow/40"
-                                : "cursor-pointer odd:bg-white even:bg-ungrd-surface/40 hover:bg-ungrd-navy/5"
+                                : "cursor-pointer odd:bg-ungrd-row even:bg-ungrd-row-alt hover:bg-ungrd-row-hover text-ungrd-text"
                             }
                           >
                             <td className="border-b border-ungrd-border/60 px-2 py-1.5 font-semibold break-all text-ungrd-heading">
@@ -2452,8 +2402,7 @@ export function CapturePanel({
                 </div>
                 <p className="mt-2 text-xs text-ungrd-muted">
                   Listado completo: {puentesVinculados.length} registro
-                  {puentesVinculados.length === 1 ? "" : "s"} (igual que la hoja
-                  Base General Puentes del Excel para este contrato).
+                  {puentesVinculados.length === 1 ? "" : "s"} de este contrato.
                 </p>
                 </>
               )}
@@ -2463,37 +2412,45 @@ export function CapturePanel({
           {fieldSections.map((section) => (
             <fieldset
               key={section.id}
-              className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5"
+              className="theme-fieldset"
               disabled={needsEntityLookup && !entityGateOpen}
             >
-              <legend className="px-1 text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
-                {section.title}
-              </legend>
+              <legend>{section.title}</legend>
               {needsEntityLookup && !entityGateOpen ? (
                 <p className="mt-2 text-sm text-ungrd-muted">
                   {needsOrdenLookup
                     ? activeForm?.lookupBy === "placa" ||
                       theme.id === "carrotanques"
-                      ? "Seleccione primero la placa de la maqueta para habilitar los campos de este formulario."
-                      : "Seleccione primero la OP del registro inicial para habilitar los campos de este formulario."
+                      ? "Seleccione primero la placa para habilitar los campos."
+                      : "Seleccione primero la orden de proveeduría para habilitar los campos."
                     : needsPuenteLookup
-                      ? "Seleccione primero el puente del inventario para habilitar los campos. El evento sigue a un puente ya registrado."
-                      : "Seleccione el contrato o convenio ya estructurado para habilitar los campos. El proceso debe existir antes del puente."}
+                      ? "Seleccione primero el puente para habilitar los campos."
+                      : "Seleccione primero el contrato o convenio para habilitar los campos."}
                 </p>
               ) : (
-                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                <div className="mt-3.5 grid gap-3 sm:gap-3.5 md:grid-cols-2">
                   {section.names.map((name) => renderField(name))}
                 </div>
               )}
             </fieldset>
           ))}
-          <div>
+          <div
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--theme-accent)_35%,var(--ungrd-border))] bg-[color-mix(in_srgb,var(--ungrd-surface)_92%,var(--theme-wash))] px-4 py-3 ${
+              !needsEntityLookup || entityGateOpen ? "theme-save-bar" : ""
+            }`}
+          >
+            <p className="text-xs font-semibold text-ungrd-muted">
+              {activeForm
+                ? activeForm.label.replace(/^\d+\s*·\s*/, "")
+                : "Registro"}
+              {editingRecordId ? " · editando" : ""}
+            </p>
             <button
               type="submit"
               disabled={
                 !writable || busy || (needsEntityLookup && !entityGateOpen)
               }
-              className="rounded-lg bg-ungrd-yellow px-5 py-2.5 text-sm font-extrabold text-ungrd-navy-deep transition hover:bg-ungrd-yellow-soft disabled:opacity-50"
+              className="theme-btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
             >
               {busy
                 ? "Guardando…"
@@ -2501,7 +2458,7 @@ export function CapturePanel({
                   ? lookupCanCreate
                     ? `Actualizar etapa/estado · ${activeForm?.label.replace(/^\d+\s*·\s*/, "") || "proceso"}`
                     : theme.id === "carrotanques"
-                      ? `Actualizar maqueta · ${form.placa || selectedOrden?.orden_de_proveeduria || "placa"}`
+                      ? `Actualizar vehículo · ${form.placa || selectedOrden?.orden_de_proveeduria || "placa"}`
                       : `Actualizar puente · ${form.id_puente || "inventario"}`
                   : lookupCanCreate && needsProcesoLookup
                     ? `Registrar · ${activeForm?.label.replace(/^\d+\s*·\s*/, "") || "proceso"}`
@@ -2519,17 +2476,17 @@ export function CapturePanel({
                 <div>
                   <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
                     {theme.id === "carrotanques"
-                      ? "Trazabilidad · historial de la maqueta"
+                      ? "Historial de cambios"
                       : lookupCanCreate
-                        ? "Trazabilidad · versiones del proceso"
-                        : "Trazabilidad · versiones"}
+                        ? "Historial del proceso"
+                        : "Historial de cambios"}
                   </p>
                   <p className="mt-1 max-w-2xl text-sm text-ungrd-muted">
                     {theme.id === "carrotanques"
-                      ? "Cada guardado deja una foto del carrotanque (placa). Nada se borra: aquí ve qué cambió, de qué valor a cuál, y cuándo."
+                      ? "Cada guardado conserva qué cambió y cuándo. Nada se borra."
                       : lookupCanCreate
-                        ? "El contrato y sus datos quedan fijos; solo cambian etapa y estado. Cada cambio deja una versión. Nada se borra."
-                        : "Cada modificación deja una versión con el detalle de campos. Nada se borra."}
+                        ? "El contrato queda fijo; solo cambian etapa y estado. Cada cambio queda registrado."
+                        : "Cada modificación queda registrada con el detalle de campos."}
                   </p>
                 </div>
                 <span className="rounded-full bg-ungrd-navy/10 px-3 py-1 text-xs font-bold text-ungrd-navy">
@@ -2547,7 +2504,7 @@ export function CapturePanel({
                   Cargando historial…
                 </p>
               ) : upsertVersions.length === 0 ? (
-                <p className="mt-3 rounded-xl border border-dashed border-ungrd-border bg-white/60 px-4 py-6 text-center text-sm text-ungrd-muted">
+                <p className="mt-3 rounded-xl border border-dashed border-ungrd-border bg-ungrd-row-alt/60 px-4 py-6 text-center text-sm text-ungrd-muted">
                   Aún no hay versiones guardadas. Al editar y guardar aparecerá
                   aquí el historial completo.
                 </p>
@@ -2618,8 +2575,8 @@ export function CapturePanel({
                           }
                           className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
                             open
-                              ? "border-ungrd-navy/30 bg-white shadow-sm dark:bg-ungrd-surface"
-                              : "border-ungrd-border/80 bg-white/70 hover:border-ungrd-navy/25 dark:bg-ungrd-surface/60"
+                              ? "border-ungrd-navy/30 bg-ungrd-surface shadow-sm"
+                              : "border-ungrd-border/80 bg-ungrd-row-alt hover:border-ungrd-navy/25"
                           }`}
                         >
                           <div className="flex flex-wrap items-center gap-2">
@@ -2640,9 +2597,7 @@ export function CapturePanel({
                           </div>
                           <p className="mt-1 text-sm font-semibold text-ungrd-heading">
                             {isInitial
-                              ? theme.id === "carrotanques"
-                                ? "Foto inicial de la maqueta"
-                                : "Versión inicial del registro"
+                              ? "Registro inicial"
                               : changed.length
                                 ? `${changed.length} campo${changed.length === 1 ? "" : "s"} modificado${changed.length === 1 ? "" : "s"}`
                                 : v.reason || "Cambio registrado"}
@@ -2688,7 +2643,7 @@ export function CapturePanel({
                                   return (
                                     <li
                                       key={name}
-                                      className="rounded-lg border border-ungrd-border/70 bg-white px-3 py-2 dark:bg-ungrd-surface"
+                                      className="rounded-lg border border-ungrd-border/70 bg-ungrd-surface px-3 py-2"
                                     >
                                       <p className="text-[10px] font-bold tracking-wide text-ungrd-navy uppercase">
                                         {labelOf(name)}
@@ -2733,12 +2688,8 @@ export function CapturePanel({
                     Historial · {activeForm.label.replace(/^\d+\s*·\s*/, "")}
                   </p>
                   <p className="mt-1 text-sm text-ungrd-muted">
-                    Eventos de esta tabla actualizable en secuencia de fecha
-                    (antiguo → reciente). También aparecen en{" "}
-                    <strong className="text-ungrd-heading">
-                      Seguimiento → Base completa (Excel)
-                    </strong>{" "}
-                    filtrando la capa.
+                    Eventos ordenados por fecha. Cada guardado agrega una fila
+                    nueva.
                   </p>
                 </div>
                 <span className="rounded-full bg-ungrd-navy/10 px-3 py-1 text-xs font-bold text-ungrd-navy">
@@ -2759,15 +2710,15 @@ export function CapturePanel({
                   {needsOrdenLookup
                     ? activeForm?.lookupBy === "placa" ||
                       theme.id === "carrotanques"
-                      ? "Seleccione la placa de la maqueta para ver debajo todos sus eventos de esta tabla, en orden de fecha. Cada guardado suma una fila nueva (no borra las anteriores)."
-                      : "Seleccione la OP del alta para ver debajo todos sus eventos de esta tabla, en orden de fecha. Cada guardado suma una fila nueva (no borra las anteriores)."
+                      ? "Seleccione la placa para ver el historial."
+                      : "Seleccione la orden de proveeduría para ver el historial."
                     : needsPuenteLookup
-                      ? "Seleccione el puente para ver el historial de esta tabla. Cada guardado suma una fila nueva."
-                      : "Seleccione el contrato/convenio para ver las etapas registradas. Cada guardado suma una fila nueva."}
+                      ? "Seleccione el puente para ver el historial."
+                      : "Seleccione el contrato o convenio para ver el historial."}
                 </p>
               ) : null}
 
-              <div className="mt-3 max-h-[28rem] overflow-auto rounded-xl border border-ungrd-border bg-white">
+              <div className="ungrd-data-table mt-3 max-h-[28rem] overflow-auto rounded-xl border border-ungrd-border">
                 <table className="min-w-full border-collapse text-left text-xs">
                   <thead className="sticky top-0 z-10 bg-ungrd-navy text-white">
                     <tr>
@@ -2796,11 +2747,11 @@ export function CapturePanel({
                           {needsOrdenLookup
                             ? activeForm?.lookupBy === "placa" ||
                               theme.id === "carrotanques"
-                              ? "Elija una placa para cargar el historial de esta tabla actualizable."
-                              : "Elija una OP para cargar el historial de esta tabla actualizable."
+                              ? "Elija una placa para ver el historial."
+                              : "Elija una orden de proveeduría para ver el historial."
                             : needsPuenteLookup
-                              ? "Elija un puente para cargar el historial de esta tabla."
-                              : "Elija un contrato/convenio para cargar el historial."}
+                              ? "Elija un puente para ver el historial."
+                              : "Elija un contrato o convenio para ver el historial."}
                         </td>
                       </tr>
                     ) : appendHistory.length === 0 ? (
@@ -2824,8 +2775,8 @@ export function CapturePanel({
                       appendHistory.map((row, idx) => (
                         <tr
                           key={row.id}
-                          className={`border-t border-slate-200 ${
-                            idx % 2 ? "bg-slate-50/80" : "bg-white"
+                          className={`border-t border-ungrd-border text-ungrd-text ${
+                            idx % 2 ? "bg-ungrd-row-alt" : "bg-ungrd-row"
                           }`}
                         >
                           <td className="px-2 py-1.5 text-ungrd-muted">
@@ -2853,21 +2804,22 @@ export function CapturePanel({
               </div>
             </div>
           ) : null}
+          </div>
         </form>
       ) : (
-        <div className="space-y-4 rounded-2xl border border-ungrd-border bg-ungrd-surface p-5">
+        <div className="space-y-4 rounded-2xl border border-[color-mix(in_srgb,var(--theme-accent)_22%,var(--ungrd-border))] bg-ungrd-surface p-5">
           {feedGuide ? (
             <div className="rounded-xl border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-4 py-3 text-sm">
               <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
-                Cómo alimentar este tema (maqueta + bitácora)
+                Cómo cargar este tema
               </p>
               <ul className="mt-2 list-disc space-y-1 pl-4 text-ungrd-muted">
                 <li>
-                  <strong className="text-ungrd-heading">Clave:</strong>{" "}
+                  <strong className="text-ungrd-heading">Identificador:</strong>{" "}
                   {feedGuide.clave}
                 </li>
                 <li>
-                  <strong className="text-ungrd-heading">Capas:</strong>{" "}
+                  <strong className="text-ungrd-heading">Formularios:</strong>{" "}
                   {feedGuide.capas.join(" · ")}
                 </li>
                 <li>{feedGuide.tip}</li>
@@ -2886,7 +2838,11 @@ export function CapturePanel({
             <span className="text-sm">
               <span className="inline-flex items-center gap-1.5 font-extrabold text-ungrd-heading">
                 <RefreshCw className="h-3.5 w-3.5" />
-                Actualizar por clave de seguimiento
+                Actualizar si el registro ya existe
+              </span>
+              <span className="mt-1 block text-xs font-normal text-ungrd-muted">
+                Si ya hay una fila con el mismo identificador y tipo, se
+                corrige en lugar de crear otra.
               </span>
             </span>
           </label>
@@ -2896,10 +2852,10 @@ export function CapturePanel({
               type="button"
               onClick={downloadTemplate}
               disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg border border-ungrd-border bg-white px-4 py-2.5 text-sm font-bold text-ungrd-heading"
+              className="inline-flex items-center gap-2 rounded-lg border border-ungrd-border bg-ungrd-surface px-4 py-2.5 text-sm font-bold text-ungrd-heading"
             >
               <FileSpreadsheet className="h-4 w-4 text-ungrd-navy" />
-              Descargar plantilla
+              Descargar plantilla de {theme.shortName || theme.name}
             </button>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white">
               <Upload className="h-4 w-4" />

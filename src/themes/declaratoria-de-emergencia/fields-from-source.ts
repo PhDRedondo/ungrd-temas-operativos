@@ -17,7 +17,7 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "departamento", label: "DEPARTAMENTO", type: "text", excelWidth: 18 },
   { name: "municipio", label: "MUNICIPIO", type: "text", excelWidth: 18 },
   { name: "evento", label: "EVENTO", type: "text", excelWidth: 18 },
-  { name: "divipola", label: "DIVIPOLA", type: "text", excelWidth: 18 },
+  { name: "divipola", label: "Código territorial", type: "text", excelWidth: 18 },
   { name: "fecha", label: "FECHA INICIO", type: "date", excelWidth: 18 },
   { name: "fecha_de_terminacion", label: "FECHA DE TERMINACION", type: "date", excelWidth: 18 },
   { name: "vigencia", label: "VIGENCIA", type: "text", excelWidth: 18 },

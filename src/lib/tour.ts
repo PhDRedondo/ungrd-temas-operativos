@@ -54,7 +54,7 @@ export function startGuidedTour() {
         popover: {
           title: "Pestañas del tema",
           description:
-            "En orden: Carga Excel, Captura de datos, Base completa, Centro de mando, QuickBI y Análisis avanzado.",
+            "En orden: Cargar Excel, Captura, Registros, Dashboard Operativo y QuickBI.",
           side: "bottom",
         },
       },

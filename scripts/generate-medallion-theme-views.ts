@@ -167,6 +167,21 @@ const JOIN_KEY_EXPR: Record<string, Record<string, string>> = {
     uuid: payloadCoalesce("uuid", "clave_seguimiento"),
     clave_seguimiento: payloadCoalesce("clave_seguimiento", "uuid"),
   },
+  // Formulario usa nombres canónicos; Excel legacy trae typo / alias.
+  "banco_maquinaria.alta_convenio": {
+    cantidad_maquinaria_expectativa: payloadCoalesce(
+      "cantidad_maquinaria_expectativa",
+      "cantidad_maquinaria_espectativa",
+    ),
+    valor_total: payloadCoalesce("valor_total", "valor_sin_iva"),
+    valor_aporte_gobernacion: payloadCoalesce("valor_aporte_gobernacion"),
+  },
+  "banco_maquinaria.alta_detalle": {
+    estado_maquina: payloadCoalesce("estado_maquina", "estado"),
+  },
+  "banco_maquinaria.bitacora_convenio": {
+    fecha_de_estado: payloadCoalesce("fecha_de_estado", "fecha"),
+  },
 };
 
 /** Agua: OP une todas las hojas del mismo workbook. */
@@ -411,6 +426,8 @@ function exclusiveFieldsOfOthers(themeId: string): Set<string> {
   return foreign;
 }
 
+const VIEW_META_FIELDS = new Set(["capa", "tipo_registro", "clave_seguimiento"]);
+
 function uniqueFields(
   themeId: string,
   names: string[],
@@ -422,6 +439,11 @@ function uniqueFields(
   const seen = new Set<string>();
   for (const n of names) {
     if (!n || seen.has(n)) continue;
+    if (VIEW_META_FIELDS.has(n)) {
+      seen.add(n);
+      out.push(n);
+      continue;
+    }
     if (foreign.has(n)) {
       throw new Error(
         `[medallion] CRUCE DE TEMAS: "${themeId}" no puede incluir campo ajeno "${n}"`,

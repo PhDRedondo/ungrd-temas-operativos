@@ -12,7 +12,7 @@ export const GEO_FIELDS: FormField[] = [
   },
   {
     name: "municipio",
-    label: "Municipio (DIVIPOLA)",
+    label: "Municipio",
     type: "select",
     required: true,
     options: [],
@@ -53,7 +53,8 @@ export function ensureDivipolaGeoFields(fields: FormField[]): FormField[] {
       return {
         ...f,
         type: "select",
-        // Opciones vacías: la UI filtra por departamento (cascada DIVIPOLA).
+        label: f.label?.includes("DIVIPOLA") ? "Municipio" : f.label,
+        // Opciones vacías: la UI filtra por departamento (cascada).
         options: f.options?.length ? f.options : [],
         placeholder: f.placeholder || "Seleccione departamento primero",
         required: f.required ?? true,

@@ -251,66 +251,60 @@ export function PuenteLookup({
 
   if (selected) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-wide text-emerald-900 uppercase">
-              <Link2 className="h-3.5 w-3.5" />
-              Puente seleccionado · seguimiento
-            </p>
-            <p className="mt-1 text-lg font-extrabold break-all text-ungrd-heading">
-              {puenteLabel(selected)}
-            </p>
-            <p className="mt-0.5 text-xs text-ungrd-muted">
-              # interno {selected.id_puente}
-              {selected.tipo ? ` · ${selected.tipo}` : ""}
-            </p>
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-ungrd-muted">
-                  Proceso (grupo)
-                </dt>
-                <dd className="font-semibold text-ungrd-heading">
-                  {selected.contrato_convenio || selected.convenio_o_cto || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-ungrd-muted">
-                  Territorio
-                </dt>
-                <dd className="font-semibold text-ungrd-heading">
-                  {[selected.municipio, selected.departamento]
-                    .filter(Boolean)
-                    .join(", ") || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-bold uppercase text-ungrd-muted">
-                  Estado
-                </dt>
-                <dd className="font-semibold text-ungrd-heading">
-                  {selected.estado_puente || "—"}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-3 text-xs text-ungrd-muted">
-              Complete abajo los campos actualizables de la bitácora. Cada
-              guardado suma un evento de este ID único.
-            </p>
+      <div className="lookup-card">
+        <div className="lookup-card__body">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="lookup-card__eyebrow">
+                <Link2 className="h-3.5 w-3.5" />
+                Puente seleccionado · seguimiento
+              </p>
+              <p className="lookup-card__title">{puenteLabel(selected)}</p>
+              <p className="lookup-card__sub">
+                # interno {selected.id_puente}
+                {selected.tipo ? ` · ${selected.tipo}` : ""}
+              </p>
+              <dl className="lookup-card__grid">
+                <div className="lookup-card__cell">
+                  <dt>Proceso (grupo)</dt>
+                  <dd>
+                    {selected.contrato_convenio ||
+                      selected.convenio_o_cto ||
+                      "—"}
+                  </dd>
+                </div>
+                <div className="lookup-card__cell">
+                  <dt>Territorio</dt>
+                  <dd>
+                    {[selected.municipio, selected.departamento]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </dd>
+                </div>
+                <div className="lookup-card__cell">
+                  <dt>Estado</dt>
+                  <dd>{selected.estado_puente || "—"}</dd>
+                </div>
+              </dl>
+              <p className="lookup-card__sub mt-2">
+                Complete abajo los campos de la bitácora. Cada guardado suma un
+                evento de este ID.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                onClear();
+                setHits([]);
+                setFacets(EMPTY_FACETS);
+              }}
+              className="lookup-card__clear"
+            >
+              <X className="h-3.5 w-3.5" />
+              Cambiar puente
+            </button>
           </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              onClear();
-              setHits([]);
-              setFacets(EMPTY_FACETS);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-ungrd-border bg-white px-3 py-1.5 text-xs font-bold text-ungrd-heading hover:border-ungrd-navy/40"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cambiar puente
-          </button>
         </div>
       </div>
     );
@@ -423,7 +417,7 @@ export function PuenteLookup({
               setDepartamento("");
               setMunicipio("");
             }}
-            className="rounded-md border border-ungrd-border bg-white px-2 py-0.5 font-semibold text-ungrd-heading hover:border-ungrd-navy/40"
+            className="rounded-md border border-ungrd-border bg-ungrd-surface px-2 py-0.5 font-semibold text-ungrd-heading hover:border-ungrd-navy/40"
           >
             Limpiar
           </button>
@@ -443,7 +437,7 @@ export function PuenteLookup({
             : "Escriba el ID único o elija un proceso para listar puentes."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-ungrd-border bg-white">
+        <div className="ungrd-data-table overflow-x-auto rounded-xl border border-ungrd-border">
           <table className="min-w-full border-collapse text-left text-xs">
             <thead className="bg-ungrd-surface">
               <tr>
@@ -485,7 +479,7 @@ export function PuenteLookup({
                       if (!disabled) onSelect(h);
                     }
                   }}
-                  className="cursor-pointer odd:bg-white even:bg-ungrd-surface/40 hover:bg-ungrd-yellow/30"
+                  className="cursor-pointer odd:bg-ungrd-row even:bg-ungrd-row-alt text-ungrd-text hover:bg-ungrd-row-hover"
                 >
                   <td className="border-b border-ungrd-border/60 px-2 py-1.5 font-semibold break-all text-ungrd-heading">
                     {puenteLabel(h)}

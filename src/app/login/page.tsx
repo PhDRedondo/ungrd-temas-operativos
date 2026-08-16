@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { ADMIN_EMAIL, STAFF_DOMAIN, resolveLoginEmail } from "@/lib/accounts";
+import { resolveLoginEmail } from "@/lib/accounts";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import "./login.css";
 
 function redirectPath(url: string | undefined | null, fallback: string): string {
   if (!url) return fallback;
@@ -27,11 +28,8 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
-  const [username, setUsername] = useState("admin");
-  // Debe coincidir con DEMO_AUTH_PASSWORD / seed en accountsServer (no hardcode legacy).
-  const [password, setPassword] = useState(
-    process.env.NEXT_PUBLIC_DEMO_AUTH_PASSWORD || "UNGRD2026",
-  );
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -50,44 +48,57 @@ function LoginForm() {
       setError(result.error || "No fue posible iniciar sesión.");
       return;
     }
-    // Navegación relativa (mismo host) — evita perder cookie si AUTH_URL apunta a localhost.
     const target = redirectPath(result.redirectTo, next);
     window.location.assign(target.startsWith("/") ? target : next);
   }
 
-  const looksLikeAdmin =
-    username.trim().toLowerCase() === "admin" ||
-    username.trim().toLowerCase() === ADMIN_EMAIL ||
-    username.includes("@ungrd.gov.co");
-
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ungrd-bg px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,209,0,0.18),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(0,45,90,0.18),transparent_40%)]" />
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
+    <main className="login-space relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="login-bg-photo" aria-hidden />
+      <div className="login-bg-veil" aria-hidden />
+      <div className="login-bg-grid" aria-hidden />
+
+      <div className="login-brand-mark" aria-hidden>
+        <p className="kicker">UNGRD</p>
+        <p className="title">
+          Subdirección de Manejo
+          <span className="mt-1 block text-ungrd-yellow">
+            del Riesgo de Desastres
+          </span>
+        </p>
+        <p className="sub">
+          Plataforma de temas operativos para el seguimiento territorial.
+        </p>
       </div>
-      <div className="relative w-full max-w-md animate-fade-up overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface shadow-[0_24px_60px_rgba(0,45,90,0.12)]">
-        <div className="bg-ungrd-navy-deep px-6 py-8 text-center text-white">
+
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle variant="hero" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md animate-fade-up overflow-hidden rounded-2xl border border-white/15 bg-ungrd-surface shadow-[0_28px_80px_rgba(0,0,0,0.55)]">
+        <div className="ungrd-tricolor-bar h-1 w-full" aria-hidden />
+        <div className="login-card-head px-6 py-8 text-center text-white">
           <BrandLogo
             width={160}
             height={190}
-            className="mx-auto h-28 w-auto object-contain"
+            className="mx-auto h-24 w-auto object-contain sm:h-28"
             priority
           />
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">
-            Acceso UNGRD
+          <p className="mt-4 inline-flex items-center rounded-full border border-ungrd-yellow/40 bg-black/20 px-3 py-1 text-[10px] font-extrabold tracking-[0.16em] text-ungrd-yellow uppercase">
+            Subdirección de Manejo
+          </p>
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
+            Acceso operativo
           </h1>
-          <p className="mt-1 text-sm text-white/70">
-            Gestión de Temas Operativos
+          <p className="mt-1.5 text-sm text-white/75">
+            Gestión de Temas Operativos · UNGRD
           </p>
         </div>
 
         {authMode === "keycloak" ? (
           <div className="space-y-4 px-6 py-6">
             <p className="text-sm text-ungrd-muted">
-              Autenticación institucional vía{" "}
-              <strong className="text-ungrd-heading">Keycloak</strong> (open
-              source). Roles: operativo, coordinador, subdirector, admin.
+              Autenticación institucional vía Keycloak.
             </p>
             <button
               type="button"
@@ -113,26 +124,14 @@ function LoginForm() {
           <form onSubmit={onSubmit} className="space-y-4 px-6 py-6">
             <label className="block text-sm font-semibold text-ungrd-heading">
               Usuario institucional
-              <div className="mt-1.5 flex min-w-0 overflow-hidden rounded-lg border border-ungrd-border bg-ungrd-input focus-within:border-ungrd-navy focus-within:ring-2 focus-within:ring-ungrd-yellow/40">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="usuario"
-                  className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ungrd-text outline-none"
-                  autoComplete="username"
-                  required
-                />
-                {!looksLikeAdmin && !username.includes("@") && (
-                  <span className="hidden shrink-0 border-l border-ungrd-border bg-ungrd-bg px-2 py-2.5 text-[11px] font-bold text-ungrd-muted sm:block">
-                    @{STAFF_DOMAIN}
-                  </span>
-                )}
-              </div>
-              <span className="mt-1 block text-xs font-normal text-ungrd-muted">
-                Escriba solo el usuario; se completa con @{STAFF_DOMAIN}. Admin:{" "}
-                {ADMIN_EMAIL}.
-              </span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
+                autoComplete="username"
+                required
+              />
             </label>
             <label className="block text-sm font-semibold text-ungrd-heading">
               Contraseña
@@ -140,25 +139,11 @@ function LoginForm() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Contraseña"
                 className="mt-1.5 w-full rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2.5 text-sm text-ungrd-text outline-none transition focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
                 autoComplete="current-password"
                 required
               />
             </label>
-
-            {authMode === "demo" && process.env.NODE_ENV === "development" ? (
-              <p className="rounded-lg border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-3 py-2 text-xs text-ungrd-muted">
-                Local demo:{" "}
-                <strong className="text-ungrd-heading">admin@ungrd.gov.co</strong>{" "}
-                / <strong className="text-ungrd-heading">UNGRD2026</strong>
-                {" · "}
-                Use la misma URL del servidor (
-                <strong className="text-ungrd-heading">localhost</strong> o{" "}
-                <strong className="text-ungrd-heading">127.0.0.1</strong>, no
-                mezcle ambas).
-              </p>
-            ) : null}
 
             {error && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-ungrd-danger dark:bg-red-950/40">
@@ -174,15 +159,6 @@ function LoginForm() {
               {loading ? "Validando…" : "Ingresar"}
             </button>
 
-            <div className="rounded-lg bg-ungrd-bg px-3 py-2 text-xs text-ungrd-muted">
-              <p className="font-bold text-ungrd-heading">Demo</p>
-              <p>
-                Admin: <code>admin</code> / <code>UNGRD2026</code>
-              </p>
-              <p>
-                Operativo: <code>operativo</code> / <code>ungrd2026</code>
-              </p>
-            </div>
             <p className="text-center text-sm">
               <Link
                 href="/"
@@ -202,7 +178,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-ungrd-bg text-ungrd-muted">
+        <div className="login-space flex min-h-screen items-center justify-center text-white/70">
           Cargando…
         </div>
       }

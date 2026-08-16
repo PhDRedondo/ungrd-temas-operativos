@@ -18,6 +18,7 @@ import {
   type RecordFilterState,
 } from "@/lib/analytics/recordFilters";
 import { formatNumber } from "@/lib/records/types";
+import { displayCapaLabel } from "@/lib/capa-display";
 
 type Props = {
   filters: RecordFilterState;
@@ -28,6 +29,8 @@ type Props = {
   municipioOptions: string[];
   /** Etiqueta del select de capa (p. ej. Tipo de registro) */
   capaLabel?: string;
+  /** Tema: convierte «Alta / orden» → «Registro inicial» en el filtro */
+  themeId?: string;
   matched: number;
   total: number;
   /** Mostrar fechas from/to */
@@ -39,7 +42,7 @@ const GUIDE = [
     icon: Search,
     title: "Buscar clave",
     detail:
-      "Encuentre una OP, placa, CDP, serial o texto sin recorrer la lista. Aplica a mando, gráficos y tabla.",
+      "Busque por número de orden, placa, CDP, serial o cualquier texto. Aplica al resumen, gráficos y tabla.",
   },
   {
     icon: MapPinned,
@@ -49,19 +52,19 @@ const GUIDE = [
   },
   {
     icon: Layers,
-    title: "Estado y capa",
+    title: "Estado y formulario",
     detail:
-      "Estado del trámite y capa (maqueta / bitácora / pago). Sirve para ver solo lo operativo relevante.",
+      "Filtre por estado del trámite o por tipo de registro (inicial, bitácora, pago, etc.).",
   },
   {
     icon: CalendarRange,
     title: "Fechas",
     detail:
-      "Ventana temporal del evento del tema (pago, instalación, etc.). Compatible con el clic en el heatmap.",
+      "Acota los registros a un rango de fechas del evento.",
   },
   {
     icon: Share2,
-    title: "URL compartible",
+    title: "Enlace compartible",
     detail:
       "Los filtros quedan en la dirección del navegador. Puede copiar el enlace y abrirlo con la misma vista.",
   },
@@ -74,7 +77,8 @@ export function RecordFilterBar({
   estadoOptions,
   capaOptions,
   municipioOptions,
-  capaLabel = "Capa / tipo",
+  capaLabel = "Tipo de registro",
+  themeId,
   matched,
   total,
   showDates = true,
@@ -83,6 +87,10 @@ export function RecordFilterBar({
   const active = hasActiveFilters(filters);
   const pct =
     total > 0 ? Math.min(100, Math.round((matched / total) * 100)) : 0;
+
+  function capaText(raw: string) {
+    return themeId ? displayCapaLabel(themeId, raw) : raw;
+  }
 
   function patch(partial: Partial<RecordFilterState>) {
     onChange({ ...filters, ...partial });
@@ -136,7 +144,7 @@ export function RecordFilterBar({
           {GUIDE.map((item) => (
             <li
               key={item.title}
-              className="rounded-xl border border-ungrd-border/80 bg-white px-3 py-2.5"
+              className="rounded-xl border border-ungrd-border/80 bg-ungrd-surface px-3 py-2.5 text-ungrd-text"
             >
               <p className="inline-flex items-center gap-1.5 text-xs font-extrabold text-ungrd-navy">
                 <item.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -278,7 +286,7 @@ export function RecordFilterBar({
               <option value="">Todas</option>
               {capaOptions.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {capaText(c)}
                 </option>
               ))}
             </select>
@@ -366,7 +374,7 @@ export function RecordFilterBar({
                 onClick={() => patch({ capa: "" })}
                 className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
-                {capaLabel}: {filters.capa} ×
+                {capaLabel}: {capaText(filters.capa)} ×
               </button>
             ) : null}
             {filters.tercero ? (

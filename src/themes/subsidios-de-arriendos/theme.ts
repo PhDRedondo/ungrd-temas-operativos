@@ -12,7 +12,7 @@ export const config: ThemeModule["config"] = {
     name: "Subsidios de Arriendos",
     shortName: "Arriendos",
     description:
-      "Consolidado de envíos de subsidio de arriendo (número de envío, orden, DIVIPOLA). Ingesta principal por Excel; captura puntual opcional.",
+      "Envíos de subsidio de arriendo por hogar. Se puede cargar por Excel o registrar uno a uno.",
     icon: "home",
     unit: "hogares",
     valueLabel: "Hogares",

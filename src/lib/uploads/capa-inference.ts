@@ -424,72 +424,76 @@ export function feedingGuideForTheme(themeId: string): {
     { clave: string; capas: string[]; tip: string }
   > = {
     "agua-y-saneamiento": {
-      clave: "Orden de proveeduría (OP)",
+      clave: "Orden de proveeduría (número de la orden)",
       capas: [
-        "Alta / orden",
-        "Modificación contractual",
-        "Bitácora estado",
-        "Bitácora estructuración",
-        "Pago / desembolso",
-        "CDPS y RC",
+        "Registro inicial",
+        "Modificaciones",
+        "Bitácora",
+        "Pagos",
+        "CDP y RC",
+        "Seguimiento de estructuración",
+        "Control de ejecución",
       ],
-      tip: "Tablas actualizables (append): modificación, bitácora, pagos, CDPS/RC y bitácora estructuración. Alta es única; la Maqueta consolida el vigente.",
+      tip: "Primero registre la orden. Luego use Bitácora, Pagos u otros formularios buscando esa misma orden.",
     },
     carrotanques: {
-      clave: "Placa",
-      capas: ["Maqueta / inventario", "Bitácora estado", "Suministro / viajes"],
-      tip: "B–J alta fija; K–L editables en maqueta; M–P y T–Z ← última bitácora; Q–R–S ← suma de suministros por placa.",
+      clave: "Placa del vehículo",
+      capas: [
+        "Inventario del vehículo",
+        "Bitácora de estado",
+        "Suministro / viajes",
+      ],
+      tip: "Primero registre la placa. Luego agregue bitácora o suministros buscando esa placa.",
     },
     "banco-de-maquinaria": {
-      clave: "Nº convenio (raíz) · Serial (equipo)",
+      clave: "Número de convenio · Serial del equipo",
       capas: [
         "Convenio o proceso",
-        "Maqueta / inventario",
-        "Bitácora convenio",
-        "Entrega a beneficiario",
+        "Detalle de maquinaria",
+        "Bitácora del convenio",
       ],
-      tip: "Primero el convenio (una sola vez). F–I (cantidades/tiempo/acta) se actualizan sobre el mismo convenio. Luego detalle: cada máquina del convenio (serial). Bitácora → estado; entrega → ENTREGADA.",
+      tip: "Primero el convenio. Luego detalle de cada máquina. La bitácora actualiza el estado del convenio.",
     },
     "obras-de-emergencia": {
-      clave: "OP o contrato de obra",
+      clave: "Orden de proveeduría o contrato de obra",
       capas: ["Contrato de obra", "Orden de proveeduría"],
-      tip: "Cargue contrato y OP como capas distintas con la misma clave cuando aplique el cruce con Agua.",
+      tip: "Cargue contrato y orden como tipos distintos cuando deba cruzarse con Agua.",
     },
     fic: {
-      clave: "No. CDP",
+      clave: "Número de CDP",
       capas: ["Transferencia FIC (por vigencia/año)"],
-      tip: "Una capa por vigencia. Use upsert para actualizar el mismo CDP+año sin duplicar.",
+      tip: "Una fila por CDP y vigencia. Si ya existe, active «Actualizar si el registro ya existe».",
     },
     puentes: {
-      clave: "id_puente (inventario) · clave_proceso (estructuración)",
+      clave: "Identificador del puente · Contrato",
       capas: [
-        "Inventario puente",
-        "Bitácora estado",
-        "Contrato estructuración",
+        "Contrato / estructuración",
+        "Inventario del puente",
+        "Bitácora del puente",
       ],
-      tip: "Alta única por puente; bitácora y estructuración son tablas append. Tras bitácora, el inventario refleja el último estado.",
+      tip: "Primero el contrato, luego el inventario del puente y después la bitácora.",
     },
     "declaratoria-de-emergencia": {
-      clave: "Nº declaratoria",
+      clave: "Número de declaratoria",
       capas: ["Decreto / declaratoria"],
-      tip: "Actualice estado y retorno a normalidad sobre la misma clave (upsert).",
+      tip: "Si ya existe, active «Actualizar si el registro ya existe» para no duplicar.",
     },
     "obras-por-impuestos": {
-      clave: "Nº convenio / BPIN",
+      clave: "Número de convenio / BPIN",
       capas: ["Convenio obra por impuesto"],
-      tip: "Una fila por convenio; use upsert para avances y vencimientos.",
+      tip: "Una fila por convenio. Si ya existe, actualice en lugar de crear otro.",
     },
     "subsidios-de-arriendos": {
-      clave: "número de envío + n. orden",
-      capas: ["Consolidado / envío"],
-      tip: "Cargue el Excel consolidado (mismas columnas del archivo). El formulario es opcional y no pide uuid.",
+      clave: "Número de envío + número de orden",
+      capas: ["Consolidado de envío"],
+      tip: "Preferible cargar el Excel de envío. El formulario es solo para un registro puntual.",
     },
   };
   return (
     guides[themeId] || {
-      clave: "clave_seguimiento",
-      capas: ["Según tipo_registro del tema"],
-      tip: "Complete tipo_registro/capa y la clave antes de cargar.",
+      clave: "Identificador del registro",
+      capas: ["Registro"],
+      tip: "Descargue la plantilla del tema, llénela y valídela antes de guardar.",
     }
   );
 }

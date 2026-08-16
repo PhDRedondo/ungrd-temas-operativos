@@ -109,16 +109,16 @@ const LOOKUP = {
 export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
   {
     id: "alta",
-    label: "1 · Alta / registro inicial",
+    label: "1 · Registro inicial",
     description:
-      "Datos estáticos al asignar el Nº de OP (A–S, V–X). No se modifican después. CDP/RC posteriores van en «CDPS y RC». Las demás tablas buscan esta OP para no volver a digitarla.",
+      "Registre la orden de proveeduría por primera vez: proveedor, valor y territorio. Después no se cambia; los demás formularios usan esta orden.",
     capa: "Alta / orden",
     mode: "create-once",
     fieldNames: [
       ...OP,
       "orden_de_proveeduria_segmentado",
       "op2",
-      /** OP por pago (tabla Pagos); se registra junto a la OP única. */
+      /** Orden por pago (tabla Pagos); se registra junto a la orden de negocio. */
       "orden_de_proveeduria_x_pago",
       "nit",
       "proveedor",
@@ -147,7 +147,7 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "variables-lider",
     label: "2 · Variables del líder",
     description:
-      "Busque la OP del alta y complete solo variables del líder (Y, Z, AA, AB) y asignaciones.",
+      "Busque la orden ya registrada y complete las variables del líder y quiénes están asignados.",
     capa: "Variables líder",
     mode: "upsert",
     ...LOOKUP,
@@ -171,7 +171,7 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "modificaciones",
     label: "3 · Modificaciones",
     description:
-      "Misma hoja Excel «modificaciones»: seleccione la OP del alta y agregue el evento (plazo, forma de pago, adición, alcance, etc.). No reescribe el alta.",
+      "Busque la orden y agregue un cambio (plazo, pago, adición, etc.). No altera el registro inicial.",
     capa: "Modificación contractual",
     mode: "append",
     ...LOOKUP,
@@ -199,9 +199,9 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "bitacora",
-    label: "4 · Bitácora (tabla actualizable)",
+    label: "4 · Bitácora",
     description:
-      "Seleccione la OP del alta; agregue solo el evento (estado, proceso, dependencia, comentario).",
+      "Busque la orden y registre un evento de seguimiento (estado, proceso, dependencia, comentario).",
     capa: "Bitácora estado",
     mode: "append",
     ...LOOKUP,
@@ -218,9 +218,9 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "pagos",
-    label: "5 · Pagos (tabla actualizable)",
+    label: "5 · Pagos",
     description:
-      "Busque la OP única o la OP por pago del alta (NIT/proveedor se heredan); el desembolso queda ligado a la OP de negocio. «Saldo a liberar» = valor OP − valor pagado (calculado).",
+      "Busque la orden y registre un pago. Proveedor y NIT se cargan solos. El saldo a liberar se calcula solo.",
     capa: "Pago / desembolso",
     mode: "append",
     ...LOOKUP,
@@ -258,9 +258,9 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "cdps-rc",
-    label: "6 · CDPS y RC (tabla actualizable)",
+    label: "6 · CDP y RC",
     description:
-      "Seleccione la OP del alta; agregue CDP/RC sin volver a digitar datos básicos.",
+      "Busque la orden y registre un CDP o un RC.",
     capa: "CDPS y RC",
     mode: "append",
     ...LOOKUP,
@@ -285,9 +285,9 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "bitacora-estructuracion",
-    label: "7 · Bitácora estructuración (tabla actualizable)",
+    label: "7 · Seguimiento de estructuración",
     description:
-      "Seleccione la OP del alta; registre seguimiento semanal / % ejecución / fechas.",
+      "Busque la orden y registre el avance semanal y el porcentaje de ejecución.",
     capa: "Bitácora estructuración",
     mode: "append",
     ...LOOKUP,
@@ -309,9 +309,9 @@ export const AGUA_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "control",
-    label: "8 · Control ejecución física",
+    label: "8 · Control de ejecución",
     description:
-      "Seleccione la OP del alta; actualice solo cantidades contratadas vs ejecutadas.",
+      "Busque la orden y actualice lo contratado frente a lo ejecutado.",
     capa: "Control ejecución física",
     mode: "upsert",
     ...LOOKUP,

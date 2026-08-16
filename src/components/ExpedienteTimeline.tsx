@@ -54,8 +54,7 @@ export function ExpedienteTimeline() {
         Expediente interconectado
       </h3>
       <p className="mt-1 text-xs text-ungrd-muted">
-        Busque por clave de negocio y vea el timeline en todas las bases
-        oficiales relacionadas.
+        Busque por orden, placa, CDP o número de declaratoria.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -66,7 +65,7 @@ export function ExpedienteTimeline() {
             onClick={() => setType(t.id)}
             className={`rounded-full px-3 py-1 text-xs font-extrabold ${
               type === t.id
-                ? "bg-ungrd-navy text-white"
+                ? "theme-mark"
                 : "bg-ungrd-bg text-ungrd-muted ring-1 ring-ungrd-border"
             }`}
             title={t.hint}

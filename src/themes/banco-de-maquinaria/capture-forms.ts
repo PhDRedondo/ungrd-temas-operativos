@@ -84,9 +84,9 @@ const LOOKUP_CONVENIO = {
 export const BMAQ_CAPTURE_FORMS: CaptureFormConfig[] = [
   {
     id: "alta-convenio",
-    label: "1 · Alta convenio o proceso",
+    label: "1 · Registrar convenio",
     description:
-      "Registro del convenio o proceso de adquisición. Se llena una sola vez. Luego, en Detalle, se atan las máquinas de ese convenio.",
+      "Registre el convenio o proceso por primera vez. Luego agregue las máquinas en Detalle.",
     capa: "Convenio o proceso",
     mode: "create-once",
     requiredNames: ["no_convenio"],
@@ -94,9 +94,9 @@ export const BMAQ_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "alta-detalle",
-    label: "2 · Detalle maquinaria",
+    label: "2 · Detalle de maquinaria",
     description:
-      "Busque por nº de orden de compra o por contrato de adquisición / convenio. Al elegir, se cargan los datos asociados; complete el resto de la hoja DETALLE (serial, referencia, tipo, etc.).",
+      "Busque el convenio y registre cada máquina (serial, tipo y datos del equipo).",
     capa: "Maqueta / inventario",
     mode: "create-once",
     ...LOOKUP_CONTRATO,
@@ -105,9 +105,9 @@ export const BMAQ_CAPTURE_FORMS: CaptureFormConfig[] = [
   },
   {
     id: "bitacora-convenio",
-    label: "3 · Bitácora de convenio",
+    label: "3 · Bitácora del convenio",
     description:
-      "Seguimiento del convenio: departamento y municipio vienen del convenio (no se reeditan). Capture el nuevo estado, fecha y comentario. Al guardar, ese último estado queda en el convenio y en ESTADO CONVENIO de los equipos (maqueta).",
+      "Busque el convenio y registre un cambio de estado. Queda en el historial del convenio.",
     capa: "Bitácora convenio",
     mode: "append",
     ...LOOKUP_CONVENIO,
