@@ -1,12 +1,12 @@
-/* Login — fondo limpio institucional */
+/* Login — fondo e identidad limpios */
 
 .login-space {
   background-color: #e8eef5 !important;
   background-image: linear-gradient(
-    160deg,
-    #f4f7fb 0%,
-    #e4ecf5 45%,
-    #d6e2ef 100%
+    165deg,
+    #f7f9fc 0%,
+    #e8eef5 48%,
+    #dce6f0 100%
   ) !important;
 }
 
@@ -15,18 +15,24 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 40% at 15% 10%, rgba(255, 209, 0, 0.18), transparent 55%),
-    radial-gradient(ellipse 50% 45% at 90% 85%, rgba(0, 45, 90, 0.12), transparent 55%);
+    radial-gradient(ellipse 50% 35% at 12% 8%, rgba(255, 209, 0, 0.14), transparent 55%),
+    radial-gradient(ellipse 45% 40% at 92% 88%, rgba(0, 45, 90, 0.1), transparent 55%);
+}
+
+/* Franja blanca integrada (no caja flotante) */
+.login-card-brand {
+  background: #ffffff;
+  padding: 1.35rem 1.5rem 1.15rem;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .login-card-head {
-  background: linear-gradient(
-    135deg,
-    #001a36 0%,
-    #002d5a 48%,
-    #0a3d6b 100%
-  );
+  background: linear-gradient(135deg, #001a36 0%, #002d5a 55%, #0a3d6b 100%);
   position: relative;
+  padding: 1.15rem 1.5rem 1.35rem;
+  text-align: center;
+  color: #fff;
 }
 
 .login-card-head::after {
@@ -36,17 +42,4 @@
   height: 3px;
   background: linear-gradient(90deg, #ffd100 0%, #002d5a 50%, #ce1126 100%);
   pointer-events: none;
-}
-
-.login-logo-plate {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
-  padding: 1rem 1.5rem 1.1rem;
-  border-radius: 1.1rem;
-  background: #ffffff;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
 }

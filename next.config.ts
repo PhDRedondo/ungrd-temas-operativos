@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // Oculta el badge flotante "N" de Next.js Dev Tools en local
+  devIndicators: false,
   poweredByHeader: false,
   async headers() {
     return [
