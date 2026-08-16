@@ -62,19 +62,18 @@ function LoginForm() {
 
       <div className="relative z-10 w-full max-w-md animate-fade-up overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface shadow-[0_24px_60px_rgba(0,45,90,0.14)]">
         <div className="ungrd-tricolor-bar h-1.5 w-full" aria-hidden />
-        <div className="login-card-head px-6 py-7 text-center text-white">
-          {/* Placa blanca: el logo color se lee siempre */}
-          <div className="login-logo-plate">
-            <Image
-              src="/branding/UNGRD-Vertical.png"
-              alt="UNGRD — Unidad Nacional para la Gestión del Riesgo de Desastres"
-              width={180}
-              height={210}
-              className="h-[7.5rem] w-auto object-contain sm:h-36"
-              priority
-            />
-          </div>
-          <p className="mt-4 inline-flex items-center rounded-full border border-ungrd-yellow/50 bg-black/25 px-3 py-1 text-[10px] font-extrabold tracking-[0.16em] text-ungrd-yellow uppercase">
+        <div className="login-card-brand">
+          <Image
+            src="/branding/UNGRD-Vertical.png"
+            alt="UNGRD — Unidad Nacional para la Gestión del Riesgo de Desastres"
+            width={160}
+            height={190}
+            className="mx-auto h-28 w-auto object-contain sm:h-32"
+            priority
+          />
+        </div>
+        <div className="login-card-head">
+          <p className="inline-flex items-center rounded-full border border-ungrd-yellow/45 bg-black/20 px-3 py-1 text-[10px] font-extrabold tracking-[0.16em] text-ungrd-yellow uppercase">
             Subdirección de Manejo
           </p>
           <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
