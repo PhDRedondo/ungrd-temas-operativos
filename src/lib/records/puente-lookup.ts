@@ -968,7 +968,15 @@ export async function searchThemeProcesos(params: {
       prev.etapas_registradas = (prev.etapas_registradas || 0) + 1;
       prev.id = String(r.id);
       prev.payload = r;
-      prev.valor = r.valor ?? prev.valor;
+      // No pisar un valor ya cargado con vacío/cero de filas de etapa posteriores.
+      const nextValor = r.valor;
+      if (
+        nextValor != null &&
+        String(nextValor).trim() !== "" &&
+        Number(nextValor) !== 0
+      ) {
+        prev.valor = nextValor;
+      }
       prev.vigencia = String(r.vigencia || prev.vigencia || "");
       if (!prev.descripcion_proceso) {
         prev.descripcion_proceso = String(
@@ -989,11 +997,14 @@ export async function searchThemeProcesos(params: {
   }
 
   // Cuántos puentes (ID único) ya están atados a cada contrato en inventario.
+  // También suma valor de inventario para completar dinero cuando la hoja de
+  // estructuración no trae valor por contrato (solo totales globales).
   const invCounts = await db
     .select({
       clave: sql<string>`lower(trim(coalesce(${records.payload}->>'clave_proceso','')))`,
       contrato: sql<string>`lower(trim(coalesce(${records.payload}->>'contrato_convenio','')))`,
       total: sql<number>`count(*)::int`,
+      valor: sql<number>`coalesce(sum(${records.valor}),0)::float`,
     })
     .from(records)
     .where(
@@ -1011,15 +1022,21 @@ export async function searchThemeProcesos(params: {
     const clave = hit.clave_proceso.toLowerCase();
     const contrato = hit.contrato_convenio.toLowerCase();
     let n = 0;
+    let valorInv = 0;
     for (const row of invCounts) {
       if (
         (row.clave && row.clave === clave) ||
         (row.contrato && row.contrato === contrato)
       ) {
         n += Number(row.total) || 0;
+        valorInv += Number(row.valor) || 0;
       }
     }
     hit.puentes_vinculados = n;
+    const current = Number(hit.valor);
+    if ((!Number.isFinite(current) || current === 0) && valorInv > 0) {
+      hit.valor = valorInv;
+    }
   }
 
   hits.sort((a, b) => {
