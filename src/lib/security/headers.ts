@@ -38,6 +38,9 @@ export function applySecurityHeaders(
     "connect-src 'self' https://*.tile.openstreetmap.org",
     "font-src 'self' data:",
     "worker-src 'self' blob:",
+    // QuickBI (Alibaba) embebido en pestaña QuickBI por tema
+    "frame-src 'self' https://bi-us-east-1.alibabacloud.com https://*.alibabacloud.com",
+    "child-src 'self' https://bi-us-east-1.alibabacloud.com https://*.alibabacloud.com",
   ].join("; ");
   res.headers.set("Content-Security-Policy", csp);
 
