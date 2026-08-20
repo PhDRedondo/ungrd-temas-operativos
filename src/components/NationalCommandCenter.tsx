@@ -223,7 +223,9 @@ export function NationalCommandCenter() {
             <button
               type="button"
               disabled={!brief}
-              onClick={() => brief && downloadNationalBriefingExcel(brief)}
+              onClick={() => {
+                if (brief) void downloadNationalBriefingExcel(brief);
+              }}
               className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
             >
               <FileSpreadsheet className="h-4 w-4" />

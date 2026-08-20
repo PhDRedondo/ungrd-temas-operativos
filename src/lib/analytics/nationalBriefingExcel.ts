@@ -1,10 +1,9 @@
-import * as XLSX from "xlsx";
 import type { NationalBrief } from "@/lib/analytics/national";
+import { downloadAoaXlsx } from "@/lib/excel/download-aoa";
 
 /** Export Excel del briefing nacional (Director). */
-export function downloadNationalBriefingExcel(brief: NationalBrief) {
+export async function downloadNationalBriefingExcel(brief: NationalBrief) {
   const stamp = new Date().toISOString().slice(0, 10);
-  const wb = XLSX.utils.book_new();
 
   const resumen = [
     ["Briefing nacional UNGRD", brief.briefing.headline],
@@ -20,11 +19,6 @@ export function downloadNationalBriefingExcel(brief: NationalBrief) {
     ["Puntos clave"],
     ...brief.briefing.bullets.map((b) => [b]),
   ];
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(resumen),
-    "Resumen",
-  );
 
   const alertas = [
     ["Severidad", "Título", "Detalle", "Qué hacer", "Conteo", "Valor"],
@@ -37,11 +31,6 @@ export function downloadNationalBriefingExcel(brief: NationalBrief) {
       a.valor ?? "",
     ]),
   ];
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(alertas),
-    "Alertas",
-  );
 
   const deptos = [
     [
@@ -61,11 +50,6 @@ export function downloadNationalBriefingExcel(brief: NationalBrief) {
       d.gapRespuesta ? "Sí" : "No",
     ]),
   ];
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(deptos),
-    "Top deptos",
-  );
 
   const claves = [
     ["Tema", "Clave", "Etiqueta", "Extra", "Valor", "Href"],
@@ -78,11 +62,14 @@ export function downloadNationalBriefingExcel(brief: NationalBrief) {
       k.href,
     ]),
   ];
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(claves),
-    "Claves",
-  );
 
-  XLSX.writeFile(wb, `briefing_mando_nacional_${stamp}.xlsx`);
+  await downloadAoaXlsx(
+    [
+      { name: "Resumen", rows: resumen },
+      { name: "Alertas", rows: alertas },
+      { name: "Top deptos", rows: deptos },
+      { name: "Claves", rows: claves },
+    ],
+    `briefing_mando_nacional_${stamp}.xlsx`,
+  );
 }

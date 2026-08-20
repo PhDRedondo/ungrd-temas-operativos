@@ -11,12 +11,12 @@ import {
   Search,
   Table2,
 } from "lucide-react";
-import * as XLSX from "xlsx";
 import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/data";
 import { isSourceTheme } from "@/lib/analytics/decision";
 import { previewColumnsForTheme } from "@/lib/analytics/enrichRecords";
 import { matchRecordQuery } from "@/lib/analytics/recordFilters";
+import { downloadAoaXlsx } from "@/lib/excel/download-aoa";
 
 const RecordDetailModal = dynamic(
   () =>
@@ -75,17 +75,17 @@ export function RecordsDataTable({ theme, records }: Props) {
     setPage(0);
   }
 
-  function downloadExcel() {
+  async function downloadExcel() {
     const headers = theme.fields.map((f) => f.name);
     const withId = ["id", ...headers.filter((h) => h !== "id")];
     const rows = visible.map((r) =>
       withId.map((h) => (r[h] === undefined ? "" : r[h])),
     );
-    const ws = XLSX.utils.aoa_to_sheet([withId, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, theme.shortName.slice(0, 28));
     const stamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `${theme.id}_filtrados_${stamp}.xlsx`);
+    await downloadAoaXlsx(
+      [{ name: theme.shortName.slice(0, 28), rows: [withId, ...rows] }],
+      `${theme.id}_filtrados_${stamp}.xlsx`,
+    );
   }
 
   const from = total === 0 ? 0 : safePage * pageSize + 1;

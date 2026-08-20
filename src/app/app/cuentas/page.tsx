@@ -35,10 +35,16 @@ function ensureActorInDirectory(email: string, name: string, role: AccountRole) 
   if (accounts.some((a) => a.email.toLowerCase() === email.toLowerCase())) {
     return;
   }
+  // Entrada solo-UI: contraseña aleatoria inutilizable (no es credencial conocida).
+  // No sincroniza al servidor para no sobrescribir cuentas reales.
+  const randomLock =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? `locked-${crypto.randomUUID()}`
+      : `locked-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   accounts.unshift({
     email: email.toLowerCase(),
     name: name || email.split("@")[0] || "Admin",
-    password: "admin2026",
+    password: randomLock,
     role: role === "admin" ? "admin" : role,
     canCreateAccounts: role === "admin",
     mustChangePassword: false,
@@ -47,7 +53,7 @@ function ensureActorInDirectory(email: string, name: string, role: AccountRole) 
     createdAt: new Date().toISOString(),
     createdBy: null,
   });
-  saveAccounts(accounts);
+  saveAccounts(accounts, { sync: false });
 }
 
 function CuentasContent() {

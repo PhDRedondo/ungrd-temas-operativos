@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { resolveAuthSecret } from "@/lib/auth/secret";
 import {
   enforceSecurity,
   finalizeResponse,
@@ -14,17 +15,20 @@ import {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const guard = enforceSecurity(req);
+  const guard = await enforceSecurity(req);
   if (!guard.ok) {
     return guard.response;
   }
 
-  // Rutas públicas de auth/health: solo seguridad, sin JWT
+  // Rutas públicas de auth/health/invitación: solo seguridad, sin JWT
   const publicApi =
-    pathname.startsWith("/api/auth") || pathname === "/api/health";
+    pathname.startsWith("/api/auth") ||
+    pathname === "/api/health" ||
+    pathname === "/api/accounts/complete-invite";
   const publicPage =
     pathname === "/login" ||
     pathname === "/" ||
+    pathname === "/cambiar-contrasena" ||
     pathname.startsWith("/geo/");
 
   if (publicApi || publicPage) {
@@ -38,7 +42,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/api/themes") ||
     pathname.startsWith("/api/uploads") ||
     pathname.startsWith("/api/me") ||
-    pathname.startsWith("/api/admin");
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/api/accounts");
 
   if (!needsAuth) {
     const res = NextResponse.next();
@@ -47,7 +52,7 @@ export async function middleware(req: NextRequest) {
 
   const token = await getToken({
     req,
-    secret: process.env.AUTH_SECRET || "ungrd-dev-secret-change-me",
+    secret: resolveAuthSecret(),
     // En HTTPS (Vercel) la cookie es `__Secure-authjs.session-token`.
     // Sin esto getToken no la encuentra y redirige siempre a /login.
     secureCookie:

@@ -289,6 +289,18 @@ export async function POST(req: Request, ctx: Ctx) {
     );
   }
 
+  const { looksLikeExcelBuffer } = await import("@/lib/uploads/file-magic");
+  if (!looksLikeExcelBuffer(buf, file.name)) {
+    return NextResponse.json(
+      {
+        error:
+          "El contenido del archivo no corresponde a un Excel válido (.xlsx/.xls).",
+        code: "BAD_FILE_MAGIC",
+      },
+      { status: 415 },
+    );
+  }
+
   const parsed = await parseExcelUpload(buf);
 
   if (parsed.meta.themeId && parsed.meta.themeId !== theme.id) {
@@ -364,14 +376,18 @@ export async function POST(req: Request, ctx: Ctx) {
 
   // En Vercel el FS del proyecto es de solo lectura; el Excel ya está parseado en memoria.
   // Persistimos el archivo solo si hay directorio escribible (local o /tmp).
-  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const safeName = path.basename(file.name).replace(/[^\w.\-]+/g, "_");
   const storageName = `${Date.now()}_${theme.id}_${safeName}`;
   const uploadsDir = process.env.VERCEL
     ? path.join("/tmp", "ungrd-uploads")
     : path.join(process.cwd(), "uploads");
   try {
     await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, storageName), buf);
+    const target = path.join(uploadsDir, path.basename(storageName));
+    if (!target.startsWith(uploadsDir)) {
+      throw new Error("Invalid upload path");
+    }
+    await writeFile(target, buf);
   } catch (err) {
     const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
     if (code !== "EROFS" && code !== "EACCES") {

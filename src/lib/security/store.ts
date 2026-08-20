@@ -1,8 +1,11 @@
 /**
- * Almacén en memoria (Edge-safe) para rate limit y bans.
- * En serverless multi-instancia cada isolate tiene su mapa;
- * para flotas grandes usar Redis (Upstash) — ver docs/SECURITY.md.
+ * Almacén para rate limit y bans.
+ * Memoria por defecto; si existen UPSTASH_REDIS_REST_URL + TOKEN,
+ * el rate limit usa Redis (multi-instancia / Vercel).
  */
+
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 type CounterBucket = {
   timestamps: number[];
@@ -24,6 +27,7 @@ const g = globalThis as typeof globalThis & {
   __ungrdSecCounters?: Map<string, CounterBucket>;
   __ungrdSecBans?: Map<string, BanRecord>;
   __ungrdSecStrikes?: Map<string, StrikeBucket>;
+  __ungrdUpstashLimiters?: Map<string, Ratelimit>;
 };
 
 function counters() {
@@ -39,6 +43,30 @@ function bans() {
 function strikes() {
   if (!g.__ungrdSecStrikes) g.__ungrdSecStrikes = new Map();
   return g.__ungrdSecStrikes;
+}
+
+function upstashEnabled() {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
+      process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
+  );
+}
+
+function getUpstashLimiter(limit: number, windowMs: number): Ratelimit | null {
+  if (!upstashEnabled()) return null;
+  if (!g.__ungrdUpstashLimiters) g.__ungrdUpstashLimiters = new Map();
+  const key = `${limit}:${windowMs}`;
+  let lim = g.__ungrdUpstashLimiters.get(key);
+  if (lim) return lim;
+  const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
+  lim = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+    prefix: "ungrd-sec",
+    analytics: false,
+  });
+  g.__ungrdUpstashLimiters.set(key, lim);
+  return lim;
 }
 
 export function pruneOldTimestamps(ts: number[], windowMs: number, now: number) {
@@ -73,6 +101,31 @@ export function hitRateLimit(
     remaining: Math.max(0, limit - bucket.timestamps.length),
     retryAfterSec: 0,
   };
+}
+
+/** Rate limit con Upstash si está configurado; si no, memoria. */
+export async function hitRateLimitAsync(
+  key: string,
+  limit: number,
+  windowMs: number,
+  now = Date.now(),
+): Promise<{ allowed: boolean; remaining: number; retryAfterSec: number }> {
+  const lim = getUpstashLimiter(limit, windowMs);
+  if (!lim) return hitRateLimit(key, limit, windowMs, now);
+  try {
+    const result = await lim.limit(key);
+    const retryAfterSec = result.success
+      ? 0
+      : Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
+    return {
+      allowed: result.success,
+      remaining: result.remaining,
+      retryAfterSec,
+    };
+  } catch {
+    // Si Redis falla, no tumbar la app: fallback memoria
+    return hitRateLimit(key, limit, windowMs, now);
+  }
 }
 
 export function getBan(ip: string, now = Date.now()): BanRecord | null {
@@ -153,5 +206,6 @@ export function securityStats() {
     activeBans: listBans().length,
     trackedIps: counters().size,
     strikeIps: strikes().size,
+    upstash: upstashEnabled(),
   };
 }

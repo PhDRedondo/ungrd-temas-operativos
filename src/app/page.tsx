@@ -140,8 +140,8 @@ export default function HomePage() {
                 Manejo del riesgo en operación real
               </p>
               <p className="mt-3 text-sm leading-relaxed text-white/65">
-                Diseñada para equipos de la Subdirección de Manejo: menos
-                fricción al registrar, más claridad al consultar y reportar.
+                Registre cada frente, consulte el territorio y reporte con una
+                sola fuente de verdad.
               </p>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-white/10 bg-ungrd-navy-deep/40 px-3.5 py-3">
@@ -180,20 +180,24 @@ export default function HomePage() {
           {PILLARS.map((item, i) => (
             <article
               key={item.title}
-              className="group relative overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-5 shadow-[0_12px_40px_rgba(0,45,90,0.06)] transition duration-300 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--colombia-blue)_35%,var(--ungrd-border))] hover:shadow-[0_20px_50px_rgba(0,45,90,0.12)] sm:p-6"
+              className="group relative overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-5 shadow-[0_12px_40px_rgba(0,45,90,0.06)] transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-ungrd-yellow/55 hover:shadow-[0_22px_55px_rgba(0,45,90,0.16),0_0_0_1px_rgba(255,209,0,0.12)] dark:hover:border-ungrd-yellow/40 dark:hover:shadow-[0_22px_55px_rgba(0,0,0,0.45),0_0_28px_rgba(255,209,0,0.08)] sm:p-6"
               style={{ animationDelay: `${0.08 * i}s` }}
             >
-              <div className="ungrd-tricolor-bar absolute inset-x-0 top-0 h-[3px] opacity-90 transition group-hover:opacity-100" />
-              <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--colombia-blue)_10%,var(--ungrd-bg))] text-ungrd-navy dark:bg-ungrd-navy/40 dark:text-ungrd-yellow">
-                <item.icon className="h-5 w-5" />
+              <div
+                className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,rgba(255,209,0,0.1)_0%,transparent_42%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                aria-hidden
+              />
+              <div className="ungrd-tricolor-bar absolute inset-x-0 top-0 h-[3px] opacity-80 transition-all duration-300 group-hover:h-1 group-hover:opacity-100" />
+              <div className="relative mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--colombia-blue)_10%,var(--ungrd-bg))] text-ungrd-navy transition-all duration-300 group-hover:scale-110 group-hover:bg-[color-mix(in_srgb,var(--colombia-yellow)_22%,var(--ungrd-bg))] group-hover:text-ungrd-navy dark:bg-ungrd-navy/40 dark:text-ungrd-yellow dark:group-hover:bg-ungrd-yellow/15 dark:group-hover:text-ungrd-yellow">
+                <item.icon className="h-5 w-5 transition-transform duration-300 group-hover:scale-105" />
               </div>
-              <p className="text-[10px] font-extrabold tracking-[0.16em] text-ungrd-muted uppercase">
+              <p className="relative text-[10px] font-extrabold tracking-[0.16em] text-ungrd-muted uppercase transition-colors duration-300 group-hover:text-ungrd-navy dark:group-hover:text-ungrd-yellow">
                 {item.kicker}
               </p>
-              <h3 className="mt-1.5 text-lg font-extrabold text-ungrd-heading">
+              <h3 className="relative mt-1.5 text-lg font-extrabold text-ungrd-heading">
                 {item.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-ungrd-muted">
+              <p className="relative mt-2 text-sm leading-relaxed text-ungrd-muted">
                 {item.text}
               </p>
             </article>

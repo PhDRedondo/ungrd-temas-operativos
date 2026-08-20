@@ -17,6 +17,7 @@ const BY_THEME: Record<string, Record<string, string>> = {
   },
   carrotanques: {
     "Maqueta / inventario": "Inventario del vehículo",
+    "Actualizar categorías": "Categorías del vehículo",
     "Bitácora estado": "Bitácora de estado",
     "Suministro / viajes": "Suministro / viajes",
   },
@@ -41,4 +42,31 @@ export function displayCapaLabel(themeId: string, capa: string): string {
   const raw = String(capa || "").trim();
   if (!raw) return "Sin tipo";
   return BY_THEME[themeId]?.[raw] || raw;
+}
+
+/**
+ * Título del paso de captura (sidebar).
+ * Prioriza el label del formulario; evita kickers tipo Actualizar/Eventos.
+ */
+export function displayFormStepTitle(
+  themeId: string,
+  form: { capa: string; label: string },
+): string {
+  let cleaned = String(form.label || "")
+    .replace(/^\d+\s*·\s*/, "")
+    .trim();
+  if (/^Actualizar categor/i.test(cleaned)) {
+    return "Categorías del vehículo";
+  }
+  if (/^(Actualizar|Eventos|Nuevo)$/i.test(cleaned)) {
+    return displayCapaLabel(themeId, form.capa);
+  }
+  if (/^Actualizar\s+/i.test(cleaned)) {
+    cleaned = cleaned.replace(/^Actualizar\s+/i, "");
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  if (!cleaned || cleaned === form.capa) {
+    return displayCapaLabel(themeId, form.capa);
+  }
+  return cleaned;
 }

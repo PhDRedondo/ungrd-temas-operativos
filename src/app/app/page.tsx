@@ -69,7 +69,7 @@ export default function AppHomePage() {
                 style={
                   {
                     "--card-accent": visual.accent,
-                    background: `linear-gradient(165deg, ${visual.wash} 0%, var(--ungrd-surface) 58%)`,
+                    background: `linear-gradient(165deg, color-mix(in srgb, ${visual.wash} 55%, var(--ungrd-surface)) 0%, var(--ungrd-surface) 62%)`,
                   } as CSSProperties
                 }
               >

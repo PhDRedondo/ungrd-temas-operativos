@@ -6,12 +6,27 @@ import { FormEvent, Suspense, useMemo, useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
-  changePasswordWithSession,
-  completePasswordChange,
   findAccount,
   findAccountByToken,
+  loadAccounts,
+  saveAccounts,
 } from "@/lib/accounts";
 import { useAuth } from "@/lib/auth";
+
+function syncLocalPassword(email: string, password: string) {
+  const accounts = loadAccounts();
+  const idx = accounts.findIndex(
+    (a) => a.email.toLowerCase() === email.toLowerCase(),
+  );
+  if (idx < 0) return;
+  accounts[idx] = {
+    ...accounts[idx]!,
+    password,
+    mustChangePassword: false,
+    inviteToken: null,
+  };
+  saveAccounts(accounts, { sync: false });
+}
 
 function ChangePasswordForm() {
   const params = useSearchParams();
@@ -46,48 +61,78 @@ function ChangePasswordForm() {
     setLoading(true);
 
     if (token) {
-      const result = completePasswordChange(token, password);
-      if (!result.ok) {
+      try {
+        const res = await fetch("/api/accounts/complete-invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, password }),
+        });
+        const data = (await res.json()) as {
+          ok?: boolean;
+          email?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.email) {
+          setLoading(false);
+          setError(data.error || "No se pudo actualizar la contraseña.");
+          return;
+        }
+        syncLocalPassword(data.email, password);
+        const session = await login(data.email, password);
+        if (!session.ok) {
+          setLoading(false);
+          setError(session.error || "Contraseña actualizada. Inicie sesión.");
+          router.push("/login");
+          return;
+        }
+        window.location.assign(session.redirectTo || "/app");
+        return;
+      } catch {
         setLoading(false);
-        setError(result.error);
+        setError("Error de red al actualizar la contraseña.");
         return;
       }
-      const session = await login(result.email, password);
-      if (!session.ok) {
-        setLoading(false);
-        setError(session.error || "Contraseña actualizada. Inicie sesión.");
-        router.push("/login");
-        return;
-      }
-      window.location.assign(session.redirectTo || "/app");
-      return;
     }
 
     if (sessionMode && user) {
-      const result = changePasswordWithSession(
-        user.email,
-        currentPassword,
-        password,
-      );
-      setLoading(false);
-      if (!result.ok) {
-        setError(result.error);
+      try {
+        const res = await fetch("/api/accounts/change-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword: password,
+          }),
+        });
+        const data = (await res.json()) as { ok?: boolean; error?: string };
+        if (!res.ok) {
+          setLoading(false);
+          setError(data.error || "No se pudo cambiar la contraseña.");
+          return;
+        }
+        syncLocalPassword(user.email, password);
+        setLoading(false);
+        window.location.assign("/app");
+        return;
+      } catch {
+        setLoading(false);
+        setError("Error de red al cambiar la contraseña.");
         return;
       }
-      window.location.assign("/app");
-      return;
     }
 
     setLoading(false);
     setError("Enlace o sesión no válidos.");
   }
 
-  const invalidInvite = Boolean(token) && !invited;
-  const needsSession =
-    sessionMode && ready && (!user || !needsPasswordChange);
-  const showForm =
-    (token && invited) ||
-    (sessionMode && ready && user && needsPasswordChange);
+  const showInviteForm = Boolean(token);
+  const showSessionForm =
+    sessionMode && ready && Boolean(user) && needsPasswordChange;
+  const showForm = showInviteForm || showSessionForm;
+  const showBlocked =
+    !showForm &&
+    ready &&
+    (sessionMode || (!token && !sessionMode));
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ungrd-bg px-4 py-10">
@@ -110,10 +155,10 @@ function ChangePasswordForm() {
           </p>
         </div>
 
-        {invalidInvite || needsSession || (!token && !sessionMode) ? (
+        {showBlocked ? (
           <div className="space-y-4 px-6 py-6 text-sm">
             <p className="text-ungrd-muted">
-              {sessionMode && ready && !user
+              {sessionMode && !user
                 ? "Debe iniciar sesión para cambiar la contraseña."
                 : "El enlace de invitación no es válido o ya fue utilizado. Solicite una nueva invitación al administrador."}
             </p>
@@ -145,7 +190,9 @@ function ChangePasswordForm() {
           <form onSubmit={onSubmit} className="space-y-4 px-6 py-6">
             <p className="rounded-lg bg-ungrd-bg px-3 py-2 text-sm text-ungrd-text">
               Cuenta:{" "}
-              <strong className="text-ungrd-heading">{emailLabel}</strong>
+              <strong className="text-ungrd-heading">
+                {emailLabel || (token ? "Invitación pendiente" : "")}
+              </strong>
             </p>
             {sessionMode && (
               <label className="block text-sm font-semibold text-ungrd-heading">

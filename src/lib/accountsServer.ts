@@ -11,6 +11,12 @@ import {
   type AccountRecord,
   type AccountRole,
 } from "@/lib/accounts";
+import {
+  ensurePasswordHashed,
+  hashPassword,
+  isPasswordHash,
+  verifyPassword,
+} from "@/lib/password";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DATA_FILE = path.join(DATA_DIR, "demo-accounts.json");
@@ -23,7 +29,7 @@ function seed(): AccountRecord[] {
     {
       email: ADMIN_EMAIL,
       name: "Administrador UNGRD",
-      password: demoPassword,
+      password: hashPassword(demoPassword),
       role: "admin",
       canCreateAccounts: true,
       mustChangePassword: false,
@@ -35,7 +41,7 @@ function seed(): AccountRecord[] {
     {
       email: staffEmailFromUsername("operativo"),
       name: "Operativo demo",
-      password: "ungrd2026",
+      password: hashPassword("ungrd2026"),
       role: "operativo",
       canCreateAccounts: false,
       mustChangePassword: false,
@@ -51,6 +57,7 @@ function normalizeList(accounts: AccountRecord[]): AccountRecord[] {
   return accounts.map((a) => ({
     ...a,
     role: normalizeAccountRole(a.role),
+    password: ensurePasswordHashed(a.password),
   }));
 }
 
@@ -166,7 +173,7 @@ export function createInviteAccountOnServer(
   const account: AccountRecord = {
     email,
     name: input.name.trim() || username,
-    password: tempPassword,
+    password: hashPassword(tempPassword),
     role: input.role === "admin" ? "operativo" : normalizeAccountRole(input.role),
     canCreateAccounts: canCreate,
     mustChangePassword: true,
@@ -184,6 +191,76 @@ export function createInviteAccountOnServer(
     account,
     invitePath: `/cambiar-contrasena?token=${encodeURIComponent(token)}`,
   };
+}
+
+export function completeInvitePasswordOnServer(
+  token: string,
+  newPassword: string,
+): { ok: true; email: string } | { ok: false; error: string } {
+  if (newPassword.length < 8) {
+    return {
+      ok: false,
+      error: "La nueva contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+  const accounts = readAccountsFile();
+  const idx = accounts.findIndex((a) => a.inviteToken === token);
+  if (idx < 0) {
+    return { ok: false, error: "Enlace de invitación inválido o vencido." };
+  }
+  const current = accounts[idx]!;
+  accounts[idx] = {
+    ...current,
+    password: hashPassword(newPassword),
+    mustChangePassword: false,
+    inviteToken: null,
+  };
+  writeAccountsFile(accounts);
+  return { ok: true, email: current.email };
+}
+
+export function changePasswordOnServer(
+  email: string,
+  currentPassword: string,
+  newPassword: string,
+): { ok: true } | { ok: false; error: string } {
+  if (newPassword.length < 8) {
+    return {
+      ok: false,
+      error: "La nueva contraseña debe tener al menos 8 caracteres.",
+    };
+  }
+  const accounts = readAccountsFile();
+  const idx = accounts.findIndex(
+    (a) => a.email.toLowerCase() === email.trim().toLowerCase(),
+  );
+  if (idx < 0) return { ok: false, error: "Cuenta no encontrada." };
+  const current = accounts[idx]!;
+  if (!verifyPassword(currentPassword, current.password)) {
+    return { ok: false, error: "La contraseña actual no es correcta." };
+  }
+  accounts[idx] = {
+    ...current,
+    password: hashPassword(newPassword),
+    mustChangePassword: false,
+    inviteToken: null,
+  };
+  writeAccountsFile(accounts);
+  return { ok: true };
+}
+
+/** Tras login exitoso con texto plano legado, rehash sin invalidar la sesión. */
+export function upgradePasswordHashIfNeeded(email: string, plain: string) {
+  const accounts = readAccountsFile();
+  const idx = accounts.findIndex(
+    (a) => a.email.toLowerCase() === email.trim().toLowerCase(),
+  );
+  if (idx < 0) return;
+  const current = accounts[idx]!;
+  if (verifyPassword(plain, current.password) && !isPasswordHash(current.password)) {
+    accounts[idx] = { ...current, password: hashPassword(plain) };
+    writeAccountsFile(accounts);
+  }
 }
 
 export type { AccountRecord, AccountRole };

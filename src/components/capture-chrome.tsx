@@ -4,18 +4,15 @@ import type { CaptureFormConfig } from "@/lib/themes";
 import type { OrdenLookupHit } from "@/components/OrdenLookup";
 import type { PuenteLookupHit } from "@/components/PuenteLookup";
 import type { ProcesoLookupHit } from "@/components/ProcesoLookup";
-
-function modeLabel(mode: CaptureFormConfig["mode"]): string {
-  if (mode === "append") return "Eventos";
-  if (mode === "upsert") return "Actualizar";
-  return "Nuevo";
-}
+import { displayFormStepTitle } from "@/lib/capa-display";
 
 export function CaptureFormStepper({
+  themeId,
   forms,
   activeId,
   onSelect,
 }: {
+  themeId: string;
   forms: CaptureFormConfig[];
   activeId: string;
   onSelect: (id: string) => void;
@@ -23,45 +20,35 @@ export function CaptureFormStepper({
   if (forms.length <= 1) return null;
   return (
     <nav
-      aria-label="Formularios del tema"
-      className="flex gap-2 overflow-x-auto px-0.5 pb-1 lg:sticky lg:top-20 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
+      aria-label="Pasos del formulario"
+      className="flex gap-1.5 overflow-x-auto px-0.5 pb-1 lg:sticky lg:top-20 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
     >
       {forms.map((f, i) => {
         const active = f.id === activeId;
-        const title = f.label.replace(/^\d+\s*·\s*/, "");
+        const title = displayFormStepTitle(themeId, f);
         return (
           <button
             key={f.id}
             type="button"
+            title={title}
             onClick={() => onSelect(f.id)}
-            className={`min-w-[12.5rem] shrink-0 rounded-xl border px-3 py-2.5 text-left transition lg:min-w-0 ${
+            className={`flex min-w-[9.5rem] shrink-0 items-center gap-2 rounded-lg border px-2 py-2 text-left transition lg:min-w-0 lg:w-full ${
               active
-                ? "theme-mark border-transparent"
-                : "border-ungrd-border bg-ungrd-surface text-ungrd-heading hover:border-[color-mix(in_srgb,var(--theme-accent)_50%,var(--ungrd-border))]"
+                ? "theme-mark border-transparent shadow-sm"
+                : "border-ungrd-border bg-ungrd-surface text-ungrd-heading hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--theme-accent)_55%,var(--ungrd-border))] hover:bg-[color-mix(in_srgb,var(--theme-accent)_8%,var(--ungrd-surface))]"
             }`}
           >
-            <span className="flex items-start gap-2.5">
-              <span
-                className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold ${
-                  active
-                    ? "bg-white/20"
-                    : "bg-[color-mix(in_srgb,var(--theme-accent)_14%,transparent)] text-[var(--theme-ink)]"
-                }`}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span className="min-w-0">
-                <span
-                  className={`block text-[10px] font-extrabold tracking-[0.14em] uppercase ${
-                    active ? "opacity-80" : "text-ungrd-muted"
-                  }`}
-                >
-                  {modeLabel(f.mode)}
-                </span>
-                <span className="mt-0.5 block text-sm font-extrabold leading-snug">
-                  {title}
-                </span>
-              </span>
+            <span
+              className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold tabular-nums ${
+                active
+                  ? "bg-white/20 text-inherit"
+                  : "bg-[color-mix(in_srgb,var(--theme-accent)_14%,transparent)] text-[var(--theme-ink)]"
+              }`}
+            >
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="min-w-0 truncate text-[12px] font-extrabold leading-snug lg:whitespace-normal lg:line-clamp-2">
+              {title}
             </span>
           </button>
         );
