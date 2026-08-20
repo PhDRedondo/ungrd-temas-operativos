@@ -77,10 +77,27 @@ POST /api/admin/security
 
 ## Multi-instancia / serverless
 
-El almacén de bans/rate limit es **en memoria por proceso**. En una sola VM o proceso Next está bien.  
-En flota (muchas lambdas Vercel) cada isolate tiene su mapa: sigue mitigando abuso por instancia.
+El almacén de bans/strikes es **en memoria por proceso**.  
+El **rate limit** usa **Upstash Redis** automáticamente si están:
 
-Para ban **global** en cloud: conectar Upstash Redis (misma API de store) — pendiente en roadmap; el protocolo ya está desacoplado en `store.ts`.
+```env
+UPSTASH_REDIS_REST_URL=…
+UPSTASH_REDIS_REST_TOKEN=…
+```
+
+Si no están definidas, cae a memoria (mitiga abuso por instancia). Si Redis falla, también cae a memoria sin tumbar la app.
+
+## Checklist de endurecimiento (2026-08)
+
+- [x] `/api/accounts/sync` exige sesión/admin; GET no devuelve passwords  
+- [x] Completar invitación vía `/api/accounts/complete-invite` (token)  
+- [x] Contraseñas hasheadas con bcrypt (compatibilidad con texto plano legado)  
+- [x] `AUTH_SECRET` obligatorio en producción  
+- [x] Validación magic-number en uploads Excel  
+- [x] Export Excel de UI con `exceljs` (sin `xlsx` en runtime de app)  
+- [ ] Rotar credenciales DB/Medallion si alguna vez se filtraron  
+- [ ] `AUTH_MODE=keycloak` en producción pública  
+- [ ] Configurar Upstash en Vercel para rate limit global  
 
 ## Checklist pre-deploy
 
@@ -93,6 +110,8 @@ Para ban **global** en cloud: conectar Upstash Redis (misma API de store) — pe
 - [ ] `SECURITY_IP_ALLOWLIST` con IPs de oficina/VPN si aplica  
 - [ ] Probar `npm run harness:security` + `npm run smoke`  
 - [ ] Backups Postgres + object storage para uploads  
+- [ ] Upstash configurado si hay flota serverless  
+- [ ] Rotar credenciales si hubo exposición  
 
 ## Verificación
 

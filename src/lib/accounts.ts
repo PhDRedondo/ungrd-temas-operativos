@@ -146,10 +146,14 @@ export function loadAccounts(): AccountRecord[] {
   return g.__ungrdDemoAccounts;
 }
 
-export function saveAccounts(accounts: AccountRecord[]) {
+export function saveAccounts(
+  accounts: AccountRecord[],
+  opts?: { sync?: boolean },
+) {
   const g = globalThis as GlobalAccounts;
   g.__ungrdDemoAccounts = accounts;
   writeClientStore(accounts);
+  if (opts?.sync === false) return;
   if (typeof window !== "undefined") {
     void fetch("/api/accounts/sync", {
       method: "POST",

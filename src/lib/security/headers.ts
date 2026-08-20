@@ -21,7 +21,11 @@ export function applySecurityHeaders(
   res.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   res.headers.set("Cross-Origin-Resource-Policy", "same-origin");
 
-  // CSP: permite Leaflet tiles OSM + mismos orígenes app
+  // CSP: Leaflet tiles OSM + mismos orígenes app.
+  // En prod se elimina unsafe-eval; Next sigue necesitando unsafe-inline para estilos.
+  const scriptSrc = isProd()
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
   const csp = [
     "default-src 'self'",
     "base-uri 'self'",
@@ -30,7 +34,7 @@ export function applySecurityHeaders(
     "object-src 'none'",
     "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next dev necesita eval; prod igual por bundler
+    scriptSrc,
     "connect-src 'self' https://*.tile.openstreetmap.org",
     "font-src 'self' data:",
     "worker-src 'self' blob:",

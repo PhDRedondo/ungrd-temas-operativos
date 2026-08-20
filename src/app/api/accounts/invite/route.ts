@@ -5,6 +5,7 @@ import {
   actorCanCreateAccounts,
   createInviteAccountOnServer,
 } from "@/lib/accountsServer";
+import { toPublicAccount } from "@/lib/accountsPublic";
 import { isEmailConfigured } from "@/lib/email/resend";
 import { sendAccountInviteEmail } from "@/lib/email/sendInviteEmail";
 
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    account: created.account,
+    account: toPublicAccount(created.account),
     inviteUrl,
     emailConfigured: isEmailConfigured(),
     emailSent: mail.ok,

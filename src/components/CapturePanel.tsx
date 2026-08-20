@@ -2169,11 +2169,12 @@ export function CapturePanel({
           onSubmit={onSubmit}
           className={
             captureForms.length > 1
-              ? "space-y-4 lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0"
+              ? "space-y-4 lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0"
               : "space-y-4"
           }
         >
           <CaptureFormStepper
+            themeId={theme.id}
             forms={captureForms}
             activeId={activeForm?.id || ""}
             onSelect={(id) => {

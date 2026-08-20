@@ -7,7 +7,12 @@ import {
   resolveLoginEmail,
   type AccountRole,
 } from "@/lib/accounts";
-import { findAccountOnServer } from "@/lib/accountsServer";
+import {
+  findAccountOnServer,
+  upgradePasswordHashIfNeeded,
+} from "@/lib/accountsServer";
+import { resolveAuthSecret } from "@/lib/auth/secret";
+import { verifyPassword } from "@/lib/password";
 import type { AppRole } from "@/themes/shared/types";
 
 declare module "next-auth" {
@@ -62,15 +67,19 @@ if (authMode === "keycloak") {
         password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
-        const email = resolveLoginEmail(String(credentials?.email || ""));
-        const password = String(credentials?.password || "").trim();
+        const email = resolveLoginEmail(
+          String(credentials?.email || "").normalize("NFKC"),
+        );
+        const password = String(credentials?.password || "")
+          .normalize("NFKC")
+          .trim();
         const account = findAccountOnServer(email);
 
         const ok =
           Boolean(account?.active) &&
-          account!.password === password &&
           email.length > 0 &&
-          password.length > 0;
+          password.length > 0 &&
+          verifyPassword(password, account!.password);
 
         if (!ok) {
           try {
@@ -89,6 +98,8 @@ if (authMode === "keycloak") {
           }
           return null;
         }
+
+        upgradePasswordHashIfNeeded(account!.email, password);
 
         const role = asAppRole(account!.role);
         return {
@@ -143,5 +154,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   trustHost: true,
-  secret: process.env.AUTH_SECRET || "ungrd-dev-secret-change-me",
+  secret: resolveAuthSecret(),
 });

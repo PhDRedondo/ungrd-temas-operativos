@@ -12,7 +12,7 @@ import {
   addStrike,
   getBan,
   getStrikeCount,
-  hitRateLimit,
+  hitRateLimitAsync,
   setBan,
 } from "./store";
 
@@ -28,7 +28,7 @@ function banDuration(cfg: ReturnType<typeof getSecurityConfig>, strikes: number)
 /**
  * Protocolo de seguridad — ejecutar al inicio del middleware.
  */
-export function enforceSecurity(req: NextRequest): GuardResult {
+export async function enforceSecurity(req: NextRequest): Promise<GuardResult> {
   const cfg = getSecurityConfig();
   const ip = clientIp(req);
 
@@ -111,7 +111,7 @@ export function enforceSecurity(req: NextRequest): GuardResult {
     ? rpmForClass(cfg, cls) * 5
     : rpmForClass(cfg, cls);
   const rlKey = `${cls}:${ip}`;
-  const rl = hitRateLimit(rlKey, limit, cfg.windowMs);
+  const rl = await hitRateLimitAsync(rlKey, limit, cfg.windowMs);
 
   if (!rl.allowed) {
     // Solo acumular strikes en API/auth/upload (no por navegar páginas).
