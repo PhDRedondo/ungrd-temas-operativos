@@ -106,6 +106,15 @@ export type ThemeConfig = {
   fields: FormField[];
   /** URL de publicación/embed de Quick BI (Alibaba) para la pestaña QuickBI. */
   quickBiUrl?: string;
+  /**
+   * Varios tableros QuickBI por tema (preferido).
+   * Si está vacío, se usa el catálogo central o `quickBiUrl`.
+   */
+  quickBiDashboards?: {
+    title: string;
+    description: string;
+    url: string;
+  }[];
   /** Versión del schema para plantillas Excel (bump al cambiar fields). */
   schemaVersion?: number;
   /** Formularios por capa (Agua y temas multi-capa). */

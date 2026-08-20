@@ -42,7 +42,7 @@ const MODULES = [
   ],
   [
     "QuickBI",
-    "Pestaña por tema para el tablero ejecutivo Quick BI (Alibaba); embed opcional vía quickBiUrl en la config del tema.",
+    "Pestaña por tema con tableros ejecutivos Quick BI (Alibaba) embebidos; catálogo en src/lib/quickbi/catalog.ts según Relación Datos SMD.",
   ],
   [
     "Cuentas y permisos",
