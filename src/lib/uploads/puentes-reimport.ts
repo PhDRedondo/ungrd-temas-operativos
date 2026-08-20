@@ -346,6 +346,8 @@ export async function runPuentesReimport(params: {
       if (!clave || !procesosEstructurados.has(clave.toLowerCase())) {
         invHuerfanos.push({ id: idp, contrato: contrato || "(sin contrato)" });
       }
+      const money = parseMoneyCell(mapped.valor);
+      if (money !== undefined) mapped.valor = money;
       return mapped;
     },
   });

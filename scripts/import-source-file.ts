@@ -277,12 +277,16 @@ async function main() {
       if (r.ok) syncedC++;
     }
     for (const serial of serials) {
-      const r = await syncBmaqDetalleFromEntrega({
-        serial,
-        userId,
-        sourceCapa: sheetHint || "import",
-      });
-      if (r.ok) syncedS++;
+      try {
+        const r = await syncBmaqDetalleFromEntrega({
+          serial,
+          userId,
+          sourceCapa: sheetHint || "import",
+        });
+        if (r.ok) syncedS++;
+      } catch (err) {
+        console.warn(`[bmaq-entrega-sync] serial=${serial}`, err);
+      }
     }
     if (convenios.size || serials.size) {
       console.log(

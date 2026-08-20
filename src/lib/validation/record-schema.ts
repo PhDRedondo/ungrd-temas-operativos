@@ -12,6 +12,7 @@ const FIXED_KEYS = new Set([
   "observaciones",
 ]);
 
+
 /** Rellena columnas fijas y clave_seguimiento desde alias de maqueta/bitácora. */
 export function fillFixedAliases(
   data: Record<string, unknown>,
@@ -192,10 +193,18 @@ export function rowContentHash(
 function parseLooseNumber(v: unknown): number | undefined {
   if (v === null || v === undefined || v === "") return undefined;
   if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
-  let s = String(v).trim().replace(/\s/g, "").replace(/\$/g, "");
+  let s = String(v).trim().replace(/\s/g, "").replace(/\$/g, "").replace(/COP/gi, "");
   if (!s || /^n\/?a$/i.test(s) || s === "-" || s === "—") return undefined;
+  // Miles US: 606,104,339 · Miles CO: 50.488.798.845 · Decimal mixto: 1.234.567,89 / 1,234,567.89
   if (s.includes(",") && s.includes(".")) {
-    s = s.replace(/\./g, "").replace(",", ".");
+    s =
+      s.lastIndexOf(",") > s.lastIndexOf(".")
+        ? s.replace(/\./g, "").replace(",", ".")
+        : s.replace(/,/g, "");
+  } else if ((s.match(/,/g) || []).length > 1) {
+    s = s.replace(/,/g, "");
+  } else if ((s.match(/\./g) || []).length > 1) {
+    s = s.replace(/\./g, "");
   } else if (s.includes(",")) {
     s = s.replace(",", ".");
   }
@@ -350,13 +359,14 @@ export function normalizeValidated(
   for (const field of theme.fields) {
     const v = data[field.name];
     if (field.type === "number") {
-      raw[field.name] = Number(v ?? 0);
+      raw[field.name] = parseLooseNumber(v) ?? 0;
     } else {
       raw[field.name] = String(v ?? "").trim();
     }
   }
 
-  const valor = Number(raw.valor ?? raw.cantidad ?? raw.beneficiarios ?? 0);
+  const valor =
+    parseLooseNumber(raw.valor ?? raw.cantidad ?? raw.beneficiarios ?? 0) ?? 0;
 
   const payload: Record<string, string | number> = {};
   for (const [k, v] of Object.entries(raw)) {
