@@ -3,6 +3,10 @@
  * Temas source (schemaVersion 3): FIC, Agua, Carrotanques, Banco, Obras, Puentes, Declaratoria.
  */
 import type { RecordRow } from "@/lib/records/types";
+import { calculateObrasIndicadores } from "@/themes/obras-de-emergencia/calculations";
+import { aggregateObrasDashboard } from "@/themes/obras-de-emergencia/dashboard";
+import { calculateImpuestosIndicadores } from "@/themes/obras-por-impuestos/calculations";
+import { aggregateImpuestosDashboard } from "@/themes/obras-por-impuestos/dashboard";
 
 export type SemaphoreLevel = "verde" | "amarillo" | "rojo" | "gris";
 
@@ -50,6 +54,8 @@ export type DecisionBrief = {
   byLayer: RankedItem[];
   priorityList: RankedItem[];
   focusLabel: string;
+  /** Título de la columna byLayer (default: Capas / tipo de registro). */
+  layerLabel?: string;
 };
 
 export const SOURCE_THEME_IDS = [
@@ -620,22 +626,20 @@ function buildBanco(rows: RecordRow[]): DecisionBrief {
 }
 
 function buildObrasEmergencia(rows: RecordRow[]): DecisionBrief {
+  const agg = aggregateObrasDashboard(rows);
   const sem = new Map<string, SemaphoreBucket>();
   const alerts: DecisionAlert[] = [];
-  let anticipo = 0;
-  let valor = 0;
-  let pagoRiesgo = 0;
   const priority = new Map<string, { count: number; valor: number; extra?: string }>();
 
   for (const r of rows) {
     const v = num(r, "valor");
-    valor += v;
-    anticipo += num(r, "valor_anticipo");
     const estado = str(r, "estado");
     const pago = str(r, "estado_de_pago");
+    const ind = calculateObrasIndicadores(r as Record<string, unknown>);
+
     const levelObra = classifyEstadoGenerico(estado);
     const levelPago = classifyEstadoGenerico(pago);
-    const level =
+    let level: SemaphoreLevel =
       levelObra === "rojo" || levelPago === "rojo"
         ? "rojo"
         : levelObra === "amarillo" || levelPago === "amarillo"
@@ -643,135 +647,323 @@ function buildObrasEmergencia(rows: RecordRow[]): DecisionBrief {
           : levelObra === "verde" && (levelPago === "verde" || !pago)
             ? "verde"
             : "gris";
+    if (ind.riesgo === "CRITICO" && level !== "rojo") level = "rojo";
+    else if (ind.riesgo === "ALTO" && (level === "verde" || level === "gris"))
+      level = "amarillo";
+    else if (ind.alerta === "URGENTE" && level === "verde") level = "amarillo";
     bump(sem, level, labelForLevel(level, "obras"), v);
 
-    if (/pend|mora|atras|sin pago/i.test(pago) || levelPago === "rojo") {
-      pagoRiesgo += 1;
-      const key =
-        str(r, "clave_seguimiento", "orden_de_proveeduria", "contrato_de_obra") ||
-        "Sin contrato/OP";
+    const key =
+      str(r, "clave_seguimiento", "orden_de_proveeduria", "contrato_de_obra") ||
+      "Sin contrato/OP";
+    const pagoRiesgo =
+      /pend|mora|atras|sin pago|crit/i.test(pago) || levelPago === "rojo";
+    if (pagoRiesgo || ind.riesgo === "CRITICO" || ind.alerta === "URGENTE") {
       const cur = priority.get(key) || { count: 0, valor: 0 };
       cur.count += 1;
       cur.valor += v;
-      cur.extra = `Obra: ${estado || "—"} · Pago: ${pago || "—"}`;
+      const spiTxt =
+        ind.spi != null && Number.isFinite(ind.spi) ? ind.spi.toFixed(2) : "—";
+      const bits = [
+        estado ? `Obra: ${estado}` : null,
+        pago ? `Pago: ${pago}` : null,
+        ind.irp != null ? `IRP ${ind.irp}` : null,
+        `SPI ${spiTxt}`,
+        ind.riesgo !== "BAJO" ? ind.riesgo : null,
+        ind.alerta === "URGENTE" ? "URGENTE" : null,
+      ].filter(Boolean);
+      cur.extra = bits.join(" · ");
       priority.set(key, cur);
     }
   }
 
-  if (pagoRiesgo > 0) {
+  if (agg.pagoRiesgo > 0) {
     alerts.push({
       id: "obras-pago",
       severity: "alta",
       title: "Riesgo en estado de pago",
-      detail: `${formatNumber(pagoRiesgo)} contratos/OP con pago pendiente, en mora o crítico.`,
+      detail: `${formatNumber(agg.pagoRiesgo)} contratos/OP con pago pendiente, en mora o crítico.`,
       action:
         "Cruce obra vs pago en la lista prioritaria y desbloqueen el trámite financiero.",
-      count: pagoRiesgo,
+      count: agg.pagoRiesgo,
     });
   }
+  if (agg.irpElevado > 0) {
+    alerts.push({
+      id: "obras-irp",
+      severity: agg.irpCriticos > 0 ? "critica" : "alta",
+      title: "Riesgo de cronograma / IRP",
+      detail: `${formatNumber(agg.irpElevado)} obras con IRP alto o crítico (${formatNumber(agg.irpCriticos)} críticos).`,
+      action:
+        "Revise avances físicos vs tiempo y financieros en Seguimiento de avances.",
+      count: agg.irpElevado,
+    });
+  }
+  if (agg.urgentes > 0) {
+    alerts.push({
+      id: "obras-plazo",
+      severity: "media",
+      title: "Plazo ≤ 40 días en ejecución",
+      detail: `${formatNumber(agg.urgentes)} contratos en ejecución con ≤ 40 días al vencimiento.`,
+      action: "Priorice cierre o prórroga contractual.",
+      count: agg.urgentes,
+    });
+  }
+  if (agg.spiMedio != null && agg.spiMedio < 0.85 && agg.enEjecucion > 0) {
+    alerts.push({
+      id: "obras-spi",
+      severity: "media",
+      title: "SPI medio bajo",
+      detail: `SPI promedio ${agg.spiMedio.toFixed(2)} (< 0,85): el avance físico va detrás del tiempo.`,
+      action: "Identifique contratos con brecha física negativa en la lista prioritaria.",
+      count: agg.enEjecucion,
+    });
+  }
+
+  // byLayer = obras por estado (gráfico del tablero SMD).
+  const byEstado: RankedItem[] = agg.porEstado.map((e) => ({
+    key: e.name,
+    label: e.name,
+    count: e.count,
+    valor: e.valor,
+  }));
 
   return {
     themeId: "obras-de-emergencia",
     title: "Tablero de decisión — Obras de emergencia",
     subtitle:
-      "Criterio: semáforo combina estado de obra y de pago · alerta si el pago está en riesgo (clave contrato/OP)",
+      "Resumen ejecutivo SMD: valor, ejecución, urgentes, IRP/SPI · alertas de pago y plazo",
     kpis: [
-      { id: "valor", label: "Valor contractual/OP", value: formatCop(valor) },
+      {
+        id: "valor",
+        label: "Valor contratado",
+        value: formatCop(agg.valorTotal),
+      },
+      {
+        id: "en-ejecucion",
+        label: "En ejecución / activo",
+        value: formatNumber(agg.enEjecucion),
+        hint: `${formatNumber(agg.n)} registros`,
+        tone: agg.enEjecucion > 0 ? "amarillo" : "verde",
+      },
+      {
+        id: "urgentes",
+        label: "Urgentes (≤40 días)",
+        value: formatNumber(agg.urgentes),
+        hint: "En ejecución y cerca del vencimiento",
+        tone: agg.urgentes > 0 ? "rojo" : "verde",
+      },
+      {
+        id: "irp-elevado",
+        label: "IRP alto / crítico",
+        value: formatNumber(agg.irpElevado),
+        hint:
+          agg.irpPromedio != null
+            ? `IRP promedio ${agg.irpPromedio}`
+            : "Sin avance/fechas suficientes",
+        tone: agg.irpElevado > 0 ? "rojo" : "verde",
+      },
+      {
+        id: "spi",
+        label: "SPI medio",
+        value: agg.spiMedio != null ? agg.spiMedio.toFixed(2) : "—",
+        hint: "1,0 = al día · <1 atraso",
+        tone:
+          agg.spiMedio == null
+            ? "gris"
+            : agg.spiMedio >= 1
+              ? "verde"
+              : agg.spiMedio >= 0.85
+                ? "amarillo"
+                : "rojo",
+      },
+      {
+        id: "avance",
+        label: "Avance físico ponderado",
+        value:
+          agg.avancePonderado != null
+            ? `${agg.avancePonderado.toFixed(1)}%`
+            : "—",
+        hint: "Ponderado por valor contractual",
+        tone:
+          agg.avancePonderado == null
+            ? "gris"
+            : agg.avancePonderado >= 70
+              ? "verde"
+              : agg.avancePonderado >= 40
+                ? "amarillo"
+                : "rojo",
+      },
       {
         id: "anticipo",
         label: "Anticipos",
-        value: formatCop(anticipo),
-        hint: valor ? `${((anticipo / valor) * 100).toFixed(1)}% del valor` : undefined,
+        value: formatCop(agg.anticipo),
+        hint: agg.valorTotal
+          ? `${((agg.anticipo / agg.valorTotal) * 100).toFixed(1)}% del valor`
+          : undefined,
       },
       {
         id: "riesgo-pago",
         label: "Riesgo de pago",
-        value: formatNumber(pagoRiesgo),
-        tone: pagoRiesgo > 0 ? "rojo" : "verde",
-      },
-      {
-        id: "regs",
-        label: "Registros",
-        value: formatNumber(rows.length),
+        value: formatNumber(agg.pagoRiesgo),
+        tone: agg.pagoRiesgo > 0 ? "rojo" : "verde",
       },
     ],
     semaphores: orderSemaphores(sem),
     alerts,
-    byLayer: layerBreakdown(rows),
+    byLayer: byEstado.length ? byEstado : layerBreakdown(rows),
+    layerLabel: "Obras por estado",
     priorityList: topN(priority, 15),
-    focusLabel: "Contratos/OP prioritarios",
+    focusLabel: "Contratos / OP prioritarios",
   };
 }
 
 function buildObrasImpuestos(rows: RecordRow[]): DecisionBrief {
+  const agg = aggregateImpuestosDashboard(rows);
   const sem = new Map<string, SemaphoreBucket>();
   const alerts: DecisionAlert[] = [];
-  let valor = 0;
-  let valorInt = 0;
-  let vencidos = 0;
   const priority = new Map<string, { count: number; valor: number; extra?: string }>();
 
   for (const r of rows) {
     const v = num(r, "valor");
-    valor += v;
-    valorInt += num(r, "valor_convenio_de_interventoria");
     const estado = str(r, "estado");
-    bump(sem, classifyEstadoGenerico(estado), labelForLevel(classifyEstadoGenerico(estado), "imp"), v);
-    const fin = str(
-      r,
-      "fecha_de_terminacion_del_convenio",
-      "fecha_finalizacion",
-      "fecha_de_finalizacion",
-    );
-    const days = daysFromToday(fin);
-    if (days !== null && days > 0 && !/finaliz|cerrad|terminad/i.test(estado)) {
-      vencidos += 1;
-      const key = str(r, "clave_seguimiento", "no_convenio") || "Sin convenio";
+    const ind = calculateImpuestosIndicadores(r as Record<string, unknown>);
+    let level: SemaphoreLevel = classifyEstadoGenerico(estado);
+    if (ind.riesgo === "CRITICO" && level !== "rojo") level = "rojo";
+    else if (ind.riesgo === "ALTO" && (level === "verde" || level === "gris"))
+      level = "amarillo";
+    else if (ind.alerta === "URGENTE" && level === "verde") level = "amarillo";
+    bump(sem, level, labelForLevel(level, "imp"), v);
+
+    const key = str(r, "clave_seguimiento", "no_convenio") || "Sin convenio";
+    const vencido =
+      ind.dias_restantes != null &&
+      ind.dias_restantes < 0 &&
+      !/finaliz|cerrad|terminad|liquidad/i.test(estado);
+    if (vencido || ind.alerta === "URGENTE" || ind.riesgo === "CRITICO") {
       const cur = priority.get(key) || { count: 0, valor: 0 };
       cur.count += 1;
       cur.valor += v;
-      cur.extra = `Vencido hace ${days} días · ${estado || "sin estado"}`;
+      const bits = [
+        estado ? `Estado: ${estado}` : null,
+        vencido && ind.dias_restantes != null
+          ? `Vencido hace ${Math.abs(ind.dias_restantes)} días`
+          : ind.alerta === "URGENTE" && ind.dias_restantes != null
+            ? `${ind.dias_restantes} días restantes`
+            : null,
+        ind.irp != null ? `IRP ${ind.irp}` : null,
+        ind.riesgo !== "BAJO" ? ind.riesgo : null,
+      ].filter(Boolean);
+      cur.extra = bits.join(" · ");
       priority.set(key, cur);
     }
   }
 
-  if (vencidos > 0) {
+  if (agg.vencidos > 0) {
     alerts.push({
       id: "imp-vencidos",
       severity: "alta",
       title: "Convenios con plazo vencido",
-      detail: `${formatNumber(vencidos)} convenios siguen abiertos después de su fecha de terminación.`,
+      detail: `${formatNumber(agg.vencidos)} convenios siguen abiertos después de su fecha de terminación.`,
       action:
         "Liquidar, prorrogar o cerrar formalmente los convenios de la lista prioritaria.",
-      count: vencidos,
+      count: agg.vencidos,
     });
   }
+  if (agg.urgentes > 0) {
+    alerts.push({
+      id: "imp-plazo",
+      severity: "media",
+      title: "Plazo ≤ 40 días en ejecución",
+      detail: `${formatNumber(agg.urgentes)} convenios en ejecución con ≤ 40 días al vencimiento.`,
+      action: "Priorice cierre, liquidación o prórroga.",
+      count: agg.urgentes,
+    });
+  }
+  if (agg.irpElevado > 0) {
+    alerts.push({
+      id: "imp-irp",
+      severity: agg.irpCriticos > 0 ? "critica" : "alta",
+      title: "Riesgo IRP alto / crítico",
+      detail: `${formatNumber(agg.irpElevado)} convenios con IRP elevado (cuando hay avances/fechas).`,
+      action: "Revise seguimiento de estado e interventoría.",
+      count: agg.irpElevado,
+    });
+  }
+
+  const byEstado: RankedItem[] = agg.porEstado.map((e) => ({
+    key: e.name,
+    label: e.name,
+    count: e.count,
+    valor: e.valor,
+  }));
 
   return {
     themeId: "obras-por-impuestos",
     title: "Tablero de decisión — Obras por impuestos",
     subtitle:
-      "Criterio: semáforo por estado del convenio · alerta si la fecha de fin ya pasó y sigue abierto",
+      "Convenios: valor, ejecución, vencidos/urgentes e IRP · lista prioritaria por plazo",
     kpis: [
-      { id: "valor", label: "Valor convenios", value: formatCop(valor) },
+      {
+        id: "valor",
+        label: "Valor convenios",
+        value: formatCop(agg.valorTotal),
+      },
       {
         id: "interventoria",
         label: "Valor interventoría",
-        value: formatCop(valorInt),
+        value: formatCop(agg.valorInterventoria),
+      },
+      {
+        id: "en-ejecucion",
+        label: "En ejecución / activo",
+        value: formatNumber(agg.enEjecucion),
+        hint: `${formatNumber(agg.n)} registros`,
+        tone: agg.enEjecucion > 0 ? "amarillo" : "verde",
       },
       {
         id: "vencidos",
         label: "Plazo vencido",
-        value: formatNumber(vencidos),
-        tone: vencidos > 0 ? "rojo" : "verde",
+        value: formatNumber(agg.vencidos),
+        tone: agg.vencidos > 0 ? "rojo" : "verde",
       },
-      { id: "regs", label: "Registros", value: formatNumber(rows.length) },
+      {
+        id: "urgentes",
+        label: "Urgentes (≤40 días)",
+        value: formatNumber(agg.urgentes),
+        tone: agg.urgentes > 0 ? "rojo" : "verde",
+      },
+      {
+        id: "irp-elevado",
+        label: "IRP alto / crítico",
+        value: formatNumber(agg.irpElevado),
+        hint:
+          agg.irpPromedio != null
+            ? `IRP promedio ${agg.irpPromedio}`
+            : "Sin avances suficientes en la base",
+        tone: agg.irpElevado > 0 ? "rojo" : "verde",
+      },
+      {
+        id: "spi",
+        label: "SPI medio",
+        value: agg.spiMedio != null ? agg.spiMedio.toFixed(2) : "—",
+        hint: "Si hay avance físico reportado",
+        tone:
+          agg.spiMedio == null
+            ? "gris"
+            : agg.spiMedio >= 1
+              ? "verde"
+              : agg.spiMedio >= 0.85
+                ? "amarillo"
+                : "rojo",
+      },
     ],
     semaphores: orderSemaphores(sem),
     alerts,
-    byLayer: layerBreakdown(rows),
+    byLayer: byEstado.length ? byEstado : layerBreakdown(rows),
+    layerLabel: "Convenios por estado",
     priorityList: topN(priority, 15),
-    focusLabel: "Convenios vencidos",
+    focusLabel: "Convenios prioritarios",
   };
 }
 

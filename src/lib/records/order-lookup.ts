@@ -6,6 +6,8 @@ import { dbToRow } from "@/lib/records/db-to-row";
 import { aguaCapaLookupVariants } from "@/themes/agua-y-saneamiento/capture-forms";
 import { bmaqCapaLookupVariants } from "@/themes/banco-de-maquinaria/capture-forms";
 import { carroCapaLookupVariants } from "@/themes/carrotanques/capture-forms";
+import { obrasEmergCapaLookupVariants } from "@/themes/obras-de-emergencia/capture-forms";
+import { obrasImpCapaLookupVariants } from "@/themes/obras-por-impuestos/capture-forms";
 
 export type OrderLookupMatchKind = "unica" | "x_pago";
 
@@ -36,6 +38,7 @@ function opOf(r: RecordRow): string {
   return String(
     r.orden_de_proveeduria ||
       r.clave_seguimiento ||
+      r.contrato_de_obra ||
       r.placa ||
       r.serial ||
       r.no_convenio ||
@@ -132,6 +135,12 @@ function capaVariants(themeId: string, capa: string): string[] {
   }
   if (themeId === "banco-de-maquinaria") {
     return bmaqCapaLookupVariants(capa);
+  }
+  if (themeId === "obras-de-emergencia") {
+    return obrasEmergCapaLookupVariants(capa);
+  }
+  if (themeId === "obras-por-impuestos") {
+    return obrasImpCapaLookupVariants(capa);
   }
   return [capa.trim()].filter(Boolean);
 }

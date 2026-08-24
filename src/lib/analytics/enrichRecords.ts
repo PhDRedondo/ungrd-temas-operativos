@@ -201,6 +201,8 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
         { key: "departamento", label: "Departamento" },
         { key: "municipio", label: "Municipio" },
         { key: "estado", label: "Estado", kind: "badge" },
+        { key: "estado_de_pago", label: "Estado de pago", kind: "badge" },
+        { key: "avance_fisico_ejecutado", label: "Avance físico %" },
         { key: "valor", label: "Valor", kind: "money" },
       ];
     case "obras-por-impuestos":
@@ -208,9 +210,15 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
         { key: "clave_seguimiento", label: "Convenio / BPIN" },
         { key: "departamento", label: "Departamento" },
         { key: "municipio", label: "Municipio" },
+        { key: "contribuyente", label: "Contribuyente" },
         { key: "estado", label: "Estado", kind: "badge" },
         { key: "valor", label: "Valor convenio", kind: "money" },
-        { key: "fecha", label: "Fecha" },
+        {
+          key: "valor_convenio_de_interventoria",
+          label: "Interventoría",
+          kind: "money",
+        },
+        { key: "fecha_de_terminacion_del_convenio", label: "Fin convenio" },
       ];
     case "puentes":
       return [

@@ -153,6 +153,9 @@ Orden cronológico reciente (commits + trabajo contractual):
 15. **Carrotanques multi-capa (ago 2026)** — maqueta por `placa`; bitácora→M–P/T–Z; suministro→suma Q–R–S; formularios B–J / K–L.
 16. **Subsidios de Arriendos (ago 2026)** — consolidado de envíos: identidad `uuid`; `numero_envio` + `n_orden` del archivo; ingesta Excel + formulario opcional; medallón `subsidios_arriendos.consolidado`.
 17. **Reader = 1 tabla por formulario (ago 2026)** — cada `captureForms` de Agua/Puentes/Carrotanques/Banco/Subsidios tiene vista homónima en la URL `medallion_reader` con los mismos `fieldNames`. Incluye `carrotanques.actualizar_categorias` (K–L). Banco: columnas canónicas del form (`cantidad_maquinaria_expectativa`, `valor_total`, `estado_maquina`, `fecha_de_estado`) con coalesce a alias Excel. Catálogo: `medallion.v_connections`.
+18. **Obras de emergencia — captura + IRP (ago 2026)** — `captureForms` (contrato / O.P. / seguimiento), estados canónicos, `calculations.ts` (SPI/CPI/IRP). Excel `fields-from-source` intacto. Lookup por `clave_seguimiento`/`contrato_de_obra`; decisión enriquece alertas IRP/plazo sin quitar riesgo de pago.
+19. **Obras de emergencia — tablero ejecutivo SMD (ago 2026)** — `dashboard.ts` agrega KPIs del zip (en ejecución, urgentes ≤40d, IRP elevado, SPI medio, avance ponderado); `byLayer` = obras por estado (`layerLabel`); captura/Excel sin cambios.
+20. **Obras por impuestos — captura + tablero (ago 2026)** — `captureForms` (convenio / interventoría / seguimiento), estados canónicos, IRP vía fechas de convenio; decisión con KPIs vencidos/urgentes; Excel ArcGIS intacto.
 
 ### Hubs del grafo (core abstractions)
 `requireSession` · `getTheme` · `ThemeConfig`/`ThemeModule` · `RecordRow` · `process-excel` · `buildDecisionBrief` · `enrichRecordsForDecision` · `NationalCommandCenter` · `guard` (security)
