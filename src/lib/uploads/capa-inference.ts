@@ -16,6 +16,10 @@ import {
 import { normalizePuenteCapa } from "@/themes/puentes/capture-forms";
 import { normalizeCarroCapa } from "@/themes/carrotanques/capture-forms";
 import { normalizeSubsidiosCapa } from "@/themes/subsidios-de-arriendos/capture-forms";
+import { normalizeObrasEmergCapa } from "@/themes/obras-de-emergencia/capture-forms";
+import { canonicalEstadoObra } from "@/themes/obras-de-emergencia/select-options";
+import { normalizeObrasImpCapa } from "@/themes/obras-por-impuestos/capture-forms";
+import { canonicalEstadoConvenio } from "@/themes/obras-por-impuestos/select-options";
 
 /** Opciones oficiales de capa por tema (alineadas a fields-from-source). */
 const THEME_CAPA_HINTS: Record<
@@ -396,9 +400,91 @@ export function prepareTrackingRow(
     if (!out.fecha && out.fecha_inicio) out.fecha = out.fecha_inicio;
   }
 
+  if (theme.id === "obras-de-emergencia") {
+    const normalizeCapa = (v: string) => normalizeObrasEmergCapa(v) || v;
+    if (out.tipo_registro) {
+      out.tipo_registro = normalizeCapa(String(out.tipo_registro));
+    }
+    if (out.capa) out.capa = normalizeCapa(String(out.capa));
+    if (out.estado != null && String(out.estado).trim()) {
+      out.estado = canonicalEstadoObra(out.estado);
+    }
+    const contrato = String(out.contrato_de_obra || "").trim();
+    const op = String(out.orden_de_proveeduria || "").trim();
+    const clave = String(out.clave_seguimiento || "").trim();
+    // Clave de seguimiento = contrato u OP (lookup y upsert).
+    if (!clave && contrato) out.clave_seguimiento = contrato;
+    if (!clave && !contrato && op) out.clave_seguimiento = op;
+    if (
+      out.avance_fisico_ejecutado != null &&
+      out.avance_fisico_ejecutado !== "" &&
+      (out.porcentaje_avance_fisico_ejecutado == null ||
+        out.porcentaje_avance_fisico_ejecutado === "")
+    ) {
+      out.porcentaje_avance_fisico_ejecutado = out.avance_fisico_ejecutado;
+    }
+    if (
+      out.avance_financiero_ejecutado != null &&
+      out.avance_financiero_ejecutado !== "" &&
+      (out.porcentaje_avance_financiero_ejecutado == null ||
+        out.porcentaje_avance_financiero_ejecutado === "")
+    ) {
+      out.porcentaje_avance_financiero_ejecutado = out.avance_financiero_ejecutado;
+    }
+    if (
+      (out.avance_fisico_ejecutado == null || out.avance_fisico_ejecutado === "") &&
+      out.porcentaje_avance_fisico_ejecutado != null &&
+      out.porcentaje_avance_fisico_ejecutado !== ""
+    ) {
+      out.avance_fisico_ejecutado = out.porcentaje_avance_fisico_ejecutado;
+    }
+    if (
+      (out.avance_financiero_ejecutado == null ||
+        out.avance_financiero_ejecutado === "") &&
+      out.porcentaje_avance_financiero_ejecutado != null &&
+      out.porcentaje_avance_financiero_ejecutado !== ""
+    ) {
+      out.avance_financiero_ejecutado =
+        out.porcentaje_avance_financiero_ejecutado;
+    }
+  }
+
+  if (theme.id === "obras-por-impuestos") {
+    const normalizeCapa = (v: string) => normalizeObrasImpCapa(v) || v;
+    if (out.tipo_registro) {
+      out.tipo_registro = normalizeCapa(String(out.tipo_registro));
+    }
+    if (out.capa) out.capa = normalizeCapa(String(out.capa));
+    if (!out.tipo_registro) out.tipo_registro = "Convenio obra por impuesto";
+    if (!out.capa) out.capa = "Convenio obra por impuesto";
+    if (out.estado != null && String(out.estado).trim()) {
+      out.estado = canonicalEstadoConvenio(out.estado);
+    }
+    if (
+      out.estado_del_convenio_de_interventoria != null &&
+      String(out.estado_del_convenio_de_interventoria).trim()
+    ) {
+      out.estado_del_convenio_de_interventoria = canonicalEstadoConvenio(
+        out.estado_del_convenio_de_interventoria,
+      );
+    }
+    const convenio = String(out.no_convenio || "").trim();
+    const clave = String(out.clave_seguimiento || "").trim();
+    if (!clave && convenio) out.clave_seguimiento = convenio;
+    if (clave && !convenio) out.no_convenio = clave;
+    if (
+      !out.fecha &&
+      (out.fecha_de_inicio_del_convenio || out.fecha_de_activacion)
+    ) {
+      out.fecha =
+        out.fecha_de_inicio_del_convenio || out.fecha_de_activacion;
+    }
+  }
+
   const claveRaw =
     out.clave_seguimiento ??
     out.orden_de_proveeduria ??
+    out.contrato_de_obra ??
     out.id_puente ??
     out.placa ??
     out.serial ??
@@ -481,7 +567,7 @@ export function feedingGuideForTheme(themeId: string): {
     "obras-por-impuestos": {
       clave: "Número de convenio / BPIN",
       capas: ["Convenio obra por impuesto"],
-      tip: "Una fila por convenio. Si ya existe, actualice en lugar de crear otro.",
+      tip: "Primero el convenio. Luego Interventoría o Seguimiento buscando el mismo Nº convenio.",
     },
     "subsidios-de-arriendos": {
       clave: "Número de envío + número de orden",

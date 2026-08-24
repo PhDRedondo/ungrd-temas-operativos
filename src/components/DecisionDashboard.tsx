@@ -316,7 +316,7 @@ export function DecisionDashboard({
         <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
           <h3 className="mb-3 flex items-center gap-2 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
             <CircleDot className="h-3.5 w-3.5" />
-            Distribución por capa / tipo de registro
+            {brief.layerLabel || "Distribución por capa / tipo de registro"}
           </h3>
           {visibleLayers.length === 0 ? (
             <p className="text-sm text-white/55">Sin capas.</p>

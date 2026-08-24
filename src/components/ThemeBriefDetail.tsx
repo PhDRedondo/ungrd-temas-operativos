@@ -106,7 +106,7 @@ export function ThemeBriefDetail({
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h4 className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
-              Capas / tipo de registro
+              {brief.layerLabel || "Capas / tipo de registro"}
             </h4>
             <ul className="mt-2 max-h-48 space-y-1 overflow-auto text-sm">
               {brief.byLayer.length === 0 ? (

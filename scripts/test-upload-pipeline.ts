@@ -170,7 +170,7 @@ test("inferCapaFromHint reconoce bitácora Agua sin pisar datos", () => {
   assert.equal(prepared.tipo_registro, "Bitácora estado");
   assert.equal(prepared.capa, "Bitácora estado");
   assert.equal(prepared.clave_seguimiento, "SMD-99");
-  // No sobrescribe capa si ya viene
+  // Legacy Excel «Maqueta / orden» se normaliza a «Alta / orden»
   const kept = prepareTrackingRow(
     theme!,
     {
@@ -180,7 +180,8 @@ test("inferCapaFromHint reconoce bitácora Agua sin pisar datos", () => {
     },
     { hint: "bitacora.xlsx" },
   );
-  assert.equal(kept.tipo_registro, "Maqueta / orden");
+  assert.equal(kept.tipo_registro, "Alta / orden");
+  assert.equal(kept.capa, "Alta / orden");
 });
 
 console.log(`\n${passed} pruebas OK`);
