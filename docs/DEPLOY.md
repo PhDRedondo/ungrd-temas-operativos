@@ -1,6 +1,16 @@
 # Checklist pre-despliegue
 
-## Antes de publicar (Vercel / Cloud Run)
+## Docker (sin Vercel — recomendado para Alibaba)
+
+Ver guía completa: [DOCKER.md](./DOCKER.md)
+
+```bash
+cp .env.docker.example .env.docker
+docker compose --profile app up -d --build
+curl -s http://localhost:3000/api/health
+```
+
+## Antes de publicar (Vercel / Cloud Run / Alibaba)
 
 ### 1. Calidad local
 

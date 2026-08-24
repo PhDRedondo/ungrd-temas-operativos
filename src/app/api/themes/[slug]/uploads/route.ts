@@ -378,9 +378,11 @@ export async function POST(req: Request, ctx: Ctx) {
   // Persistimos el archivo solo si hay directorio escribible (local o /tmp).
   const safeName = path.basename(file.name).replace(/[^\w.\-]+/g, "_");
   const storageName = `${Date.now()}_${theme.id}_${safeName}`;
-  const uploadsDir = process.env.VERCEL
-    ? path.join("/tmp", "ungrd-uploads")
-    : path.join(process.cwd(), "uploads");
+  const uploadsDir =
+    process.env.UPLOADS_DIR?.trim() ||
+    (process.env.VERCEL
+      ? path.join("/tmp", "ungrd-uploads")
+      : path.join(process.cwd(), "uploads"));
   try {
     await mkdir(uploadsDir, { recursive: true });
     const target = path.join(uploadsDir, path.basename(storageName));

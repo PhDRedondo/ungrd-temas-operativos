@@ -1,0 +1,40 @@
+# Dependencias y artefactos de build
+node_modules
+.next
+out
+build
+coverage
+
+# Entorno y secretos
+.env
+.env.*
+!.env.docker.example
+
+# Git / IDE
+.git
+.gitignore
+.cursor
+.agents
+.tmp
+graphify-out
+
+# Uploads y datos locales (se montan como volúmenes)
+uploads/*
+!.uploads/.gitkeep
+.data
+exports
+
+# Docs pesados / no necesarios en runtime
+*.md
+!README.md
+docs
+scripts/harness
+.agents
+
+# Vercel
+.vercel
+vercel.json
+
+# Tests y logs
+*.log
+npm-debug.log*
