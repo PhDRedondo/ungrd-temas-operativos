@@ -15,8 +15,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Imagen Docker / despliegue fuera de Vercel (Alibaba, VM, compose).
-  output: "standalone",
+  // Standalone solo fuera de Vercel (Docker / Alibaba). En Vercel + Next 16.3
+  // `output: "standalone"` rompe onBuildComplete (ENOENT next-server.js.nft.json).
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
     root: path.join(__dirname),

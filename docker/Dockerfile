@@ -13,6 +13,8 @@ RUN npm ci
 FROM deps AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Fuerza standalone aunque VERCEL esté definido por error en el host de build.
+ENV VERCEL=
 RUN npm run build
 
 # Job one-shot: schema + seed (docker compose migrate)

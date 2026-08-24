@@ -86,6 +86,7 @@ Fuente: [`.env.docker.example`](../.env.docker.example)
 
 - Dockerfile: [`docker/Dockerfile`](../docker/Dockerfile)
 - Build multi-stage: `deps` → `builder` (Next standalone) → `runner`
+- En Vercel **no** se usa `output: "standalone"` (Next 16.3 + adapter). Docker sí.
 - Job `migrator`: schema + seed antes de levantar `app`
 
 Build manual:
