@@ -15,6 +15,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Imagen Docker / despliegue fuera de Vercel (Alibaba, VM, compose).
+  output: "standalone",
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
     root: path.join(__dirname),

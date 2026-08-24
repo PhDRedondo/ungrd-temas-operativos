@@ -1,5 +1,16 @@
-# UNGRD Temas Operativos — stack local 100% open source
-# Postgres (app) + Keycloak (OIDC) + Postgres (Keycloak)
+# UNGRD Temas Operativos — stack Docker (sin Vercel)
+#
+# Postgres solo (compatible con docs/LOCAL.md):
+#   docker compose up -d postgres
+#
+# App completa (Postgres + migrate + Next.js):
+#   docker compose --profile app up -d --build
+#   → http://localhost:3000  (demo: admin@ungrd.gov.co / UNGRD2026)
+#
+# + Keycloak OIDC:
+#   docker compose --profile app --profile keycloak up -d --build
+#
+# Variables: copiar .env.docker.example → .env.docker y ajustar secretos.
 
 services:
   postgres:
@@ -7,20 +18,87 @@ services:
     container_name: ungrd-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PUBLISH_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: ungrd
-      POSTGRES_PASSWORD: ungrd
-      POSTGRES_DB: ungrd_temas
+      POSTGRES_USER: ${POSTGRES_USER:-ungrd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ungrd}
+      POSTGRES_DB: ${POSTGRES_DB:-ungrd_temas}
     volumes:
       - ungrd_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ungrd -d ungrd_temas"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-ungrd} -d ${POSTGRES_DB:-ungrd_temas}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  migrate:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: migrator
+    container_name: ungrd-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://ungrd:ungrd@postgres:5432/ungrd_temas}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: runner
+    container_name: ungrd-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PUBLISH_PORT:-3000}:3000"
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://ungrd:ungrd@postgres:5432/ungrd_temas}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-docker-dev-secret-min-32-chars}
+      AUTH_MODE: ${AUTH_MODE:-demo}
+      NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE:-demo}
+      DEMO_AUTH_EMAIL: ${DEMO_AUTH_EMAIL:-admin@ungrd.gov.co}
+      DEMO_AUTH_PASSWORD: ${DEMO_AUTH_PASSWORD:-UNGRD2026}
+      ACL_STRICT: ${ACL_STRICT:-false}
+      SECURITY_ENABLED: ${SECURITY_ENABLED:-true}
+      SECURITY_ALLOW_LOCALHOST: ${SECURITY_ALLOW_LOCALHOST:-true}
+      QUICKBI_UPSTREAM_BASE_URL: ${QUICKBI_UPSTREAM_BASE_URL:-https://apisni.soft180.co}
+      UPLOADS_DIR: /app/uploads
+      MEDALLION_DATABASE_URL: ${MEDALLION_DATABASE_URL:-}
+    volumes:
+      - ungrd_uploads:/app/uploads
+      - ungrd_app_data:/app/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
   keycloak-db:
+    profiles: ["keycloak"]
     image: postgres:16-alpine
     container_name: ungrd-keycloak-db
     restart: unless-stopped
@@ -37,6 +115,7 @@ services:
       retries: 10
 
   keycloak:
+    profiles: ["keycloak"]
     image: quay.io/keycloak/keycloak:26.2
     container_name: ungrd-keycloak
     restart: unless-stopped
@@ -62,3 +141,5 @@ services:
 volumes:
   ungrd_pg_data:
   ungrd_kc_data:
+  ungrd_uploads:
+  ungrd_app_data:

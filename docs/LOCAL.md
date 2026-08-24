@@ -6,10 +6,13 @@
 |-------------|--------|
 | Node.js 20+ | Recomendado LTS |
 | npm 10+ | Viene con Node |
-| PostgreSQL 14/16 | Homebrew o Docker |
-| Docker (opcional) | Solo para Keycloak + compose completo |
+| Supabase (recomendado) | Misma `DATABASE_URL` que prod / QuickBI medallón |
+| PostgreSQL Docker | Solo si necesitas offline aislado |
+| Docker (opcional) | App completa / Keycloak — ver [DOCKER.md](./DOCKER.md) |
 
-## Setup
+## Setup (recomendado: Supabase = local = despliegue)
+
+Así el **Dashboard Operativo** y **QuickBI** miran la misma fuente.
 
 ```bash
 git clone <repo>
@@ -18,36 +21,52 @@ cp .env.example .env.local
 npm install
 ```
 
-Asegurar Postgres escuchando y que `DATABASE_URL` en `.env.local` coincida:
+En `.env.local`:
 
-```env
-DATABASE_URL=postgresql://ungrd:ungrd@127.0.0.1:5432/ungrd_temas
-AUTH_MODE=demo
-NEXT_PUBLIC_AUTH_MODE=demo
-AUTH_SECRET=ungrd-dev-secret-change-me-in-prod
-ACL_STRICT=false
-```
-
-Schema + seed:
+1. Define `MEDALLION_DATABASE_URL` (reader).
+2. Genera la URL de app (escritura, pooler Session `:5432`):
 
 ```bash
-npm run db:setup
+npx tsx scripts/print-vercel-database-url.ts
+# Copia la línea postgresql://postgres.<ref>:… en DATABASE_URL
 ```
 
-App:
+```env
+DATABASE_URL=postgresql://postgres.<ref>:…@aws-1-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require
+MEDALLION_DATABASE_URL=postgresql://medallion_reader.<ref>:…@…:5432/postgres?sslmode=require
+AUTH_MODE=demo
+AUTH_URL=http://localhost:3000
+AUTH_SECRET=ungrd-dev-secret-change-me-in-prod
+ACL_STRICT=false
+QUICKBI_UPSTREAM_BASE_URL=https://apisni.soft180.co
+```
+
+**No** hace falta `npm run db:setup` contra Supabase (el schema ya está en prod).
 
 ```bash
 npm run dev
 ```
 
-Abrir http://localhost:3000 — login demo: cualquier email + password ≥ 4 caracteres; rol `captura` para escribir.
+Abrir http://localhost:3000 — demo: `admin@ungrd.gov.co` / `UNGRD2026`.  
+Health debe mostrar host pooler Supabase (`db:"up"`).
 
-## Postgres vía Docker (sin Keycloak)
+## Postgres vía Docker (offline / aislado)
+
+Solo si no puedes usar Supabase. **Los números no coincidirán con QuickBI.**
 
 ```bash
 docker compose up -d postgres
+# DATABASE_URL=postgresql://ungrd:ungrd@127.0.0.1:5432/ungrd_temas
 npm run db:setup
 npm run dev
+```
+
+## App completa en Docker (sin Vercel)
+
+```bash
+cp .env.docker.example .env.docker
+npm run docker:up
+# http://localhost:3000 — ver docs/DOCKER.md
 ```
 
 ## Stack completo (Keycloak)

@@ -39,6 +39,16 @@ npm run smoke                # Excel E2E
 
 Detalle: [`docs/LOCAL.md`](docs/LOCAL.md)
 
+### Docker (app completa, sin Vercel)
+
+```bash
+cp .env.docker.example .env.docker
+npm run docker:up              # Postgres + migrate + Next.js
+# http://localhost:3000
+```
+
+Guía: [`docs/DOCKER.md`](docs/DOCKER.md) · Alibaba / producción.
+
 ---
 
 ## Estructura (vista limpia)
@@ -52,6 +62,7 @@ ungrd-temas-operativos/
 ├── src/                  ← código (app, api, temas, security)
 ├── data/  public/  infra/
 ├── docker-compose.yml
+├── docker/Dockerfile
 └── package.json + configs Next/TS/ESLint (deben estar en raíz)
 ```
 
@@ -68,7 +79,8 @@ Las configs (`next.config.ts`, `tsconfig.json`, etc.) **no se pueden meter en un
 | `db:setup` | Schema + seed |
 | `harness` / `harness:security` | Arnés |
 | `smoke` | E2E Excel |
-| `stack:up` | Docker Postgres + Keycloak |
+| `stack:up` | Docker Keycloak (perfil keycloak) |
+| `docker:up` | App + Postgres en contenedores |
 
 ---
 

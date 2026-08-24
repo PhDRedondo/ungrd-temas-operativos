@@ -49,6 +49,9 @@ Route Handlers en el mismo repo (v0.1). Platform API v1 (`/api/v1/cases|tasks`) 
 ### ADR-007 · Protocolo de seguridad en middleware
 Rate limit + ban IP + path inspection + headers + body limit (`src/lib/security`).
 
+### ADR-008 · QuickBI embed con CreateTicket (patrón SNI)
+Catálogo por `pageId` en `src/lib/quickbi/catalog.ts`. Panel React → `token-service.ts` → `POST /api/quickbi/embed-url` (BFF) → proxy a `QUICKBI_UPSTREAM_BASE_URL` (prod: `https://apisni.soft180.co`) o CreateTicket local. Embed: `token3rd` + `accessTicket`. Los `pageId` deben estar compartidos en QuickBI del workspace del upstream; si no, el API SNI responde 502.
+
 ### ADR-008 · Clave de seguimiento + capa
 Todo registro lleva `tipo_registro`, `capa`, `clave_seguimiento` para cruces, upsert y mando nacional.
 
@@ -194,3 +197,6 @@ Orden cronológico reciente (commits + trabajo contractual):
 | 2026-07-28 | Comparación bases vs formularios + modelo maqueta Agua |
 | 2026-07-30 | Evidencias contrato 9677 (informe + figuras) |
 | 2026-07-31 | Init memoria agent + Graphify arquitectura |
+| 2026-08-20 | QuickBI: embed token3rd + API CreateTicket (port SNI) |
+| 2026-08-23 | Docker compose (--profile app): Postgres + migrate + Next standalone |
+| 2026-08-23 | Local recomendado: `DATABASE_URL` = Supabase (misma base que prod / QuickBI) |
