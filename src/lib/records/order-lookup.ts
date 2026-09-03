@@ -8,6 +8,7 @@ import { bmaqCapaLookupVariants } from "@/themes/banco-de-maquinaria/capture-for
 import { carroCapaLookupVariants } from "@/themes/carrotanques/capture-forms";
 import { obrasEmergCapaLookupVariants } from "@/themes/obras-de-emergencia/capture-forms";
 import { obrasImpCapaLookupVariants } from "@/themes/obras-por-impuestos/capture-forms";
+import { ficCapaLookupVariants } from "@/themes/fic/capture-forms";
 
 export type OrderLookupMatchKind = "unica" | "x_pago";
 
@@ -42,6 +43,7 @@ function opOf(r: RecordRow): string {
       r.placa ||
       r.serial ||
       r.no_convenio ||
+      r.no_cdp ||
       "",
   ).trim();
 }
@@ -141,6 +143,9 @@ function capaVariants(themeId: string, capa: string): string[] {
   }
   if (themeId === "obras-por-impuestos") {
     return obrasImpCapaLookupVariants(capa);
+  }
+  if (themeId === "fic") {
+    return ficCapaLookupVariants(capa);
   }
   return [capa.trim()].filter(Boolean);
 }
@@ -479,6 +484,7 @@ export async function searchThemeOrders(params: {
         OR coalesce(${records.payload}->>'marca','') ILIKE ${like}
         OR coalesce(${records.payload}->>'serial','') ILIKE ${like}
         OR coalesce(${records.payload}->>'no_convenio','') ILIKE ${like}
+        OR coalesce(${records.payload}->>'no_cdp','') ILIKE ${like}
         OR coalesce(${records.payload}->>'no_orden_de_compra','') ILIKE ${like}
         OR coalesce(${records.payload}->>'no_maquina','') ILIKE ${like}
         OR coalesce(${records.payload}->>'referencia','') ILIKE ${like}
@@ -568,6 +574,7 @@ export async function findThemeRecordByOpAndCapa(params: {
     OR lower(trim(coalesce(${records.payload}->>'placa',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'serial',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'no_convenio',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'no_cdp',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'orden_de_proveeduria_x_pago',''))) = ${op.toLowerCase()}
   )`;
 
@@ -638,6 +645,7 @@ export async function listThemeRecordsByOpAndCapa(params: {
     OR lower(trim(coalesce(${records.payload}->>'placa',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'serial',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'no_convenio',''))) = ${op.toLowerCase()}
+    OR lower(trim(coalesce(${records.payload}->>'no_cdp',''))) = ${op.toLowerCase()}
     OR lower(trim(coalesce(${records.payload}->>'orden_de_proveeduria_x_pago',''))) = ${op.toLowerCase()}
   )`;
 

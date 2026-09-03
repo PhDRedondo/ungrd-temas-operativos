@@ -18,6 +18,12 @@ import { OBRAS_EMERG_CAPTURE_FORMS } from "../src/themes/obras-de-emergencia/cap
 import { calculateImpuestosIndicadores } from "../src/themes/obras-por-impuestos/calculations";
 import { aggregateImpuestosDashboard } from "../src/themes/obras-por-impuestos/dashboard";
 import { OBRAS_IMP_CAPTURE_FORMS } from "../src/themes/obras-por-impuestos/capture-forms";
+import {
+  FIC_CAPTURE_FORMS,
+  ficCapaFromVigencia,
+  ficCapaLookupVariants,
+} from "../src/themes/fic/capture-forms";
+import { canonicalEstadoLegalizacion } from "../src/themes/fic/select-options";
 
 let passed = 0;
 function test(name: string, fn: () => void) {
@@ -46,12 +52,17 @@ function row(partial: Partial<RecordRow> & { id: string }): RecordRow {
 test("temas registrados con captureForms", () => {
   const emerg = getTheme("obras-de-emergencia");
   const imp = getTheme("obras-por-impuestos");
+  const fic = getTheme("fic");
   assert.ok(emerg);
   assert.ok(imp);
+  assert.ok(fic);
   assert.equal(emerg!.captureForms?.length, 3);
   assert.equal(imp!.captureForms?.length, 3);
+  assert.equal(fic!.captureForms?.length, 3);
   assert.equal(emerg!.fields.find((f) => f.name === "estado")?.type, "select");
   assert.equal(imp!.fields.find((f) => f.name === "estado")?.type, "select");
+  assert.equal(fic!.fields.find((f) => f.name === "estado")?.type, "select");
+  assert.equal(fic!.fields.find((f) => f.name === "vigencia")?.type, "select");
 });
 
 test("campos de formularios existen en schema Excel (emergencia)", () => {
@@ -73,6 +84,42 @@ test("campos de formularios existen en schema Excel (impuestos)", () => {
       assert.ok(names.has(n), `impuestos form ${form.id}: falta campo ${n}`);
     }
   }
+});
+
+test("campos de formularios existen en schema Excel (fic)", () => {
+  const names = new Set(getTheme("fic")!.fields.map((f) => f.name));
+  for (const form of FIC_CAPTURE_FORMS) {
+    for (const n of form.fieldNames) {
+      assert.ok(names.has(n), `fic form ${form.id}: falta campo ${n}`);
+    }
+    for (const n of form.requiredNames || []) {
+      assert.ok(names.has(n), `fic form ${form.id}: required ${n}`);
+    }
+  }
+});
+
+test("prepareTrackingRow fic deriva capa de vigencia y sync CDP", () => {
+  const theme = getTheme("fic")!;
+  const out = prepareTrackingRow(theme, {
+    no_cdp: "CDP-999",
+    vigencia: "2024",
+    departamento: "Huila",
+    municipio: "Neiva",
+    valor: 1000,
+    estado: "por legalizar",
+  });
+  assert.equal(out.capa, "Transferencia FIC 2024");
+  assert.equal(out.tipo_registro, "Transferencia FIC 2024");
+  assert.equal(out.clave_seguimiento, "CDP-999");
+  assert.equal(out.estado, "POR LEGALIZAR");
+});
+
+test("fic capa lookup incluye todas las vigencias", () => {
+  const vars = ficCapaLookupVariants("Transferencia FIC 2026");
+  assert.ok(vars.includes("Transferencia FIC 2014"));
+  assert.ok(vars.includes("Transferencia FIC 2026"));
+  assert.equal(ficCapaFromVigencia("2025"), "Transferencia FIC 2025");
+  assert.equal(canonicalEstadoLegalizacion("vencido"), "VENCIDO");
 });
 
 test("toPctValue acepta 0.88 y 88%", () => {

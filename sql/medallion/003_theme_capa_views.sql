@@ -522,31 +522,23 @@ COMMENT ON VIEW carrotanques.suministro IS 'Carrotanques — hoja Excel «sumini
 -- === Obras de Emergencia → schema obras_emergencia ===
 CREATE SCHEMA IF NOT EXISTS obras_emergencia;
 
-DROP VIEW IF EXISTS obras_emergencia.base CASCADE;
-CREATE VIEW obras_emergencia.base AS
+DROP VIEW IF EXISTS obras_emergencia.contrato CASCADE;
+CREATE VIEW obras_emergencia.contrato AS
 SELECT
   r.id AS record_id,
   r.theme_id,
   r.source,
   r.created_at,
   r.updated_at,
-  r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'clave_seguimiento' AS clave_seguimiento,
-  r.payload->>'orden_de_proveeduria' AS orden_de_proveeduria,
-  r.payload->>'id' AS id,
+  r.payload->>'contrato_de_obra' AS contrato_de_obra,
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
-  r.payload->>'contrato_de_obra' AS contrato_de_obra,
-  r.payload->>'divipola' AS divipola,
-  r.payload->>'lugar' AS lugar,
+  r.payload->>'contratista' AS contratista,
   r.payload->>'obra_realizada' AS obra_realizada,
   r.payload->>'objeto_del_contrato' AS objeto_del_contrato,
-  r.payload->>'latitud' AS latitud,
-  r.payload->>'longitud' AS longitud,
-  r.payload->>'contratista' AS contratista,
-  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
-  r.payload->>'estado_de_pago' AS estado_de_pago,
   COALESCE(
     CASE
       WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
@@ -555,117 +547,103 @@ SELECT
     END,
     r.valor
   ) AS valor,
-  r.payload->>'plazo' AS plazo,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'estado_de_pago' AS estado_de_pago,
+  r.payload->>'avance_fisico_ejecutado' AS avance_fisico_ejecutado,
+  r.payload->>'avance_financiero_ejecutado' AS avance_financiero_ejecutado,
+  r.payload->>'avance_fisico_programado' AS avance_fisico_programado,
   coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
   r.payload->>'fecha_finalizacion_uno' AS fecha_finalizacion_uno,
   r.payload->>'no_cdp' AS no_cdp,
   r.payload->>'no_rc' AS no_rc,
-  r.payload->>'anticipo' AS anticipo,
-  r.payload->>'porcentaje_anticipo' AS porcentaje_anticipo,
-  r.payload->>'valor_anticipo' AS valor_anticipo,
-  r.payload->>'modificacion_contractual' AS modificacion_contractual,
-  r.payload->>'otrosi_uno' AS otrosi_uno,
-  r.payload->>'tipo_otrosi_uno' AS tipo_otrosi_uno,
-  r.payload->>'tiempo_prorroga_uno' AS tiempo_prorroga_uno,
-  r.payload->>'adicion_uno' AS adicion_uno,
-  r.payload->>'cdp_prorroga_uno' AS cdp_prorroga_uno,
-  r.payload->>'rc_prorroga_uno' AS rc_prorroga_uno,
-  r.payload->>'fecha_finalizacion_dos' AS fecha_finalizacion_dos,
-  r.payload->>'justificacion_modificacion_contractual_uno' AS justificacion_modificacion_contractual_uno,
-  r.payload->>'otrosi_dos' AS otrosi_dos,
-  r.payload->>'tipo_otrosi_dos' AS tipo_otrosi_dos,
-  r.payload->>'tiempo_prorroga_dos' AS tiempo_prorroga_dos,
-  r.payload->>'adicion_dos' AS adicion_dos,
-  r.payload->>'cdp_mod_contract' AS cdp_mod_contract,
-  r.payload->>'rc_mod_contrac' AS rc_mod_contrac,
-  r.payload->>'fecha_finalizacion_tres' AS fecha_finalizacion_tres,
-  r.payload->>'justificacion_mod_cont_dos' AS justificacion_mod_cont_dos,
-  r.payload->>'otrosi_tres' AS otrosi_tres,
-  r.payload->>'tipo_otrosi_tres' AS tipo_otrosi_tres,
-  r.payload->>'tiempo_prorroga_tres' AS tiempo_prorroga_tres,
-  r.payload->>'adicion_tres' AS adicion_tres,
-  r.payload->>'fecha_finalizacion_cuatro' AS fecha_finalizacion_cuatro,
-  r.payload->>'justificacion_mod_cont_tres' AS justificacion_mod_cont_tres,
-  r.payload->>'avance_fisico_ejecutado' AS avance_fisico_ejecutado,
-  r.payload->>'avance_financiero_ejecutado' AS avance_financiero_ejecutado,
-  r.payload->>'avance_fisico_programado' AS avance_fisico_programado,
-  r.payload->>'cuentas_de_cobro_tramitadas' AS cuentas_de_cobro_tramitadas,
-  r.payload->>'observaciones' AS observaciones,
-  r.payload->>'contrato_de_interventoria' AS contrato_de_interventoria,
-  r.payload->>'objeto_contrato_de_interventoria' AS objeto_contrato_de_interventoria,
-  r.payload->>'contratista_cont_interv' AS contratista_cont_interv,
-  r.payload->>'supervisor_conti_nterv' AS supervisor_conti_nterv,
-  r.payload->>'valor_cont_interv' AS valor_cont_interv,
-  r.payload->>'plazo_cont_interv' AS plazo_cont_interv,
-  r.payload->>'acta_de_inicio_fecha_inicial' AS acta_de_inicio_fecha_inicial,
-  r.payload->>'acta_de_inicio_fecha_final' AS acta_de_inicio_fecha_final,
-  r.payload->>'cdp_cont_interv' AS cdp_cont_interv,
-  r.payload->>'rc_cont_interv' AS rc_cont_interv,
-  r.payload->>'modificacion_contrac_cont_interv' AS modificacion_contrac_cont_interv,
-  r.payload->>'otrosi_uno_cont_interv' AS otrosi_uno_cont_interv,
-  r.payload->>'tipo_otrosi_cont_inter' AS tipo_otrosi_cont_inter,
-  r.payload->>'tiempo_prorroga_cont_interv' AS tiempo_prorroga_cont_interv,
-  r.payload->>'adicion_prorroga_cont_interv' AS adicion_prorroga_cont_interv,
-  r.payload->>'cdp_prorroga_cont_interv' AS cdp_prorroga_cont_interv,
-  r.payload->>'rc_prorroga_cont_interv' AS rc_prorroga_cont_interv,
-  r.payload->>'fecha_de_finalizacion_cont_interv' AS fecha_de_finalizacion_cont_interv,
-  r.payload->>'justificacion_mod_contractual_cont_int' AS justificacion_mod_contractual_cont_int,
-  r.payload->>'otrosi_interv_dos' AS otrosi_interv_dos,
-  r.payload->>'tipo_otrosi_interv_dos' AS tipo_otrosi_interv_dos,
-  r.payload->>'tiempo_interv_dos' AS tiempo_interv_dos,
-  r.payload->>'adicion_interv_dos' AS adicion_interv_dos,
-  r.payload->>'cdp_mod_contract_interv' AS cdp_mod_contract_interv,
-  r.payload->>'rc_mod_contrac_interv' AS rc_mod_contrac_interv,
-  r.payload->>'fecha_finalizacion_interv_tres' AS fecha_finalizacion_interv_tres,
-  r.payload->>'justificacion_mod_cont_interv_dos' AS justificacion_mod_cont_interv_dos,
-  r.payload->>'avance_fisico_ejecutado_cont_interv' AS avance_fisico_ejecutado_cont_interv,
-  r.payload->>'avance_financiero_ejecutado_cont_interv' AS avance_financiero_ejecutado_cont_interv,
-  r.payload->>'avance_fisico_programado_cont_interv' AS avance_fisico_programado_cont_interv,
-  r.payload->>'cuenta_de_cobro_tramitadas_cont_interv' AS cuenta_de_cobro_tramitadas_cont_interv,
-  r.payload->>'minuta_y_obs_cont_interv' AS minuta_y_obs_cont_interv,
-  r.payload->>'tipo_de_contrato' AS tipo_de_contrato,
-  r.payload->>'horas_maquina' AS horas_maquina,
-  r.payload->>'dias_volqueta' AS dias_volqueta,
-  r.payload->>'proveedor' AS proveedor,
-  r.payload->>'nit' AS nit,
-  r.payload->>'representante_legal' AS representante_legal,
-  r.payload->>'cc_representante_legal' AS cc_representante_legal,
-  r.payload->>'telefono_contratista' AS telefono_contratista,
-  r.payload->>'correo_contratista' AS correo_contratista,
-  r.payload->>'fecha_orden' AS fecha_orden,
-  r.payload->>'fecha_aceptacion' AS fecha_aceptacion,
-  r.payload->>'fecha_de_activacion' AS fecha_de_activacion,
-  r.payload->>'fecha_finalizacion' AS fecha_finalizacion,
-  r.payload->>'alcance_uno' AS alcance_uno,
-  r.payload->>'tipo_alcance_uno' AS tipo_alcance_uno,
-  r.payload->>'alcance_dos' AS alcance_dos,
-  r.payload->>'tipo_alcance_dos' AS tipo_alcance_dos,
-  r.payload->>'tiempo_de_prorroga_dos' AS tiempo_de_prorroga_dos,
-  r.payload->>'cdp_prorroga_dos' AS cdp_prorroga_dos,
-  r.payload->>'rc_prorroga_dos' AS rc_prorroga_dos,
-  r.payload->>'justificacion_modificacion_contractual_dos' AS justificacion_modificacion_contractual_dos,
-  r.payload->>'alcance_tres' AS alcance_tres,
-  r.payload->>'tipo_alcance_tres' AS tipo_alcance_tres,
-  r.payload->>'tiempo_de_prorroga_tres' AS tiempo_de_prorroga_tres,
-  r.payload->>'cdp_prorroga_tres' AS cdp_prorroga_tres,
-  r.payload->>'rc_prorroga_tres' AS rc_prorroga_tres,
-  r.payload->>'justificacion_modificacion_contractual_tres' AS justificacion_modificacion_contractual_tres,
-  r.payload->>'alcance_cuatro' AS alcance_cuatro,
-  r.payload->>'tipo_alcance_cuatro' AS tipo_alcance_cuatro,
-  r.payload->>'tiempo_de_prorroga_cuatro' AS tiempo_de_prorroga_cuatro,
-  r.payload->>'adicion_cuatro' AS adicion_cuatro,
-  r.payload->>'cdp_prorroga_cuatro' AS cdp_prorroga_cuatro,
-  r.payload->>'rc_prorroga_cuatro' AS rc_prorroga_cuatro,
-  r.payload->>'fecha_finalizacion_cinco' AS fecha_finalizacion_cinco,
-  r.payload->>'porcentaje_avance_financiero_ejecutado' AS porcentaje_avance_financiero_ejecutado,
-  r.payload->>'porcentaje_avance_fisico_ejecutado' AS porcentaje_avance_fisico_ejecutado,
-  r.payload->>'porcentaje_avance_fisico_programado' AS porcentaje_avance_fisico_programado
+  r.payload->>'lugar' AS lugar,
+  r.payload->>'latitud' AS latitud,
+  r.payload->>'longitud' AS longitud,
+  r.payload->>'observaciones' AS observaciones
 FROM public.records r
 WHERE r.theme_id = 'obras-de-emergencia'
   AND r.deleted_at IS NULL
-  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test');
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('contrato de obra'));
 
-COMMENT ON VIEW obras_emergencia.base IS 'Obras de Emergencia — base';
+COMMENT ON VIEW obras_emergencia.contrato IS 'Obras de Emergencia — hoja Excel «contrato»';
+
+
+DROP VIEW IF EXISTS obras_emergencia.orden_proveeduria CASCADE;
+CREATE VIEW obras_emergencia.orden_proveeduria AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  r.payload->>'orden_de_proveeduria' AS orden_de_proveeduria,
+  nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
+  nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
+  r.payload->>'proveedor' AS proveedor,
+  r.payload->>'tipo_de_contrato' AS tipo_de_contrato,
+  COALESCE(
+    CASE
+      WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+      THEN nullif(trim(r.payload->>'valor'), '')::numeric
+      ELSE NULL
+    END,
+    r.valor
+  ) AS valor,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'estado_de_pago' AS estado_de_pago,
+  r.payload->>'horas_maquina' AS horas_maquina,
+  r.payload->>'dias_volqueta' AS dias_volqueta,
+  r.payload->>'fecha_orden' AS fecha_orden,
+  r.payload->>'fecha_de_activacion' AS fecha_de_activacion,
+  r.payload->>'fecha_finalizacion' AS fecha_finalizacion,
+  r.payload->>'porcentaje_avance_fisico_ejecutado' AS porcentaje_avance_fisico_ejecutado,
+  r.payload->>'porcentaje_avance_financiero_ejecutado' AS porcentaje_avance_financiero_ejecutado,
+  r.payload->>'porcentaje_avance_fisico_programado' AS porcentaje_avance_fisico_programado,
+  r.payload->>'nit' AS nit,
+  r.payload->>'representante_legal' AS representante_legal,
+  r.payload->>'telefono_contratista' AS telefono_contratista,
+  r.payload->>'correo_contratista' AS correo_contratista,
+  r.payload->>'observaciones' AS observaciones
+FROM public.records r
+WHERE r.theme_id = 'obras-de-emergencia'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('orden de proveeduría'));
+
+COMMENT ON VIEW obras_emergencia.orden_proveeduria IS 'Obras de Emergencia — hoja Excel «orden_proveeduria»';
+
+
+DROP VIEW IF EXISTS obras_emergencia.seguimiento CASCADE;
+CREATE VIEW obras_emergencia.seguimiento AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'estado_de_pago' AS estado_de_pago,
+  r.payload->>'avance_fisico_ejecutado' AS avance_fisico_ejecutado,
+  r.payload->>'avance_financiero_ejecutado' AS avance_financiero_ejecutado,
+  r.payload->>'avance_fisico_programado' AS avance_fisico_programado,
+  coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
+  r.payload->>'fecha_finalizacion_uno' AS fecha_finalizacion_uno,
+  r.payload->>'cuentas_de_cobro_tramitadas' AS cuentas_de_cobro_tramitadas,
+  r.payload->>'observaciones' AS observaciones
+FROM public.records r
+WHERE r.theme_id = 'obras-de-emergencia'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('contrato de obra'));
+
+COMMENT ON VIEW obras_emergencia.seguimiento IS 'Obras de Emergencia — hoja Excel «seguimiento»';
 
 
 -- === Puentes → schema puentes ===
@@ -951,24 +929,24 @@ COMMENT ON VIEW banco_maquinaria.bitacora_convenio IS 'Banco de Maquinaria — h
 -- === Obras por impuestos → schema obras_impuestos ===
 CREATE SCHEMA IF NOT EXISTS obras_impuestos;
 
-DROP VIEW IF EXISTS obras_impuestos.base CASCADE;
-CREATE VIEW obras_impuestos.base AS
+DROP VIEW IF EXISTS obras_impuestos.convenio CASCADE;
+CREATE VIEW obras_impuestos.convenio AS
 SELECT
   r.id AS record_id,
   r.theme_id,
   r.source,
   r.created_at,
   r.updated_at,
-  r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'clave_seguimiento' AS clave_seguimiento,
   r.payload->>'no_convenio' AS no_convenio,
-  coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
-  r.payload->>'id' AS id,
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
-  r.payload->>'divipola' AS divipola,
   r.payload->>'lugar' AS lugar,
+  r.payload->>'contribuyente' AS contribuyente,
+  r.payload->>'contratista' AS contratista,
+  r.payload->>'objeto_del_convenio' AS objeto_del_convenio,
   COALESCE(
     CASE
       WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
@@ -977,15 +955,37 @@ SELECT
     END,
     r.valor
   ) AS valor,
-  r.payload->>'objeto_del_convenio' AS objeto_del_convenio,
-  r.payload->>'latitud' AS latitud,
-  r.payload->>'longitud' AS longitud,
-  r.payload->>'contribuyente' AS contribuyente,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
   r.payload->>'fecha_de_inicio_del_convenio' AS fecha_de_inicio_del_convenio,
   r.payload->>'fecha_de_terminacion_del_convenio' AS fecha_de_terminacion_del_convenio,
   r.payload->>'fecha_de_activacion' AS fecha_de_activacion,
   r.payload->>'fecha_finalizacion' AS fecha_finalizacion,
+  r.payload->>'municipios_apoyados_por_convenio' AS municipios_apoyados_por_convenio,
+  r.payload->>'entidad_de_iconos' AS entidad_de_iconos,
+  r.payload->>'latitud' AS latitud,
+  r.payload->>'longitud' AS longitud,
+  r.payload->>'observaciones' AS observaciones
+FROM public.records r
+WHERE r.theme_id = 'obras-por-impuestos'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('convenio obra por impuesto'));
+
+COMMENT ON VIEW obras_impuestos.convenio IS 'Obras por impuestos — hoja Excel «convenio»';
+
+
+DROP VIEW IF EXISTS obras_impuestos.interventoria CASCADE;
+CREATE VIEW obras_impuestos.interventoria AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
   r.payload->>'convenio_de_interventoria_no' AS convenio_de_interventoria_no,
   r.payload->>'objeto_del_convenio_de_interventoria' AS objeto_del_convenio_de_interventoria,
   r.payload->>'contratista' AS contratista,
@@ -994,15 +994,40 @@ SELECT
   r.payload->>'plazo_convenio_de_interventoria' AS plazo_convenio_de_interventoria,
   r.payload->>'fecha_inicio_de_convenio_interventoria' AS fecha_inicio_de_convenio_interventoria,
   r.payload->>'fecha_terminacion_de_convenio_de_interventoria' AS fecha_terminacion_de_convenio_de_interventoria,
-  r.payload->>'entidad_de_iconos' AS entidad_de_iconos,
-  r.payload->>'municipios_apoyados_por_convenio' AS municipios_apoyados_por_convenio,
   r.payload->>'observaciones' AS observaciones
 FROM public.records r
 WHERE r.theme_id = 'obras-por-impuestos'
   AND r.deleted_at IS NULL
-  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test');
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('convenio obra por impuesto'));
 
-COMMENT ON VIEW obras_impuestos.base IS 'Obras por impuestos — base';
+COMMENT ON VIEW obras_impuestos.interventoria IS 'Obras por impuestos — hoja Excel «interventoria»';
+
+
+DROP VIEW IF EXISTS obras_impuestos.seguimiento CASCADE;
+CREATE VIEW obras_impuestos.seguimiento AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'fecha_de_inicio_del_convenio' AS fecha_de_inicio_del_convenio,
+  r.payload->>'fecha_de_terminacion_del_convenio' AS fecha_de_terminacion_del_convenio,
+  r.payload->>'fecha_de_activacion' AS fecha_de_activacion,
+  r.payload->>'fecha_finalizacion' AS fecha_finalizacion,
+  r.payload->>'observaciones' AS observaciones
+FROM public.records r
+WHERE r.theme_id = 'obras-por-impuestos'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('convenio obra por impuesto'));
+
+COMMENT ON VIEW obras_impuestos.seguimiento IS 'Obras por impuestos — hoja Excel «seguimiento»';
 
 
 -- === Asistencia Humanitaria → schema asistencia_humanitaria ===
@@ -1241,26 +1266,28 @@ COMMENT ON VIEW compra_materiales.base IS 'Compra de materiales — base';
 -- === FIC → schema fic ===
 CREATE SCHEMA IF NOT EXISTS fic;
 
-DROP VIEW IF EXISTS fic.base CASCADE;
-CREATE VIEW fic.base AS
+DROP VIEW IF EXISTS fic.transferencia CASCADE;
+CREATE VIEW fic.transferencia AS
 SELECT
   r.id AS record_id,
   r.theme_id,
   r.source,
   r.created_at,
   r.updated_at,
-  r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'clave_seguimiento' AS clave_seguimiento,
-  r.payload->>'no_cdp' AS no_cdp,
+  r.payload->>'acto_administrativo_otorgamiento_del_recurso' AS acto_administrativo_otorgamiento_del_recurso,
+  r.payload->>'fecha_acto_administrativo_resolucion' AS fecha_acto_administrativo_resolucion,
   r.payload->>'vigencia' AS vigencia,
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
+  r.payload->>'objeto_transferencia' AS objeto_transferencia,
   r.payload->>'tipo_de_evento' AS tipo_de_evento,
   r.payload->>'fecha_formato_de_aprobacion_de_la_atencion' AS fecha_formato_de_aprobacion_de_la_atencion,
-  r.payload->>'acto_administrativo_otorgamiento_del_recurso' AS acto_administrativo_otorgamiento_del_recurso,
-  r.payload->>'fecha_acto_administrativo_resolucion' AS fecha_acto_administrativo_resolucion,
+  r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
   r.payload->>'clasificacion' AS clasificacion,
+  r.payload->>'no_cdp' AS no_cdp,
   r.payload->>'no_rc' AS no_rc,
   COALESCE(
     CASE
@@ -1275,26 +1302,75 @@ SELECT
   r.payload->>'fecha_de_radicacion_comunicacion_ente_territorial' AS fecha_de_radicacion_comunicacion_ente_territorial,
   r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
   r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
-  r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
-  r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'valor_legalizado' AS valor_legalizado,
   r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
   r.payload->>'porcentaje_de_avance_en_el_ejericicio_de_legalizacion' AS porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
-  r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
-  r.payload->>'describa_el_resultado_de_las_visitas_realizadas' AS describa_el_resultado_de_las_visitas_realizadas,
-  r.payload->>'observaciones' AS observaciones,
-  r.payload->>'fecha_de_radicacion_en_gafc' AS fecha_de_radicacion_en_gafc,
-  r.payload->>'objeto_transferencia' AS objeto_transferencia,
-  r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
-  r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
-  r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
-  r.payload->>'valor_legalizado' AS valor_legalizado
+  r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
+  r.payload->>'observaciones' AS observaciones
 FROM public.records r
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
-  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test');
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
 
-COMMENT ON VIEW fic.base IS 'FIC — base';
+COMMENT ON VIEW fic.transferencia IS 'FIC — hoja Excel «Transferencia FIC»';
+
+
+DROP VIEW IF EXISTS fic.legalizacion CASCADE;
+CREATE VIEW fic.legalizacion AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'valor_legalizado' AS valor_legalizado,
+  r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
+  r.payload->>'porcentaje_de_avance_en_el_ejericicio_de_legalizacion' AS porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
+  r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
+  r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
+  r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
+  r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
+  r.payload->>'describa_el_resultado_de_las_visitas_realizadas' AS describa_el_resultado_de_las_visitas_realizadas,
+  r.payload->>'fecha_de_radicacion_en_gafc' AS fecha_de_radicacion_en_gafc,
+  r.payload->>'observaciones' AS observaciones
+FROM public.records r
+WHERE r.theme_id = 'fic'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+
+COMMENT ON VIEW fic.legalizacion IS 'FIC — hoja Excel «Legalización»';
+
+
+DROP VIEW IF EXISTS fic.modificacion CASCADE;
+CREATE VIEW fic.modificacion AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
+  r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
+  r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'observaciones' AS observaciones
+FROM public.records r
+WHERE r.theme_id = 'fic'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+
+COMMENT ON VIEW fic.modificacion IS 'FIC — hoja Excel «Modificación / prórroga»';
 
 
 -- === Convenios → schema convenios ===
@@ -1613,14 +1689,18 @@ SELECT * FROM (VALUES
   ('carrotanques.actualizar_categorias', 'carrotanques', 'actualizar_categorias', 'carrotanques', 'actualizar_categorias', 'Carrotanques — actualizar_categorias', 'SELECT * FROM carrotanques.actualizar_categorias'),
   ('carrotanques.bitacora', 'carrotanques', 'bitacora', 'carrotanques', 'bitacora', 'Carrotanques — bitacora', 'SELECT * FROM carrotanques.bitacora'),
   ('carrotanques.suministro', 'carrotanques', 'suministro', 'carrotanques', 'suministro', 'Carrotanques — suministro', 'SELECT * FROM carrotanques.suministro'),
-  ('obras_emergencia.base', 'obras_emergencia', 'base', 'obras-de-emergencia', 'base', 'Obras de Emergencia — base', 'SELECT * FROM obras_emergencia.base'),
+  ('obras_emergencia.contrato', 'obras_emergencia', 'contrato', 'obras-de-emergencia', 'contrato', 'Obras de Emergencia — contrato', 'SELECT * FROM obras_emergencia.contrato'),
+  ('obras_emergencia.orden_proveeduria', 'obras_emergencia', 'orden_proveeduria', 'obras-de-emergencia', 'orden_proveeduria', 'Obras de Emergencia — orden_proveeduria', 'SELECT * FROM obras_emergencia.orden_proveeduria'),
+  ('obras_emergencia.seguimiento', 'obras_emergencia', 'seguimiento', 'obras-de-emergencia', 'seguimiento', 'Obras de Emergencia — seguimiento', 'SELECT * FROM obras_emergencia.seguimiento'),
   ('puentes.contratos_estructuracion', 'puentes', 'contratos_estructuracion', 'puentes', 'Contratos Estructuracion', 'Puentes — Contratos Estructuracion', 'SELECT * FROM puentes.contratos_estructuracion'),
   ('puentes.base_general_puentes', 'puentes', 'base_general_puentes', 'puentes', 'Base General Puentes', 'Puentes — Base General Puentes', 'SELECT * FROM puentes.base_general_puentes'),
   ('puentes.bitacora', 'puentes', 'bitacora', 'puentes', 'bitacora', 'Puentes — bitacora', 'SELECT * FROM puentes.bitacora'),
   ('banco_maquinaria.alta_convenio', 'banco_maquinaria', 'alta_convenio', 'banco-de-maquinaria', 'alta_convenio', 'Banco de Maquinaria — alta_convenio', 'SELECT * FROM banco_maquinaria.alta_convenio'),
   ('banco_maquinaria.alta_detalle', 'banco_maquinaria', 'alta_detalle', 'banco-de-maquinaria', 'alta_detalle', 'Banco de Maquinaria — alta_detalle', 'SELECT * FROM banco_maquinaria.alta_detalle'),
   ('banco_maquinaria.bitacora_convenio', 'banco_maquinaria', 'bitacora_convenio', 'banco-de-maquinaria', 'bitacora_convenio', 'Banco de Maquinaria — bitacora_convenio', 'SELECT * FROM banco_maquinaria.bitacora_convenio'),
-  ('obras_impuestos.base', 'obras_impuestos', 'base', 'obras-por-impuestos', 'base', 'Obras por impuestos — base', 'SELECT * FROM obras_impuestos.base'),
+  ('obras_impuestos.convenio', 'obras_impuestos', 'convenio', 'obras-por-impuestos', 'convenio', 'Obras por impuestos — convenio', 'SELECT * FROM obras_impuestos.convenio'),
+  ('obras_impuestos.interventoria', 'obras_impuestos', 'interventoria', 'obras-por-impuestos', 'interventoria', 'Obras por impuestos — interventoria', 'SELECT * FROM obras_impuestos.interventoria'),
+  ('obras_impuestos.seguimiento', 'obras_impuestos', 'seguimiento', 'obras-por-impuestos', 'seguimiento', 'Obras por impuestos — seguimiento', 'SELECT * FROM obras_impuestos.seguimiento'),
   ('asistencia_humanitaria.base', 'asistencia_humanitaria', 'base', 'asistencia-humanitaria', 'base', 'Asistencia Humanitaria — base', 'SELECT * FROM asistencia_humanitaria.base'),
   ('gestion_servicios.base', 'gestion_servicios', 'base', 'gestion-de-servicios', 'base', 'Gestión de Servicios — base', 'SELECT * FROM gestion_servicios.base'),
   ('subsidios_arriendos.consolidado', 'subsidios_arriendos', 'consolidado', 'subsidios-de-arriendos', 'consolidado', 'Subsidios de Arriendos — consolidado', 'SELECT * FROM subsidios_arriendos.consolidado'),
@@ -1628,7 +1708,9 @@ SELECT * FROM (VALUES
   ('asistencia_tecnica.base', 'asistencia_tecnica', 'base', 'asistencia-tecnica', 'base', 'Asistencia técnica — base', 'SELECT * FROM asistencia_tecnica.base'),
   ('equipo_respuesta.base', 'equipo_respuesta', 'base', 'equipo-de-respuesta', 'base', 'Equipo de respuesta — base', 'SELECT * FROM equipo_respuesta.base'),
   ('compra_materiales.base', 'compra_materiales', 'base', 'compra-de-materiales', 'base', 'Compra de materiales — base', 'SELECT * FROM compra_materiales.base'),
-  ('fic.base', 'fic', 'base', 'fic', 'base', 'FIC — base', 'SELECT * FROM fic.base'),
+  ('fic.transferencia', 'fic', 'transferencia', 'fic', 'Transferencia FIC', 'FIC — Transferencia FIC', 'SELECT * FROM fic.transferencia'),
+  ('fic.legalizacion', 'fic', 'legalizacion', 'fic', 'Legalización', 'FIC — Legalización', 'SELECT * FROM fic.legalizacion'),
+  ('fic.modificacion', 'fic', 'modificacion', 'fic', 'Modificación / prórroga', 'FIC — Modificación / prórroga', 'SELECT * FROM fic.modificacion'),
   ('convenios.base', 'convenios', 'base', 'convenios', 'base', 'Convenios — base', 'SELECT * FROM convenios.base'),
   ('presupuesto.base', 'presupuesto', 'base', 'presupuesto', 'base', 'Presupuesto — base', 'SELECT * FROM presupuesto.base'),
   ('ejecucion_financiera.base', 'ejecucion_financiera', 'base', 'ejecucion-financiera', 'base', 'Ejecución financiera — base', 'SELECT * FROM ejecucion_financiera.base'),

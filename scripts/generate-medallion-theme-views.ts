@@ -58,6 +58,10 @@ const SHEET_ALIAS: Record<string, string> = {
   estructuracion: "contratos_estructuracion",
   inventario: "base_general_puentes",
   consolidado: "consolidado",
+  // FIC — formularios AppSheet CONTROL FIC
+  transferencia: "transferencia",
+  legalizacion: "legalizacion",
+  modificacion: "modificacion",
 };
 
 /** Nombre legible de la hoja (como en Excel). */
@@ -73,6 +77,9 @@ const SHEET_LABEL: Record<string, string> = {
   base_general_puentes: "Base General Puentes",
   contratos_estructuracion: "Contratos Estructuracion",
   consolidado: "consolidado",
+  transferencia: "Transferencia FIC",
+  legalizacion: "Legalización",
+  modificacion: "Modificación / prórroga",
 };
 
 /**
@@ -340,6 +347,22 @@ const CAPA_VARIANTS: Record<string, string[]> = {
     "Contrato estructuración",
     "Contrato estructuracion",
     "Contratos Estructuracion",
+  ],
+  // FIC: capa canónica del form = 2026; la vista debe ver todas las vigencias.
+  "Transferencia FIC 2026": [
+    "Transferencia FIC 2014",
+    "Transferencia FIC 2015",
+    "Transferencia FIC 2016",
+    "Transferencia FIC 2017",
+    "Transferencia FIC 2018",
+    "Transferencia FIC 2019",
+    "Transferencia FIC 2020",
+    "Transferencia FIC 2021",
+    "Transferencia FIC 2022",
+    "Transferencia FIC 2023",
+    "Transferencia FIC 2024",
+    "Transferencia FIC 2025",
+    "Transferencia FIC 2026",
   ],
 };
 
