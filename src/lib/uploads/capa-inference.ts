@@ -20,6 +20,11 @@ import { normalizeObrasEmergCapa } from "@/themes/obras-de-emergencia/capture-fo
 import { canonicalEstadoObra } from "@/themes/obras-de-emergencia/select-options";
 import { normalizeObrasImpCapa } from "@/themes/obras-por-impuestos/capture-forms";
 import { canonicalEstadoConvenio } from "@/themes/obras-por-impuestos/select-options";
+import {
+  ficCapaFromVigencia,
+  normalizeFicCapa,
+} from "@/themes/fic/capture-forms";
+import { canonicalEstadoLegalizacion } from "@/themes/fic/select-options";
 
 /** Opciones oficiales de capa por tema (alineadas a fields-from-source). */
 const THEME_CAPA_HINTS: Record<
@@ -481,6 +486,31 @@ export function prepareTrackingRow(
     }
   }
 
+  if (theme.id === "fic") {
+    const fromVig =
+      ficCapaFromVigencia(out.vigencia) ||
+      ficCapaFromVigencia(out.tipo_registro) ||
+      ficCapaFromVigencia(out.capa);
+    if (fromVig) {
+      out.tipo_registro = fromVig;
+      out.capa = fromVig;
+      const y = fromVig.match(/(20\d{2})/);
+      if (y && !String(out.vigencia || "").trim()) out.vigencia = y[1];
+    } else {
+      if (out.tipo_registro) {
+        out.tipo_registro = normalizeFicCapa(String(out.tipo_registro));
+      }
+      if (out.capa) out.capa = normalizeFicCapa(String(out.capa));
+    }
+    if (out.estado != null && String(out.estado).trim()) {
+      out.estado = canonicalEstadoLegalizacion(out.estado);
+    }
+    const cdp = String(out.no_cdp || "").trim();
+    const clave = String(out.clave_seguimiento || "").trim();
+    if (!clave && cdp) out.clave_seguimiento = cdp;
+    if (clave && !cdp) out.no_cdp = clave;
+  }
+
   const claveRaw =
     out.clave_seguimiento ??
     out.orden_de_proveeduria ??
@@ -547,8 +577,12 @@ export function feedingGuideForTheme(themeId: string): {
     },
     fic: {
       clave: "Número de CDP",
-      capas: ["Transferencia FIC (por vigencia/año)"],
-      tip: "Una fila por CDP y vigencia. Si ya existe, active «Actualizar si el registro ya existe».",
+      capas: [
+        "1 · Transferencia FIC",
+        "2 · Seguimiento legalización",
+        "3 · Modificación / prórroga",
+      ],
+      tip: "Primero registre el CDP con su vigencia. Luego legalización o prórroga buscando el mismo No. CDP.",
     },
     puentes: {
       clave: "Identificador del puente · Contrato",
