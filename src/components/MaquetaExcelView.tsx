@@ -39,7 +39,6 @@ import {
 } from "@/themes/subsidios-de-arriendos/capture-forms";
 import {
   FIC_CAPAS,
-  FIC_CAPA_DEFAULT,
   normalizeFicCapa,
 } from "@/themes/fic/capture-forms";
 
@@ -281,15 +280,16 @@ function profileFor(themeId: string): ThemeExcelProfile {
   if (themeId === "fic") {
     return {
       capas: FIC_CAPAS,
-      defaultCapa: FIC_CAPA_DEFAULT,
+      // Mostrar todas las vigencias al entrar (la prueba real está en 2025).
+      defaultCapa: "__todas__",
       pinLeft: PIN_LEFT_FIC,
       searchLabel: "Buscar FIC (No. CDP)",
       searchPlaceholder: "No. CDP…",
       helpText:
-        "Busque por No. CDP. Clic en una celda para editar; vea fecha inicial, final y fecha actual.",
+        "Elija «Todos los formularios» o una vigencia (ej. Transferencia FIC 2025). Busque por No. CDP.",
       filterHint: " · filtro CDP: todas las vigencias de ese CDP",
       emptyHint:
-        " (Transferencia FIC por vigencia) o quite el filtro de CDP.",
+        " · pruebe «Todos los formularios» o «Transferencia FIC 2025».",
       normalizeCapa: (raw) => normalizeFicCapa(raw) || "Sin capa",
       isOfficial: (capa) => (FIC_CAPAS as readonly string[]).includes(capa),
       keyOf: (r) =>
