@@ -8,7 +8,7 @@ import { ESTADO_LEGALIZACION_OPCIONES } from "./select-options";
  * (fields-from-source intacto).
  */
 const CAPTURE_ONLY_FIELDS: FormField[] = [
-  { name: "fecha_cdp", label: "Fecha CDP", type: "date", excelWidth: 14 },
+  { name: "fecha_cdp", label: "Fecha FIC", type: "date", excelWidth: 14 },
   { name: "fecha_rc", label: "Fecha RC", type: "date", excelWidth: 14 },
   {
     name: "plazo_final_dias",
@@ -33,7 +33,7 @@ const CAPTURE_ONLY_FIELDS: FormField[] = [
 /**
  * FIC — Seguimiento y control de transferencias directas
  * (Fondo de Inversión Colectiva). Fuente: Seguimiento_FIC_2026.xlsx
- * Capas = vigencia (hoja por año). Clave: No. CDP.
+ * Capas = vigencia (hoja por año). Clave de seguimiento: número FIC (campo técnico no_cdp).
  * Captura alineada a AppSheet CONTROL FIC (fic_transferencias_Form).
  */
 const base = buildThemeFromSource({

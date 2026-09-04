@@ -908,7 +908,9 @@ export function CapturePanel({
           setMessage(
             byPlaca
               ? `Placa seleccionada. Complete los campos y guarde.`
-              : `Orden seleccionada. Complete los campos y guarde.`,
+              : theme.id === "fic"
+                ? `FIC seleccionado. Complete los campos y guarde.`
+                : `Orden seleccionada. Complete los campos y guarde.`,
           );
         }
       } catch {
@@ -998,14 +1000,22 @@ export function CapturePanel({
             ? n > 0
               ? `Placa seleccionada. Hay ${n} evento${n === 1 ? "" : "s"} en este formulario. El nuevo guardado agrega otra fila.`
               : `Placa seleccionada. Aún no hay eventos aquí: complete y guarde el primero.`
-            : n > 0
-              ? `Orden seleccionada. Hay ${n} evento${n === 1 ? "" : "s"} en este formulario. El nuevo guardado agrega otra fila.`
-              : `Orden seleccionada. Aún no hay eventos aquí: complete y guarde el primero.`,
+            : theme.id === "fic"
+              ? n > 0
+                ? `FIC seleccionado. Hay ${n} evento${n === 1 ? "" : "s"} en este formulario. El nuevo guardado agrega otra fila.`
+                : `FIC seleccionado. Aún no hay eventos aquí: complete y guarde el primero.`
+              : n > 0
+                ? `Orden seleccionada. Hay ${n} evento${n === 1 ? "" : "s"} en este formulario. El nuevo guardado agrega otra fila.`
+                : `Orden seleccionada. Aún no hay eventos aquí: complete y guarde el primero.`,
         );
       } catch {
         setAppendLayerRows([]);
         setMessage(
-          `Orden seleccionada. Complete los datos; el historial aparecerá debajo.`,
+          byPlaca
+            ? `Placa seleccionada. Complete los datos; el historial aparecerá debajo.`
+            : theme.id === "fic"
+              ? `FIC seleccionado. Complete los datos; el historial aparecerá debajo.`
+              : `Orden seleccionada. Complete los datos; el historial aparecerá debajo.`,
         );
       } finally {
         setLoadingLayer(false);
@@ -1643,10 +1653,14 @@ export function CapturePanel({
         const raw = formForSave[name] || "";
         rawValues[name] = field?.type === "number" ? Number(raw || 0) : raw;
       }
-      // Asegurar OP + identidad heredada aunque estén ocultos en UI
+      // Asegurar identidad heredada aunque esté oculta en UI
       if (selectedOrden) {
         rawValues.orden_de_proveeduria = selectedOrden.orden_de_proveeduria;
         rawValues.clave_seguimiento = selectedOrden.orden_de_proveeduria;
+        if (theme.id === "fic") {
+          rawValues.no_cdp = selectedOrden.orden_de_proveeduria;
+          rawValues.clave_seguimiento = selectedOrden.orden_de_proveeduria;
+        }
         {
           const lookupBy = resolveOrdenLookupBy(activeForm, theme.id);
           const payload = selectedOrden.payload as Record<string, unknown>;
@@ -2838,7 +2852,9 @@ export function CapturePanel({
                         >
                           Aún no hay eventos
                           {selectedOrden
-                            ? " para esta OP"
+                            ? theme.id === "fic"
+                              ? " para este FIC"
+                              : " para esta OP"
                             : selectedPuente
                               ? ` para el puente ${selectedPuente.id_puente}`
                               : selectedProceso

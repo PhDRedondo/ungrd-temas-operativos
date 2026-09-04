@@ -3,7 +3,7 @@
  *
  * Fuente: alimentador.fic_transferencias_Form (+ modificaciones).
  * Persistencia: records theme_id=fic. Capas = Transferencia FIC {vigencia}.
- * Clave: No. CDP. No reduce fields-from-source.ts (Excel intacto).
+ * Clave: número FIC (campo técnico no_cdp). No reduce fields-from-source.ts (Excel intacto).
  *
  * Plazos / fechas (misma fila principal):
  *  - plazo_ejecucion_dias + fecha_inicial_para_legalizacion → alta (no se pierden)
@@ -59,7 +59,7 @@ export function normalizeFicCapa(raw: string): string {
   return s;
 }
 
-/** Lookup: cualquier vigencia FIC encuentra CDPs de todas las capas Transferencia. */
+/** Lookup: cualquier vigencia FIC encuentra transferencias de todas las capas. */
 export function ficCapaLookupVariants(capa: string): string[] {
   const raw = String(capa || "").trim();
   const canon = normalizeFicCapa(raw) || raw;
