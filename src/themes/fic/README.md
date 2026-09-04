@@ -11,13 +11,13 @@
 
 ## Capas
 
-Una por vigencia (`Transferencia FIC 2014` … `2026`). Clave de seguimiento: **No. CDP**.
+Una por vigencia (`Transferencia FIC 2014` … `2026`). Clave de seguimiento: **número FIC** (columna Excel `No. CDP` / campo `no_cdp`).
 
 La capa se deriva de la **vigencia** al guardar (`prepareTrackingRow`); no hace falta elegirla a mano.
 
 ## Formularios de captura
 
-1. **Transferencia FIC** — alta del CDP (plazo inicial + fecha inicial de legalización).
+1. **Transferencia FIC** — alta del FIC (plazo inicial + fecha inicial de legalización).
 2. **Seguimiento legalización** — estado/valores; el visor usa la **fecha final** (con prórroga si hubo).
 3. **Modificación / prórroga** — conserva plazo/fecha inicial; suma adición y recalcula plazo/fecha final.
 

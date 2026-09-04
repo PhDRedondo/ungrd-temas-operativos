@@ -900,5 +900,9 @@ export function inheritFromAlta(
           ).trim();
     if (payment) out.orden_de_proveeduria_x_pago = payment;
   }
+  if (fieldNames.includes("no_cdp") && !out.no_cdp) {
+    const ficKey = String(hit.payload?.no_cdp || mainOp || "").trim();
+    if (ficKey) out.no_cdp = ficKey;
+  }
   return out;
 }

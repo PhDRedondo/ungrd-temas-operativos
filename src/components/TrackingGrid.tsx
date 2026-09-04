@@ -21,6 +21,7 @@ import {
   CARRO_TABLAS_ACTUALIZABLES,
   normalizeCarroCapa,
 } from "@/themes/carrotanques/capture-forms";
+import { normalizeFicCapa } from "@/themes/fic/capture-forms";
 
 type VersionRow = {
   id: string;
@@ -45,12 +46,16 @@ type Props = {
 function capaOf(themeId: string, r: RecordRow): string {
   const raw = String(r.tipo_registro || r.capa || "");
   if (themeId === "carrotanques") return normalizeCarroCapa(raw);
+  if (themeId === "fic") return normalizeFicCapa(raw) || raw;
   return normalizeAguaCapa(raw);
 }
 
 function keyOf(themeId: string, r: RecordRow): string {
   if (themeId === "carrotanques") {
     return String(r.placa || r.clave_seguimiento || "").trim();
+  }
+  if (themeId === "fic") {
+    return String(r.no_cdp || r.clave_seguimiento || "").trim();
   }
   return String(r.orden_de_proveeduria || r.clave_seguimiento || "").trim();
 }
@@ -65,9 +70,11 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
   const { role } = useAuth();
   const writable = canWrite(role || undefined);
   const carro = theme.id === "carrotanques";
+  const fic = theme.id === "fic";
 
   const trackingForms = useMemo(() => {
     const forms = theme.captureForms || [];
+    if (fic) return forms;
     const prefer = new Set(
       (carro
         ? CARRO_TABLAS_ACTUALIZABLES
@@ -79,7 +86,7 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
     return filtered.length
       ? filtered
       : forms.filter((f) => f.mode === "append");
-  }, [theme.captureForms, carro]);
+  }, [theme.captureForms, carro, fic]);
 
   const [formId, setFormId] = useState(trackingForms[0]?.id || "");
   const activeForm: CaptureFormConfig | undefined =
@@ -247,12 +254,16 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
     if (!writable || !activeForm) return;
     const key = carro
       ? (newRow.placa || "").trim()
-      : (newRow.orden_de_proveeduria || "").trim();
+      : fic
+        ? (newRow.no_cdp || newRow.clave_seguimiento || "").trim()
+        : (newRow.orden_de_proveeduria || "").trim();
     if (!key) {
       setError(
         carro
           ? "Indique la placa para la fila nueva."
-          : "Indique la orden de proveeduría para la fila nueva.",
+          : fic
+            ? "Indique el número FIC para la fila nueva."
+            : "Indique la orden de proveeduría para la fila nueva.",
       );
       return;
     }
@@ -270,6 +281,9 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
       values.capa = activeForm.capa;
       if (carro) {
         values.placa = key;
+        values.clave_seguimiento = key;
+      } else if (fic) {
+        values.no_cdp = key;
         values.clave_seguimiento = key;
       } else {
         values.orden_de_proveeduria = key;
@@ -406,11 +420,15 @@ export function TrackingGrid({ theme, records, onChanged }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-semibold text-ungrd-heading">
-          {carro ? "Filtrar placa" : "Filtrar orden de proveeduría"}
+          {carro
+            ? "Filtrar placa"
+            : fic
+              ? "Filtrar FIC"
+              : "Filtrar orden de proveeduría"}
           <input
             value={keyFilter}
             onChange={(e) => setKeyFilter(e.target.value)}
-            placeholder={carro ? "OZJ943…" : "GS-SMD-…"}
+            placeholder={carro ? "OZJ943…" : fic ? "Número FIC…" : "GS-SMD-…"}
             className="ml-2 rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-1.5 text-sm font-normal"
           />
         </label>

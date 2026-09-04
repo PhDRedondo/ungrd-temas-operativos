@@ -244,7 +244,9 @@ export async function POST(req: Request, ctx: Ctx) {
         ? "Ya existe un alta de maqueta para esta placa. Use el formulario de categorías u otra capa."
         : theme.id === "banco-de-maquinaria"
           ? "Ya existe un registro con esta clave (convenio o serial). Use avance F–I, operativo, bitácora o entrega según corresponda."
-          : "Ya existe un alta para esta orden de proveeduría. Use otro formulario para actualizar (T/U, líder, seguimiento, bitácora).";
+          : theme.id === "fic"
+            ? "Ya existe un alta para este FIC. Use Seguimiento legalización o Modificación / prórroga."
+            : "Ya existe un alta para esta orden de proveeduría. Use otro formulario para actualizar (T/U, líder, seguimiento, bitácora).";
     return NextResponse.json(
       {
         error: dupMsg,
