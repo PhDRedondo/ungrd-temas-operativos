@@ -509,6 +509,55 @@ export function prepareTrackingRow(
     const clave = String(out.clave_seguimiento || "").trim();
     if (!clave && cdp) out.clave_seguimiento = cdp;
     if (clave && !cdp) out.no_cdp = clave;
+
+    const toNum = (v: unknown): number | null => {
+      if (v === undefined || v === null || v === "") return null;
+      const n =
+        typeof v === "number" ? v : Number(String(v).replace(/[^\d.-]/g, ""));
+      return Number.isFinite(n) ? n : null;
+    };
+    const desembolso = toNum(out.valor);
+    const porLegalizar = toNum(out.valor_por_legalizar);
+    if (desembolso != null && desembolso !== 0 && porLegalizar != null) {
+      const pct = ((desembolso - porLegalizar) / desembolso) * 100;
+      out.porcentaje_de_avance_en_el_ejericicio_de_legalizacion =
+        Math.round(pct * 100) / 100;
+    }
+
+    const plazoInicial = toNum(out.plazo_ejecucion_dias) ?? 0;
+    const plazoAdicion = toNum(out.plazo_adicion_dias) ?? 0;
+    const hasPlazo =
+      toNum(out.plazo_ejecucion_dias) != null ||
+      toNum(out.plazo_adicion_dias) != null;
+    if (hasPlazo) {
+      out.plazo_final_dias = plazoInicial + plazoAdicion;
+    }
+    const fechaIni = String(out.fecha_inicial_para_legalizacion || "")
+      .trim()
+      .slice(0, 10);
+    const plazoFinal = toNum(out.plazo_final_dias);
+    if (fechaIni && plazoFinal != null) {
+      const base = new Date(`${fechaIni}T12:00:00`);
+      if (!Number.isNaN(base.getTime())) {
+        base.setDate(base.getDate() + Math.round(plazoFinal));
+        const y = base.getFullYear();
+        const m = String(base.getMonth() + 1).padStart(2, "0");
+        const d = String(base.getDate()).padStart(2, "0");
+        const fechaFinal = `${y}-${m}-${d}`;
+        out.fecha_final_para_legalizacion = fechaFinal;
+        // Columna Excel de prórroga: misma fecha final (no se pierde el rastro).
+        if (plazoAdicion > 0) {
+          out.fecha_de_legalizacion_por_prorroga = fechaFinal;
+        }
+      }
+    }
+
+    // Fecha actual del sistema (visor / comparación vs fecha final).
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    out.fecha_actual = `${y}-${m}-${d}`;
   }
 
   const claveRaw =
@@ -582,7 +631,7 @@ export function feedingGuideForTheme(themeId: string): {
         "2 · Seguimiento legalización",
         "3 · Modificación / prórroga",
       ],
-      tip: "Primero registre el CDP con su vigencia. Luego legalización o prórroga buscando el mismo No. CDP.",
+      tip: "Primero registre el CDP con plazo y fecha inicial. La prórroga suma días y corre la fecha final; el visor usa plazo/fecha final.",
     },
     puentes: {
       clave: "Identificador del puente · Contrato",

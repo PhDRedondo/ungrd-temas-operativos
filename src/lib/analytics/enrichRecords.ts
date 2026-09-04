@@ -166,6 +166,12 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
         { key: "estado", label: "Legalización", kind: "badge" },
         { key: "valor", label: "Desembolso", kind: "money" },
         { key: "valor_por_legalizar", label: "Por legalizar", kind: "money" },
+        { key: "plazo_ejecucion_dias", label: "Plazo inicial (días)" },
+        { key: "plazo_adicion_dias", label: "Plazo prórroga (días)" },
+        { key: "plazo_final_dias", label: "Plazo final (días)" },
+        { key: "fecha_inicial_para_legalizacion", label: "Fecha inicial legalización" },
+        { key: "fecha_final_para_legalizacion", label: "Fecha final legalización" },
+        { key: "fecha_actual", label: "Fecha actual" },
       ];
     case "agua-y-saneamiento":
       return [

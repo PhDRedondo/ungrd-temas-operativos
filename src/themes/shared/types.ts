@@ -19,10 +19,14 @@ export type CaptureFormMode = "create-once" | "upsert" | "append";
 
 /**
  * Regla de cálculo para un campo de captura (solo lectura en UI).
- * `subtract`: left − right (usa el primer campo con valor en left/right + fallbacks).
+ * - `subtract`: left − right
+ * - `sum`: left + right
+ * - `percent_of_remainder`: ((left − right) / left) × 100
+ * - `add_days`: fecha (left) + días (right) → YYYY-MM-DD
+ *   Usa el primer campo con valor en left/right + fallbacks.
  */
 export type ComputedFieldRule = {
-  op: "subtract";
+  op: "subtract" | "sum" | "percent_of_remainder" | "add_days";
   left: string;
   right: string;
   leftFallbacks?: string[];

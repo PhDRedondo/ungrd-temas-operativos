@@ -114,6 +114,45 @@ test("prepareTrackingRow fic deriva capa de vigencia y sync CDP", () => {
   assert.equal(out.estado, "POR LEGALIZAR");
 });
 
+test("prepareTrackingRow fic calcula % avance legalización", () => {
+  const theme = getTheme("fic")!;
+  const out = prepareTrackingRow(theme, {
+    no_cdp: "CDP-1",
+    vigencia: "2026",
+    valor: 1_000_000,
+    valor_por_legalizar: 250_000,
+    estado: "EN PROCESO",
+  });
+  // (1_000_000 - 250_000) / 1_000_000 × 100 = 75
+  assert.equal(out.porcentaje_de_avance_en_el_ejericicio_de_legalizacion, 75);
+  const rule =
+    FIC_CAPTURE_FORMS.find((f) => f.id === "transferencia")?.computedFields
+      ?.porcentaje_de_avance_en_el_ejericicio_de_legalizacion;
+  assert.equal(rule?.op, "percent_of_remainder");
+  assert.equal(rule?.left, "valor");
+  assert.equal(rule?.right, "valor_por_legalizar");
+});
+
+test("prepareTrackingRow fic plazos: inicial + prórroga → final y fecha final", () => {
+  const theme = getTheme("fic")!;
+  const out = prepareTrackingRow(theme, {
+    no_cdp: "CDP-PLAZO",
+    vigencia: "2026",
+    plazo_ejecucion_dias: 180,
+    plazo_adicion_dias: 30,
+    fecha_inicial_para_legalizacion: "2026-01-15",
+    estado: "PRÓRROGA",
+    valor: 100,
+  });
+  assert.equal(out.plazo_final_dias, 210);
+  assert.equal(out.fecha_final_para_legalizacion, "2026-08-13"); // 15 ene + 210d
+  assert.equal(out.fecha_de_legalizacion_por_prorroga, "2026-08-13");
+  assert.ok(
+    getTheme("fic")!.fields.some((f) => f.name === "fecha_final_para_legalizacion"),
+  );
+  assert.ok(getTheme("fic")!.fields.some((f) => f.name === "plazo_final_dias"));
+});
+
 test("fic capa lookup incluye todas las vigencias", () => {
   const vars = ficCapaLookupVariants("Transferencia FIC 2026");
   assert.ok(vars.includes("Transferencia FIC 2014"));

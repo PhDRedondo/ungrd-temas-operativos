@@ -232,7 +232,12 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     const level = classifyLegalizacion(estado);
     bump(sem, level, labelForLevel(level, "fic"), valor);
 
-    const plazo = str(r, "fecha_inicial_para_legalizacion");
+    const plazo = str(
+      r,
+      "fecha_final_para_legalizacion",
+      "fecha_de_legalizacion_por_prorroga",
+      "fecha_inicial_para_legalizacion",
+    );
     const days = daysFromToday(plazo);
     const critico =
       pendiente > 0 &&
@@ -279,7 +284,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     themeId: "fic",
     title: "Tablero de decisión — FIC",
     subtitle:
-      "Criterio: semáforo por estado de legalización · crítico si hay saldo por legalizar con plazo vencido (clave No. CDP)",
+      "Criterio: semáforo por estado de legalización · crítico si hay saldo por legalizar con fecha final vencida (inicial + prórroga; clave No. CDP)",
     kpis: [
       {
         id: "desembolso",
