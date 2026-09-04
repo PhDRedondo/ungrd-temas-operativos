@@ -625,13 +625,13 @@ export function feedingGuideForTheme(themeId: string): {
       tip: "Cargue contrato y orden como tipos distintos cuando deba cruzarse con Agua.",
     },
     fic: {
-      clave: "Número de CDP",
+      clave: "Número FIC",
       capas: [
         "1 · Transferencia FIC",
         "2 · Seguimiento legalización",
         "3 · Modificación / prórroga",
       ],
-      tip: "Primero registre el CDP con plazo y fecha inicial. La prórroga suma días y corre la fecha final; el visor usa plazo/fecha final.",
+      tip: "Primero registre el FIC con plazo y fecha inicial. La prórroga suma días y corre la fecha final; el visor usa plazo/fecha final.",
     },
     puentes: {
       clave: "Identificador del puente · Contrato",

@@ -80,7 +80,7 @@ export function CaptureIdentityFicha({
           : lookupBy === "convenio" || lookupBy === "contrato"
             ? "Convenio / orden de compra"
             : themeId === "fic"
-              ? "FIC (No. CDP)"
+              ? "FIC"
               : "Orden de proveeduría";
     rows.push({
       k: keyLabel,

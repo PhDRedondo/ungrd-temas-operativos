@@ -283,11 +283,11 @@ function profileFor(themeId: string): ThemeExcelProfile {
       // Mostrar todas las vigencias al entrar (la prueba real está en 2025).
       defaultCapa: "__todas__",
       pinLeft: PIN_LEFT_FIC,
-      searchLabel: "Buscar FIC (No. CDP)",
-      searchPlaceholder: "No. CDP…",
+      searchLabel: "Buscar FIC",
+      searchPlaceholder: "Número FIC…",
       helpText:
-        "Elija «Todos los formularios» o una vigencia (ej. Transferencia FIC 2025). Busque por No. CDP.",
-      filterHint: " · filtro CDP: todas las vigencias de ese CDP",
+        "Elija «Todos los formularios» o una vigencia (ej. Transferencia FIC 2025). Busque por número FIC.",
+      filterHint: " · filtro FIC: todas las vigencias de ese número",
       emptyHint:
         " · pruebe «Todos los formularios» o «Transferencia FIC 2025».",
       normalizeCapa: (raw) => normalizeFicCapa(raw) || "Sin capa",

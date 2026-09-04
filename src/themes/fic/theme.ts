@@ -41,7 +41,7 @@ const base = buildThemeFromSource({
   name: "FIC",
   shortName: "FIC",
   description:
-    "Seguimiento y control de transferencias directas del Fondo de Inversión Colectiva (FR-1703-SMD-44) — una capa por vigencia, unidos por No. CDP.",
+    "Seguimiento y control de transferencias directas del Fondo de Inversión Colectiva (FR-1703-SMD-44) — una capa por vigencia, unidos por número FIC.",
   icon: "building-2",
   unit: "transferencias",
   valueLabel: "Transferencias FIC",
@@ -75,6 +75,10 @@ function withCaptureOnlyFields(fields: FormField[]): FormField[] {
         ...f,
         label: "Fecha legalización por prórroga (= fecha final)",
       };
+    } else if (f.name === "no_cdp") {
+      next = { ...f, label: "Número FIC" };
+    } else if (f.name === "clave_seguimiento") {
+      next = { ...f, label: "Clave de seguimiento (FIC)" };
     }
     out.push(next);
     if (f.name === "no_cdp" && extras.has("fecha_cdp")) {

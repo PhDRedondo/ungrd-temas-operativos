@@ -1600,7 +1600,7 @@ export function CapturePanel({
         activeForm?.lookupBy === "placa" || theme.id === "carrotanques"
           ? "Busque y seleccione la placa del vehículo antes de guardar."
           : theme.id === "fic"
-            ? "Busque y seleccione el FIC (No. CDP) antes de guardar."
+            ? "Busque y seleccione el FIC antes de guardar."
             : "Busque y seleccione la orden de proveeduría antes de guardar.",
       );
       return;
@@ -2493,7 +2493,7 @@ export function CapturePanel({
                       theme.id === "carrotanques"
                       ? "Seleccione primero la placa para habilitar los campos."
                       : theme.id === "fic"
-                        ? "Seleccione primero el FIC (No. CDP) para habilitar los campos."
+                        ? "Seleccione primero el FIC para habilitar los campos."
                         : "Seleccione primero la orden de proveeduría para habilitar los campos."
                     : needsPuenteLookup
                       ? "Seleccione primero el puente para habilitar los campos."
@@ -2784,7 +2784,7 @@ export function CapturePanel({
                       theme.id === "carrotanques"
                       ? "Seleccione la placa para ver el historial."
                       : theme.id === "fic"
-                        ? "Seleccione el FIC (No. CDP) para ver el historial."
+                        ? "Seleccione el FIC para ver el historial."
                         : "Seleccione la orden de proveeduría para ver el historial."
                     : needsPuenteLookup
                       ? "Seleccione el puente para ver el historial."
@@ -2823,7 +2823,7 @@ export function CapturePanel({
                               theme.id === "carrotanques"
                               ? "Elija una placa para ver el historial."
                               : theme.id === "fic"
-                                ? "Elija un FIC (No. CDP) para ver el historial."
+                                ? "Elija un FIC para ver el historial."
                                 : "Elija una orden de proveeduría para ver el historial."
                             : needsPuenteLookup
                               ? "Elija un puente para ver el historial."

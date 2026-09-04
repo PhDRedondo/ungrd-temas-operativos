@@ -471,11 +471,11 @@ export function OrdenLookup({
       );
       return (
         <LookupSelectedCard
-          eyebrow="Transferencia FIC (CDP)"
+          eyebrow="Transferencia FIC"
           title={shown}
           rows={rows}
           objeto={String(p.objeto_transferencia || selected.objeto || "")}
-          clearLabel="Cambiar CDP"
+          clearLabel="Cambiar FIC"
           disabled={disabled}
           onClear={() => {
             onClear();
@@ -548,7 +548,7 @@ export function OrdenLookup({
               : byConvenio
                 ? "Buscar número de convenio"
                 : byFic
-                  ? "Buscar FIC (No. CDP)"
+                  ? "Buscar FIC"
                   : "Buscar orden de proveeduría"}
         <span className="ml-1 text-ungrd-danger" aria-hidden>
           *
@@ -571,7 +571,7 @@ export function OrdenLookup({
                     : byConvenio
                       ? "Número de convenio, departamento…"
                       : byFic
-                        ? "No. CDP, municipio, vigencia…"
+                        ? "Número FIC, municipio, vigencia…"
                         : expandPaymentOps
                           ? "Orden de proveeduría o orden por pago…"
                           : "Ej. GS-SMD-006… proveedor, municipio, NIT"
@@ -591,7 +591,7 @@ export function OrdenLookup({
               : byConvenio
                 ? "Seleccione el convenio; los eventos de bitácora se ligan a ese número."
                 : byFic
-                  ? "Escriba el No. CDP o municipio y seleccione la transferencia FIC; los datos se heredan."
+                  ? "Escriba el número FIC o municipio y seleccione la transferencia; los datos se heredan."
                   : expandPaymentOps
                     ? "Puede buscar la orden de negocio o la orden por pago. Al elegir, se heredan proveedor y datos comunes."
                     : "Escriba parte de la orden de proveeduría o el proveedor y seleccione; los datos comunes se heredan."}
@@ -717,7 +717,7 @@ export function OrdenLookup({
                 : byConvenio
                   ? `No hay coincidencias con «${q.trim()}». Pruebe otro nº de convenio o departamento.`
                   : byFic
-                    ? `No hay coincidencias con «${q.trim()}». Pruebe el No. CDP, municipio o vigencia.`
+                    ? `No hay coincidencias con «${q.trim()}». Pruebe el número FIC, municipio o vigencia.`
                     : `No hay coincidencias con «${q.trim()}». Pruebe parte de la orden (ej. GS-SMD) o el nombre del proveedor.`}
         </p>
       ) : null}
