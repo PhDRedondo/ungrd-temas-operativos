@@ -160,7 +160,7 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
   switch (themeId) {
     case "fic":
       return [
-        { key: "clave_seguimiento", label: "No. CDP" },
+        { key: "clave_seguimiento", label: "Número FIC" },
         { key: "tipo_registro", label: "Capa" },
         { key: "departamento", label: "Departamento" },
         { key: "estado", label: "Legalización", kind: "badge" },

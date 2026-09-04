@@ -167,7 +167,7 @@ export const FIC_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "transferencia",
     label: "1 · Transferencia FIC",
     description:
-      "Alta del CDP: plazo inicial y fecha inicial de legalización. El plazo/fecha final se calculan solos (y se actualizan si hay prórroga).",
+      "Alta del FIC: plazo inicial y fecha inicial de legalización. El plazo/fecha final se calculan solos (y se actualizan si hay prórroga).",
     capa: FIC_CAPA_DEFAULT,
     mode: "upsert",
     fieldNames: [...TRANSFERENCIA_FIELDS],
@@ -218,7 +218,7 @@ export const FIC_CAPTURE_FORMS: CaptureFormConfig[] = [
     id: "modificacion",
     label: "3 · Modificación / prórroga",
     description:
-      "Prórroga sobre el mismo CDP: arriba ve plazo y fecha inicial (solo lectura). La adición recalcula plazo y fecha final.",
+      "Prórroga sobre el mismo FIC: arriba ve plazo y fecha inicial (solo lectura). La adición recalcula plazo y fecha final.",
     capa: FIC_CAPA_DEFAULT,
     mode: "upsert",
     requiresOrdenLookup: true,

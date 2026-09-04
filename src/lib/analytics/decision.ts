@@ -245,7 +245,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     if (critico) {
       vencidos += 1;
       vencidosValor += pendiente || valor;
-      const key = str(r, "clave_seguimiento", "no_cdp") || "Sin CDP";
+      const key = str(r, "clave_seguimiento", "no_cdp") || "Sin FIC";
       const cur = priority.get(key) || { count: 0, valor: 0 };
       cur.count += 1;
       cur.valor += pendiente || valor;
@@ -263,7 +263,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
       title: "Legalización vencida o en riesgo",
       detail: `${formatNumber(vencidos)} transferencias con saldo pendiente y plazo vencido (o estado VENCIDO). Dinero en riesgo: ${formatCop(vencidosValor)}.`,
       action:
-        "Priorice CDP de la lista de la derecha y gestione prórroga o legalización inmediata.",
+        "Priorice FIC de la lista de la derecha y gestione prórroga o legalización inmediata.",
       count: vencidos,
       valor: vencidosValor,
     });
@@ -284,7 +284,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     themeId: "fic",
     title: "Tablero de decisión — FIC",
     subtitle:
-      "Criterio: semáforo por estado de legalización · crítico si hay saldo por legalizar con fecha final vencida (inicial + prórroga; clave No. CDP)",
+      "Criterio: semáforo por estado de legalización · crítico si hay saldo por legalizar con fecha final vencida (inicial + prórroga; clave FIC)",
     kpis: [
       {
         id: "desembolso",
@@ -317,7 +317,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts,
     byLayer: layerBreakdown(rows),
     priorityList: topN(priority, 15),
-    focusLabel: "CDP prioritarios (saldo + plazo)",
+    focusLabel: "FIC prioritarios (saldo + plazo)",
   };
 }
 
