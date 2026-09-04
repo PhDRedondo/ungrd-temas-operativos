@@ -17,11 +17,27 @@ La capa se deriva de la **vigencia** al guardar (`prepareTrackingRow`); no hace 
 
 ## Formularios de captura
 
-1. **Transferencia FIC** — alta/upsert (CDP, acto, desembolso, legalización).
-2. **Seguimiento legalización** — lookup por CDP; patch de estado/valores/%.
-3. **Modificación / prórroga** — lookup por CDP; acto y plazo de prórroga.
+1. **Transferencia FIC** — alta del CDP (plazo inicial + fecha inicial de legalización).
+2. **Seguimiento legalización** — estado/valores; el visor usa la **fecha final** (con prórroga si hubo).
+3. **Modificación / prórroga** — conserva plazo/fecha inicial; suma adición y recalcula plazo/fecha final.
 
-Excel `fields-from-source.ts` intacto. Campos AppSheet sin columna Excel (`aplica_entidad_receptora`, `fecha_cdp`, `fecha_rc`, bitácora/expedientes) quedan fuera de esta entrega.
+### Plazos y fechas (misma fila / tabla principal)
+
+| Campo | Rol |
+|-------|-----|
+| `plazo_ejecucion_dias` | Plazo **inicial** (no se pierde con la prórroga) |
+| `plazo_adicion_dias` | Días de **prórroga** |
+| `plazo_final_dias` | Inicial + adición (calculado) |
+| `fecha_inicial_para_legalizacion` | Fecha **inicial** |
+| `fecha_final_para_legalizacion` | Fecha **final** = inicial + plazo final (calculado; lo usa el visor/decisión) |
+| `fecha_actual` | Fecha de hoy (se graba al guardar/importar; comparación vs fecha final en el visor) |
+| `fecha_de_legalizacion_por_prorroga` | Igual a la fecha final cuando hay adición (columna Excel) |
+
+Ejemplo: inicial 180 días + prórroga 30 → plazo final 210; la fecha final corre 210 días desde la fecha inicial.
+
+El **% de avance** = `(desembolso − por legalizar) / desembolso × 100`.
+
+Excel `fields-from-source.ts` intacto. `fecha_cdp` / `fecha_rc` / `plazo_final_dias` / `fecha_final_para_legalizacion` se agregan en `theme.ts` solo para captura. Bitácora/expedientes quedan fuera de esta entrega.
 
 ## Regenerar campos
 
@@ -39,7 +55,7 @@ npm run db:reimport
 
 ## Archivos
 
-- `theme.ts` — configuración + `captureForms` + selects (estado, vigencia).
+- `theme.ts` — configuración + `captureForms` + selects + campos captura-only.
 - `capture-forms.ts` — formularios y variantes de capa para lookup.
 - `select-options.ts` — estados de legalización canónicos.
 - `fields-from-source.ts` — campos generados desde el Excel (no editar a mano).

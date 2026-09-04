@@ -283,17 +283,59 @@ function applyComputedFields(
   if (!rules || Object.keys(rules).length === 0) return form;
   const next = { ...form };
   for (const [target, rule] of Object.entries(rules)) {
+    const left = firstMoney(next, rule.left, rule.leftFallbacks);
+    const right = firstMoney(next, rule.right, rule.rightFallbacks);
+    const hasLeft =
+      parseMoneyInput(next[rule.left]) !== null ||
+      (rule.leftFallbacks || []).some((k) => parseMoneyInput(next[k]) !== null);
+    const hasRight =
+      parseMoneyInput(next[rule.right]) !== null ||
+      (rule.rightFallbacks || []).some((k) => parseMoneyInput(next[k]) !== null);
     if (rule.op === "subtract") {
-      const left = firstMoney(next, rule.left, rule.leftFallbacks);
-      const right = firstMoney(next, rule.right, rule.rightFallbacks);
-      const hasLeft =
-        parseMoneyInput(next[rule.left]) !== null ||
-        (rule.leftFallbacks || []).some((k) => parseMoneyInput(next[k]) !== null);
-      const hasRight =
-        parseMoneyInput(next[rule.right]) !== null ||
-        (rule.rightFallbacks || []).some((k) => parseMoneyInput(next[k]) !== null);
-      // Solo calcula si hay al menos un valor de orden o de pago
       next[target] = hasLeft || hasRight ? String(left - right) : "";
+      continue;
+    }
+    if (rule.op === "sum") {
+      next[target] = hasLeft || hasRight ? String(left + right) : "";
+      continue;
+    }
+    if (rule.op === "percent_of_remainder") {
+      if (!hasLeft || left === 0) {
+        next[target] = "";
+        continue;
+      }
+      const pct = ((left - right) / left) * 100;
+      next[target] = String(Math.round(pct * 100) / 100);
+      continue;
+    }
+    if (rule.op === "add_days") {
+      const dateRaw = String(
+        next[rule.left] ||
+          (rule.leftFallbacks || [])
+            .map((k) => next[k])
+            .find((v) => String(v || "").trim()) ||
+          "",
+      ).trim();
+      const hasDays =
+        parseMoneyInput(next[rule.right]) !== null ||
+        (rule.rightFallbacks || []).some(
+          (k) => parseMoneyInput(next[k]) !== null,
+        );
+      const days = firstMoney(next, rule.right, rule.rightFallbacks);
+      if (!dateRaw || !hasDays) {
+        next[target] = "";
+        continue;
+      }
+      const base = new Date(`${dateRaw.slice(0, 10)}T12:00:00`);
+      if (Number.isNaN(base.getTime())) {
+        next[target] = "";
+        continue;
+      }
+      base.setDate(base.getDate() + Math.round(days));
+      const y = base.getFullYear();
+      const m = String(base.getMonth() + 1).padStart(2, "0");
+      const d = String(base.getDate()).padStart(2, "0");
+      next[target] = `${y}-${m}-${d}`;
     }
   }
   return next;
@@ -1557,7 +1599,9 @@ export function CapturePanel({
       setError(
         activeForm?.lookupBy === "placa" || theme.id === "carrotanques"
           ? "Busque y seleccione la placa del vehículo antes de guardar."
-          : "Busque y seleccione la orden de proveeduría antes de guardar.",
+          : theme.id === "fic"
+            ? "Busque y seleccione el FIC (No. CDP) antes de guardar."
+            : "Busque y seleccione la orden de proveeduría antes de guardar.",
       );
       return;
     }
@@ -1783,6 +1827,26 @@ export function CapturePanel({
                   : ""
               }.`,
         );
+        // FIC / lookup: refrescar ficha resumen con lo recién guardado.
+        if (needsOrdenLookup && selectedOrden) {
+          setSelectedOrden({
+            ...selectedOrden,
+            departamento:
+              String(values.departamento || selectedOrden.departamento || ""),
+            municipio: String(values.municipio || selectedOrden.municipio || ""),
+            valor:
+              typeof values.valor === "number"
+                ? values.valor
+                : Number(values.valor) || selectedOrden.valor,
+            vigencia: String(values.vigencia || selectedOrden.vigencia || ""),
+            payload: {
+              ...(selectedOrden.payload || {}),
+              ...Object.fromEntries(
+                Object.entries(values).map(([k, v]) => [k, v as string | number]),
+              ),
+            },
+          });
+        }
         if (editingRecordId) {
           void loadUpsertVersions(editingRecordId);
         }
@@ -2228,6 +2292,7 @@ export function CapturePanel({
               ) : null}
               <CaptureIdentityFicha
                 lookupBy={resolveOrdenLookupBy(activeForm, theme.id)}
+                themeId={theme.id}
                 orden={selectedOrden}
                 puente={selectedPuente}
                 proceso={selectedProceso}
@@ -2244,7 +2309,11 @@ export function CapturePanel({
                     : theme.id === "carrotanques" &&
                         activeForm.patchFieldNames?.length
                       ? "Registro existente: aquí solo se actualizan categorías y clasificación."
-                      : "Editando este puente. Para agregar otro, use «Nuevo puente»."}
+                      : theme.id === "fic"
+                        ? "Editando este FIC. Los cambios alimentan el mismo registro (plazo inicial se conserva; la prórroga suma al plazo final)."
+                        : theme.id === "puentes"
+                          ? "Editando este puente. Para agregar otro, use «Nuevo puente»."
+                          : "Editando el registro seleccionado. Guarde para actualizar la tabla principal."}
                 </p>
               ) : null}
               {!lookupCanCreate &&
@@ -2423,7 +2492,9 @@ export function CapturePanel({
                     ? activeForm?.lookupBy === "placa" ||
                       theme.id === "carrotanques"
                       ? "Seleccione primero la placa para habilitar los campos."
-                      : "Seleccione primero la orden de proveeduría para habilitar los campos."
+                      : theme.id === "fic"
+                        ? "Seleccione primero el FIC (No. CDP) para habilitar los campos."
+                        : "Seleccione primero la orden de proveeduría para habilitar los campos."
                     : needsPuenteLookup
                       ? "Seleccione primero el puente para habilitar los campos."
                       : "Seleccione primero el contrato o convenio para habilitar los campos."}
@@ -2712,7 +2783,9 @@ export function CapturePanel({
                     ? activeForm?.lookupBy === "placa" ||
                       theme.id === "carrotanques"
                       ? "Seleccione la placa para ver el historial."
-                      : "Seleccione la orden de proveeduría para ver el historial."
+                      : theme.id === "fic"
+                        ? "Seleccione el FIC (No. CDP) para ver el historial."
+                        : "Seleccione la orden de proveeduría para ver el historial."
                     : needsPuenteLookup
                       ? "Seleccione el puente para ver el historial."
                       : "Seleccione el contrato o convenio para ver el historial."}
@@ -2749,7 +2822,9 @@ export function CapturePanel({
                             ? activeForm?.lookupBy === "placa" ||
                               theme.id === "carrotanques"
                               ? "Elija una placa para ver el historial."
-                              : "Elija una orden de proveeduría para ver el historial."
+                              : theme.id === "fic"
+                                ? "Elija un FIC (No. CDP) para ver el historial."
+                                : "Elija una orden de proveeduría para ver el historial."
                             : needsPuenteLookup
                               ? "Elija un puente para ver el historial."
                               : "Elija un contrato o convenio para ver el historial."}

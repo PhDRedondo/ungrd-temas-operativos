@@ -156,7 +156,7 @@ Orden cronológico reciente (commits + trabajo contractual):
 18. **Obras de emergencia — captura + IRP (ago 2026)** — `captureForms` (contrato / O.P. / seguimiento), estados canónicos, `calculations.ts` (SPI/CPI/IRP). Excel `fields-from-source` intacto. Lookup por `clave_seguimiento`/`contrato_de_obra`; decisión enriquece alertas IRP/plazo sin quitar riesgo de pago.
 19. **Obras de emergencia — tablero ejecutivo SMD (ago 2026)** — `dashboard.ts` agrega KPIs del zip (en ejecución, urgentes ≤40d, IRP elevado, SPI medio, avance ponderado); `byLayer` = obras por estado (`layerLabel`); captura/Excel sin cambios.
 20. **Obras por impuestos — captura + tablero (ago 2026)** — `captureForms` (convenio / interventoría / seguimiento), estados canónicos, IRP vía fechas de convenio; decisión con KPIs vencidos/urgentes; Excel ArcGIS intacto.
-21. **FIC — captura AppSheet CONTROL FIC (sep 2026)** — `captureForms` (transferencia / legalización / prórroga), capa derivada de vigencia, lookup por No. CDP en todas las vigencias; Excel `fields-from-source` intacto.
+21. **FIC — captura AppSheet CONTROL FIC (sep 2026)** — `captureForms` (transferencia / legalización / prórroga), capa derivada de vigencia, lookup por No. CDP; plazos inicial+adición→final y fecha final de legalización (visor/decisión usan la final); Excel `fields-from-source` intacto.
 
 ### Hubs del grafo (core abstractions)
 `requireSession` · `getTheme` · `ThemeConfig`/`ThemeModule` · `RecordRow` · `process-excel` · `buildDecisionBrief` · `enrichRecordsForDecision` · `NationalCommandCenter` · `guard` (security)

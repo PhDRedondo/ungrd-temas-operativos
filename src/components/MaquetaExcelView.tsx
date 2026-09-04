@@ -37,6 +37,11 @@ import {
   SUBSIDIOS_CAPAS,
   normalizeSubsidiosCapa,
 } from "@/themes/subsidios-de-arriendos/capture-forms";
+import {
+  FIC_CAPAS,
+  FIC_CAPA_DEFAULT,
+  normalizeFicCapa,
+} from "@/themes/fic/capture-forms";
 
 type ChangeMark = {
   versionCount: number;
@@ -165,6 +170,21 @@ const PIN_LEFT_SUBSIDIOS = [
   "_archivo_fuente",
 ];
 
+const PIN_LEFT_FIC = [
+  "clave_seguimiento",
+  "no_cdp",
+  "vigencia",
+  "departamento",
+  "municipio",
+  "estado",
+  "fecha_inicial_para_legalizacion",
+  "fecha_final_para_legalizacion",
+  "fecha_actual",
+  "plazo_ejecucion_dias",
+  "plazo_adicion_dias",
+  "plazo_final_dias",
+];
+
 type ThemeExcelProfile = {
   capas: readonly string[];
   defaultCapa: string;
@@ -256,6 +276,24 @@ function profileFor(themeId: string): ThemeExcelProfile {
         (SUBSIDIOS_CAPAS as readonly string[]).includes(capa),
       keyOf: (r) =>
         String(r.uuid || r.clave_seguimiento || r.numero_envio || "").trim(),
+    };
+  }
+  if (themeId === "fic") {
+    return {
+      capas: FIC_CAPAS,
+      defaultCapa: FIC_CAPA_DEFAULT,
+      pinLeft: PIN_LEFT_FIC,
+      searchLabel: "Buscar FIC (No. CDP)",
+      searchPlaceholder: "No. CDP…",
+      helpText:
+        "Busque por No. CDP. Clic en una celda para editar; vea fecha inicial, final y fecha actual.",
+      filterHint: " · filtro CDP: todas las vigencias de ese CDP",
+      emptyHint:
+        " (Transferencia FIC por vigencia) o quite el filtro de CDP.",
+      normalizeCapa: (raw) => normalizeFicCapa(raw) || "Sin capa",
+      isOfficial: (capa) => (FIC_CAPAS as readonly string[]).includes(capa),
+      keyOf: (r) =>
+        String(r.no_cdp || r.clave_seguimiento || "").trim(),
     };
   }
   // Agua y Saneamiento (default de la vista Excel histórica)

@@ -59,11 +59,13 @@ export function CaptureFormStepper({
 
 export function CaptureIdentityFicha({
   lookupBy,
+  themeId,
   orden,
   puente,
   proceso,
 }: {
   lookupBy?: "orden" | "placa" | "serial" | "convenio" | "contrato";
+  themeId?: string;
   orden: OrdenLookupHit | null;
   puente: PuenteLookupHit | null;
   proceso: ProcesoLookupHit | null;
@@ -77,14 +79,34 @@ export function CaptureIdentityFicha({
           ? "Serial"
           : lookupBy === "convenio" || lookupBy === "contrato"
             ? "Convenio / orden de compra"
-            : "Orden de proveeduría";
+            : themeId === "fic"
+              ? "FIC (No. CDP)"
+              : "Orden de proveeduría";
     rows.push({
       k: keyLabel,
       v: orden.display_op || orden.orden_de_proveeduria,
     });
-    if (orden.proveedor) rows.push({ k: "Proveedor", v: String(orden.proveedor) });
-    const lugar = [orden.departamento, orden.municipio].filter(Boolean).join(" · ");
-    if (lugar) rows.push({ k: "Territorio", v: lugar });
+    if (themeId === "fic") {
+      const depto = String(orden.departamento || "").trim();
+      const muni = String(orden.municipio || "").trim();
+      if (depto) rows.push({ k: "Departamento", v: depto });
+      if (muni) rows.push({ k: "Municipio", v: muni });
+      const p = orden.payload || {};
+      const plazoIni = String(p.plazo_ejecucion_dias ?? "").trim();
+      const fechaIni = String(p.fecha_inicial_para_legalizacion ?? "")
+        .trim()
+        .slice(0, 10);
+      if (plazoIni) rows.push({ k: "Plazo inicial (días)", v: plazoIni });
+      if (fechaIni) rows.push({ k: "Fecha inicial legalización", v: fechaIni });
+    } else {
+      if (orden.proveedor) {
+        rows.push({ k: "Proveedor", v: String(orden.proveedor) });
+      }
+      const lugar = [orden.departamento, orden.municipio]
+        .filter(Boolean)
+        .join(" · ");
+      if (lugar) rows.push({ k: "Territorio", v: lugar });
+    }
   }
   if (puente) {
     rows.push({ k: "ID puente", v: puente.id_puente });

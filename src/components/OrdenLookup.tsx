@@ -98,6 +98,29 @@ function formatOrdenValor(valor: number | string | undefined): string {
   return formatCop(n);
 }
 
+function toMoneyNumber(v: unknown): number | null {
+  if (v === undefined || v === null || v === "") return null;
+  const n =
+    typeof v === "number" ? v : Number(String(v).replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** % avance legalización FIC: payload o (desembolso − por legalizar) / desembolso. */
+function ficAvanceLegalizacionPct(hit: OrdenLookupHit): string {
+  const p = hit.payload || {};
+  const raw = p.porcentaje_de_avance_en_el_ejericicio_de_legalizacion;
+  if (raw !== undefined && raw !== null && String(raw).trim() !== "") {
+    const n = toMoneyNumber(raw);
+    if (n !== null) return `${n} %`;
+    return `${String(raw).trim()} %`;
+  }
+  const desembolso = toMoneyNumber(p.valor ?? hit.valor);
+  const porLegalizar = toMoneyNumber(p.valor_por_legalizar);
+  if (desembolso == null || desembolso === 0 || porLegalizar == null) return "";
+  const pct = Math.round(((desembolso - porLegalizar) / desembolso) * 10000) / 100;
+  return `${pct} %`;
+}
+
 function displayOpOf(hit: OrdenLookupHit): string {
   return (
     String(hit.display_op || "").trim() ||
@@ -141,6 +164,7 @@ export function OrdenLookup({
   const bySerial = lookupBy === "serial";
   const byConvenio = lookupBy === "convenio";
   const byContrato = lookupBy === "contrato";
+  const byFic = themeId === "fic";
   const byAsset = byPlaca || bySerial || byConvenio || byContrato;
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<OrdenLookupHit[]>([]);
@@ -395,6 +419,73 @@ export function OrdenLookup({
     const estado = String(
       selected.payload?.estado_actual || selected.payload?.estado || "",
     ).trim();
+    const p = selected.payload || {};
+
+    if (themeId === "fic") {
+      const avance = ficAvanceLegalizacionPct(selected);
+      const porLegalizar = formatOrdenValor(
+        p.valor_por_legalizar as number | string | undefined,
+      );
+      const plazoIni = String(p.plazo_ejecucion_dias ?? "").trim();
+      const plazoAdd = String(p.plazo_adicion_dias ?? "").trim();
+      const plazoFin = String(p.plazo_final_dias ?? "").trim();
+      const fechaIni = String(p.fecha_inicial_para_legalizacion ?? "")
+        .trim()
+        .slice(0, 10);
+      const fechaFin = String(
+        p.fecha_final_para_legalizacion ||
+          p.fecha_de_legalizacion_por_prorroga ||
+          "",
+      )
+        .trim()
+        .slice(0, 10);
+      const fechaAct = String(p.fecha_actual ?? "").trim().slice(0, 10);
+      const rows: { label: string; value: string }[] = [
+        {
+          label: "Departamento",
+          value: String(selected.departamento || p.departamento || "").trim(),
+        },
+        {
+          label: "Municipio",
+          value: String(selected.municipio || p.municipio || "").trim(),
+        },
+        {
+          label: "Valor desembolso",
+          value: formatOrdenValor(selected.valor),
+        },
+        { label: "% avance legalización", value: avance },
+        { label: "Valor por legalizar", value: porLegalizar },
+      ];
+      if (estado) rows.push({ label: "Estado actual", value: estado });
+      rows.push(
+        { label: "Plazo inicial (días)", value: plazoIni },
+        { label: "Plazo prórroga (días)", value: plazoAdd },
+        { label: "Plazo final (días)", value: plazoFin },
+        { label: "Fecha inicial legalización", value: fechaIni },
+        { label: "Fecha final legalización", value: fechaFin },
+        { label: "Fecha actual", value: fechaAct },
+        {
+          label: "Vigencia",
+          value: String(p.vigencia || selected.vigencia || "").trim(),
+        },
+      );
+      return (
+        <LookupSelectedCard
+          eyebrow="Transferencia FIC (CDP)"
+          title={shown}
+          rows={rows}
+          objeto={String(p.objeto_transferencia || selected.objeto || "")}
+          clearLabel="Cambiar CDP"
+          disabled={disabled}
+          onClear={() => {
+            onClear();
+            setQ("");
+            setHits([]);
+          }}
+        />
+      );
+    }
+
     const rows: { label: string; value: string }[] = [
       { label: "Proveedor", value: selected.proveedor || "" },
       { label: "NIT", value: selected.nit || "" },
@@ -456,7 +547,9 @@ export function OrdenLookup({
               ? "Buscar orden de compra o contrato"
               : byConvenio
                 ? "Buscar número de convenio"
-                : "Buscar orden de proveeduría"}
+                : byFic
+                  ? "Buscar FIC (No. CDP)"
+                  : "Buscar orden de proveeduría"}
         <span className="ml-1 text-ungrd-danger" aria-hidden>
           *
         </span>
@@ -477,9 +570,11 @@ export function OrdenLookup({
                     ? "Orden de compra o contrato…"
                     : byConvenio
                       ? "Número de convenio, departamento…"
-                      : expandPaymentOps
-                        ? "Orden de proveeduría o orden por pago…"
-                        : "Ej. GS-SMD-006… proveedor, municipio, NIT"
+                      : byFic
+                        ? "No. CDP, municipio, vigencia…"
+                        : expandPaymentOps
+                          ? "Orden de proveeduría o orden por pago…"
+                          : "Ej. GS-SMD-006… proveedor, municipio, NIT"
             }
             className="w-full rounded-lg border border-ungrd-border bg-ungrd-input py-2.5 pr-3 pl-10 text-sm font-normal text-ungrd-text outline-none focus:border-ungrd-navy focus:ring-2 focus:ring-ungrd-yellow/40"
             autoComplete="off"
@@ -495,9 +590,11 @@ export function OrdenLookup({
               ? "Filtre por convenio, contrato u orden de compra."
               : byConvenio
                 ? "Seleccione el convenio; los eventos de bitácora se ligan a ese número."
-                : expandPaymentOps
-                  ? "Puede buscar la orden de negocio o la orden por pago. Al elegir, se heredan proveedor y datos comunes."
-                  : "Escriba parte de la orden de proveeduría o el proveedor y seleccione; los datos comunes se heredan."}
+                : byFic
+                  ? "Escriba el No. CDP o municipio y seleccione la transferencia FIC; los datos se heredan."
+                  : expandPaymentOps
+                    ? "Puede buscar la orden de negocio o la orden por pago. Al elegir, se heredan proveedor y datos comunes."
+                    : "Escriba parte de la orden de proveeduría o el proveedor y seleccione; los datos comunes se heredan."}
       </p>
       {loading ? (
         <p className="text-xs font-semibold text-ungrd-muted">Buscando…</p>
@@ -582,7 +679,21 @@ export function OrdenLookup({
                               ]
                                 .filter(Boolean)
                                 .join(" · ") || null
-                            : h.proveedor,
+                            : byFic
+                              ? [
+                                  String(h.payload?.vigencia || h.vigencia || "")
+                                    .trim()
+                                    ? `Vigencia ${h.payload?.vigencia || h.vigencia}`
+                                    : null,
+                                  String(
+                                    h.payload?.objeto_transferencia ||
+                                      h.objeto ||
+                                      "",
+                                  ).trim() || null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ") || "FIC"
+                              : h.proveedor,
                       byContrato ? null : h.municipio,
                       byContrato ? null : h.departamento,
                     ]
@@ -605,7 +716,9 @@ export function OrdenLookup({
                 ? `No hay coincidencias con «${q.trim()}». Pruebe nº de orden de compra o contrato de adquisición.`
                 : byConvenio
                   ? `No hay coincidencias con «${q.trim()}». Pruebe otro nº de convenio o departamento.`
-                  : `No hay coincidencias con «${q.trim()}». Pruebe parte de la orden (ej. GS-SMD) o el nombre del proveedor.`}
+                  : byFic
+                    ? `No hay coincidencias con «${q.trim()}». Pruebe el No. CDP, municipio o vigencia.`
+                    : `No hay coincidencias con «${q.trim()}». Pruebe parte de la orden (ej. GS-SMD) o el nombre del proveedor.`}
         </p>
       ) : null}
     </div>

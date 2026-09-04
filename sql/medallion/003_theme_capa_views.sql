@@ -1286,9 +1286,13 @@ SELECT
   r.payload->>'tipo_de_evento' AS tipo_de_evento,
   r.payload->>'fecha_formato_de_aprobacion_de_la_atencion' AS fecha_formato_de_aprobacion_de_la_atencion,
   r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
+  r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
+  r.payload->>'plazo_final_dias' AS plazo_final_dias,
   r.payload->>'clasificacion' AS clasificacion,
   r.payload->>'no_cdp' AS no_cdp,
+  r.payload->>'fecha_cdp' AS fecha_cdp,
   r.payload->>'no_rc' AS no_rc,
+  r.payload->>'fecha_rc' AS fecha_rc,
   COALESCE(
     CASE
       WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
@@ -1302,6 +1306,8 @@ SELECT
   r.payload->>'fecha_de_radicacion_comunicacion_ente_territorial' AS fecha_de_radicacion_comunicacion_ente_territorial,
   r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
   r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
+  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  r.payload->>'fecha_actual' AS fecha_actual,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
   r.payload->>'valor_legalizado' AS valor_legalizado,
   r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
@@ -1328,11 +1334,23 @@ SELECT
   r.payload->>'capa' AS capa,
   r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  COALESCE(
+    CASE
+      WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+      THEN nullif(trim(r.payload->>'valor'), '')::numeric
+      ELSE NULL
+    END,
+    r.valor
+  ) AS valor,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
   r.payload->>'valor_legalizado' AS valor_legalizado,
   r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
   r.payload->>'porcentaje_de_avance_en_el_ejericicio_de_legalizacion' AS porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
   r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
+  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
+  r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
+  r.payload->>'plazo_final_dias' AS plazo_final_dias,
   r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
   r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
   r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
@@ -1359,8 +1377,12 @@ SELECT
   r.payload->>'capa' AS capa,
   r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
+  r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
   r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
   r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
+  r.payload->>'plazo_final_dias' AS plazo_final_dias,
+  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
   r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
   r.payload->>'observaciones' AS observaciones

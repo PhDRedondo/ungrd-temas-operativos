@@ -4,6 +4,12 @@
  * Fuente: alimentador.fic_transferencias_Form (+ modificaciones).
  * Persistencia: records theme_id=fic. Capas = Transferencia FIC {vigencia}.
  * Clave: No. CDP. No reduce fields-from-source.ts (Excel intacto).
+ *
+ * Plazos / fechas (misma fila principal):
+ *  - plazo_ejecucion_dias + fecha_inicial_para_legalizacion → alta (no se pierden)
+ *  - plazo_adicion_dias → prórroga
+ *  - plazo_final_dias = inicial + adición
+ *  - fecha_final_para_legalizacion = fecha_inicial + plazo_final
  */
 import type { CaptureFormConfig } from "../shared";
 
@@ -77,15 +83,21 @@ const TRANSFERENCIA_FIELDS = [
   "tipo_de_evento",
   "fecha_formato_de_aprobacion_de_la_atencion",
   "plazo_ejecucion_dias",
+  "plazo_adicion_dias",
+  "plazo_final_dias",
   "clasificacion",
   "no_cdp",
+  "fecha_cdp",
   "no_rc",
+  "fecha_rc",
   "valor",
   "fecha",
   "comunicacion_de_notificacion_ente_territorial",
   "fecha_de_radicacion_comunicacion_ente_territorial",
   "nombre_del_supervisor_administrativo",
   "fecha_inicial_para_legalizacion",
+  "fecha_final_para_legalizacion",
+  "fecha_actual",
   "estado",
   "valor_legalizado",
   "valor_por_legalizar",
@@ -95,11 +107,16 @@ const TRANSFERENCIA_FIELDS = [
 ] as const;
 
 const LEGALIZACION_FIELDS = [
+  "valor",
   "estado",
   "valor_legalizado",
   "valor_por_legalizar",
   "porcentaje_de_avance_en_el_ejericicio_de_legalizacion",
   "fecha_inicial_para_legalizacion",
+  "fecha_final_para_legalizacion",
+  "plazo_ejecucion_dias",
+  "plazo_adicion_dias",
+  "plazo_final_dias",
   "nombre_del_supervisor_administrativo",
   "responsabilidades_de_la_supervision_descripcion_de_las_acciones_",
   "se_realizaron_visitas_de_seguimiento",
@@ -108,21 +125,49 @@ const LEGALIZACION_FIELDS = [
   "observaciones",
 ] as const;
 
-/** alimentador.fic_modificaciones_Form → columnas prórroga del Excel. */
+/** alimentador.fic_modificaciones_Form → prórroga + contexto informativo del alta. */
 const MODIFICACION_FIELDS = [
+  "plazo_ejecucion_dias",
+  "fecha_inicial_para_legalizacion",
   "acto_administrativo_prorroga",
   "plazo_adicion_dias",
+  "plazo_final_dias",
+  "fecha_final_para_legalizacion",
   "fecha_de_legalizacion_por_prorroga",
+  "fecha_actual",
   "estado",
   "observaciones",
 ] as const;
+
+/** ((desembolso − por legalizar) / desembolso) × 100 */
+const AVANCE_LEGALIZACION_COMPUTED = {
+  porcentaje_de_avance_en_el_ejericicio_de_legalizacion: {
+    op: "percent_of_remainder" as const,
+    left: "valor",
+    right: "valor_por_legalizar",
+  },
+};
+
+/** Plazo final = inicial + adición; fecha final = fecha inicial + plazo final. */
+const PLAZOS_FIC_COMPUTED = {
+  plazo_final_dias: {
+    op: "sum" as const,
+    left: "plazo_ejecucion_dias",
+    right: "plazo_adicion_dias",
+  },
+  fecha_final_para_legalizacion: {
+    op: "add_days" as const,
+    left: "fecha_inicial_para_legalizacion",
+    right: "plazo_final_dias",
+  },
+};
 
 export const FIC_CAPTURE_FORMS: CaptureFormConfig[] = [
   {
     id: "transferencia",
     label: "1 · Transferencia FIC",
     description:
-      "Alta o actualización de transferencia (CDP, vigencia, acto, desembolso y legalización). La capa se fija con la vigencia.",
+      "Alta del CDP: plazo inicial y fecha inicial de legalización. El plazo/fecha final se calculan solos (y se actualizan si hay prórroga).",
     capa: FIC_CAPA_DEFAULT,
     mode: "upsert",
     fieldNames: [...TRANSFERENCIA_FIELDS],
@@ -134,12 +179,16 @@ export const FIC_CAPTURE_FORMS: CaptureFormConfig[] = [
       "valor",
       "estado",
     ],
+    computedFields: {
+      ...AVANCE_LEGALIZACION_COMPUTED,
+      ...PLAZOS_FIC_COMPUTED,
+    },
   },
   {
     id: "legalizacion",
     label: "2 · Seguimiento legalización",
     description:
-      "Actualice estado, valores legalizados y avance de un CDP ya registrado (busque por No. CDP).",
+      "Actualice estado y valores de legalización. La fecha final refleja el plazo vigente (inicial + prórroga si hubo).",
     capa: FIC_CAPA_DEFAULT,
     mode: "upsert",
     requiresOrdenLookup: true,
@@ -154,27 +203,60 @@ export const FIC_CAPTURE_FORMS: CaptureFormConfig[] = [
       "departamento",
       "municipio",
       "valor",
+      "plazo_ejecucion_dias",
+      "plazo_adicion_dias",
+      "plazo_final_dias",
+      "fecha_inicial_para_legalizacion",
+      "fecha_final_para_legalizacion",
     ],
+    computedFields: {
+      ...AVANCE_LEGALIZACION_COMPUTED,
+      ...PLAZOS_FIC_COMPUTED,
+    },
   },
   {
     id: "modificacion",
     label: "3 · Modificación / prórroga",
     description:
-      "Acto de prórroga, plazo adicionado y fecha de legalización por prórroga (form AppSheet modificaciones).",
+      "Prórroga sobre el mismo CDP: arriba ve plazo y fecha inicial (solo lectura). La adición recalcula plazo y fecha final.",
     capa: FIC_CAPA_DEFAULT,
     mode: "upsert",
     requiresOrdenLookup: true,
     lookupBy: "orden",
     lookupCapa: FIC_CAPA_DEFAULT,
     fieldNames: [...MODIFICACION_FIELDS],
-    requiredNames: ["acto_administrativo_prorroga"],
-    patchFieldNames: [...MODIFICACION_FIELDS],
+    requiredNames: ["acto_administrativo_prorroga", "plazo_adicion_dias"],
+    patchFieldNames: [
+      "acto_administrativo_prorroga",
+      "plazo_adicion_dias",
+      "plazo_final_dias",
+      "fecha_final_para_legalizacion",
+      "fecha_de_legalizacion_por_prorroga",
+      "fecha_actual",
+      "estado",
+      "observaciones",
+    ],
     readonlyWhenEditing: [
       "no_cdp",
       "vigencia",
       "departamento",
       "municipio",
       "valor",
+      "plazo_ejecucion_dias",
+      "fecha_inicial_para_legalizacion",
+      "plazo_final_dias",
+      "fecha_final_para_legalizacion",
+      "fecha_de_legalizacion_por_prorroga",
+      "fecha_actual",
     ],
+    computedFields: {
+      ...PLAZOS_FIC_COMPUTED,
+      // Misma fecha final en la columna Excel de prórroga (compatibilidad BI).
+      fecha_de_legalizacion_por_prorroga: {
+        op: "add_days" as const,
+        left: "fecha_inicial_para_legalizacion",
+        right: "plazo_final_dias",
+      },
+    },
   },
 ];
