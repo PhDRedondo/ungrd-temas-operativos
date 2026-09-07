@@ -5,13 +5,14 @@
 | **ID / slug** | `fic` |
 | **Ruta** | `/app/temas/fic` |
 | **Carpeta** | `src/themes/fic/` |
-| **Fuente** | `Seguimiento_FIC_2026.xlsx` (FR-1703-SMD-44) |
+| **Fuente** | `transferencias_fic.parquet` (AppSheet CONTROL FIC) + Excel histórico `Seguimiento_FIC_2026.xlsx` |
 | **Captura** | AppSheet CONTROL FIC (`alimentador.fic_transferencias_Form`) |
 | **schemaVersion** | 3 |
+| **Import** | `npx tsx scripts/import-fic-parquet.ts [/ruta/transferencias_fic.parquet]` → soft-delete + 388 filas en Supabase |
 
 ## Capas
 
-Una por vigencia (`Transferencia FIC 2014` … `2026`). Clave de seguimiento: **número FIC** (columna Excel `No. CDP` / campo `no_cdp`).
+Una por vigencia (`Transferencia FIC 2014` … `2026`). Clave de seguimiento: **número FIC** (columna AppSheet `numero_cdp` / campo `no_cdp`; `id_transferencia` desambigua duplicados).
 
 La capa se deriva de la **vigencia** al guardar (`prepareTrackingRow`); no hace falta elegirla a mano.
 
