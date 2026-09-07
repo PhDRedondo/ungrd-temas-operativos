@@ -8,6 +8,12 @@ import { ESTADO_LEGALIZACION_OPCIONES } from "./select-options";
  * (fields-from-source intacto).
  */
 const CAPTURE_ONLY_FIELDS: FormField[] = [
+  {
+    name: "id_transferencia",
+    label: "ID transferencia (AppSheet)",
+    type: "text",
+    excelWidth: 22,
+  },
   { name: "fecha_cdp", label: "Fecha FIC", type: "date", excelWidth: 14 },
   { name: "fecha_rc", label: "Fecha RC", type: "date", excelWidth: 14 },
   {

@@ -5,23 +5,30 @@
 export const ESTADO_LEGALIZACION_OPCIONES = [
   "LEGALIZADO 100%",
   "LEGALIZADO",
+  "LEGALIZADO PARCIALMENTE",
   "EN EJECUCIÓN",
   "POR LEGALIZAR",
+  "SIN LEGALIZAR",
   "EN PROCESO",
   "PENDIENTE",
   "PRÓRROGA",
   "VENCIDO",
+  "CIERRE",
+  "REINTEGRO",
+  "ANULADO",
 ] as const;
 
 export const ESTADO_LEGALIZACION_ALIASES: Record<string, string> = {
   "legalizado 100%": "LEGALIZADO 100%",
   "legalizado 100": "LEGALIZADO 100%",
   legalizado: "LEGALIZADO",
+  "legalizado parcialmente": "LEGALIZADO PARCIALMENTE",
   "en ejecución": "EN EJECUCIÓN",
   "en ejecucion": "EN EJECUCIÓN",
   ejecucion: "EN EJECUCIÓN",
   ejecución: "EN EJECUCIÓN",
   "por legalizar": "POR LEGALIZAR",
+  "sin legalizar": "SIN LEGALIZAR",
   "en proceso": "EN PROCESO",
   pendiente: "PENDIENTE",
   prorroga: "PRÓRROGA",
@@ -30,6 +37,9 @@ export const ESTADO_LEGALIZACION_ALIASES: Record<string, string> = {
   "con prórroga": "PRÓRROGA",
   vencido: "VENCIDO",
   vencida: "VENCIDO",
+  cierre: "CIERRE",
+  reintegro: "REINTEGRO",
+  anulado: "ANULADO",
 };
 
 export function canonicalEstadoLegalizacion(raw: unknown): string {
