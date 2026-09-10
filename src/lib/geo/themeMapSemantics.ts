@@ -60,9 +60,9 @@ const SOURCE_LABELS: Record<
   { valor: string; count: string; unit: string }
 > = {
   fic: {
-    valor: "Valor transferencias (COP)",
-    count: "Nº CDP / transferencias",
-    unit: "transferencias",
+    valor: "Valor FIC (COP)",
+    count: "Nº FIC",
+    unit: "FIC",
   },
   "agua-y-saneamiento": {
     valor: "Valor órdenes (COP)",

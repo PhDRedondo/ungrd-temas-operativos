@@ -93,12 +93,23 @@ export function DecisionDashboard({
 
   const totalSem = brief.semaphores.reduce((a, s) => a + s.count, 0) || 1;
   const source = isSourceTheme(themeId);
-  const visibleAlerts =
-    scale === "macro" ? brief.alerts.slice(0, 5) : brief.alerts;
-  const visibleLayers =
-    scale === "macro" ? brief.byLayer.slice(0, 8) : brief.byLayer;
-  const visiblePriority =
-    scale === "macro" ? brief.priorityList.slice(0, 10) : brief.priorityList;
+  const isFic = themeId === "fic";
+  // FIC: sin Macro/Micro — el tablero muestra el detalle completo de una sola vez.
+  const visibleAlerts = isFic
+    ? brief.alerts
+    : scale === "macro"
+      ? brief.alerts.slice(0, 5)
+      : brief.alerts;
+  const visibleLayers = isFic
+    ? brief.byLayer
+    : scale === "macro"
+      ? brief.byLayer.slice(0, 8)
+      : brief.byLayer;
+  const visiblePriority = isFic
+    ? brief.priorityList
+    : scale === "macro"
+      ? brief.priorityList.slice(0, 10)
+      : brief.priorityList;
 
   async function onDownloadPdf() {
     if (records.length === 0 || pdfBusy) return;
@@ -133,7 +144,7 @@ export function DecisionDashboard({
             {brief.subtitle}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => void onDownloadPdf()}
@@ -144,34 +155,36 @@ export function DecisionDashboard({
             <Download className="h-3.5 w-3.5" aria-hidden />
             {pdfBusy ? "Generando…" : "Briefing PDF"}
           </button>
-          <div className="inline-flex rounded-lg bg-black/30 p-1 ring-1 ring-white/20">
-            <button
-              type="button"
-              onClick={() => setScale("macro")}
-              className={`rounded-md px-3 py-1.5 text-[11px] font-extrabold ${
-                scale === "macro"
-                  ? "bg-ungrd-yellow text-ungrd-navy-deep"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              Macro
-            </button>
-            <button
-              type="button"
-              onClick={() => setScale("micro")}
-              className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[11px] font-extrabold ${
-                scale === "micro"
-                  ? "bg-ungrd-yellow text-ungrd-navy-deep"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              <Microscope className="h-3.5 w-3.5" />
-              Micro
-            </button>
-          </div>
+          {!isFic ? (
+            <div className="inline-flex rounded-lg bg-black/30 p-1 ring-1 ring-white/20">
+              <button
+                type="button"
+                onClick={() => setScale("macro")}
+                className={`rounded-md px-3 py-1.5 text-[11px] font-extrabold ${
+                  scale === "macro"
+                    ? "bg-ungrd-yellow text-ungrd-navy-deep"
+                    : "text-white/80 hover:text-white"
+                }`}
+              >
+                Macro
+              </button>
+              <button
+                type="button"
+                onClick={() => setScale("micro")}
+                className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-[11px] font-extrabold ${
+                  scale === "micro"
+                    ? "bg-ungrd-yellow text-ungrd-navy-deep"
+                    : "text-white/80 hover:text-white"
+                }`}
+              >
+                <Microscope className="h-3.5 w-3.5" />
+                Micro
+              </button>
+            </div>
+          ) : null}
           {source ? (
             <span className="rounded-full bg-ungrd-yellow px-3 py-1 text-[11px] font-extrabold tracking-wide text-ungrd-navy-deep uppercase">
-              Base oficial conectada
+              {isFic ? "Base FIC" : "Base oficial conectada"}
             </span>
           ) : null}
         </div>
@@ -384,10 +397,12 @@ export function DecisionDashboard({
         </div>
       </div>
 
-      {scale === "micro" && source ? (
+      {(isFic || scale === "micro") && source ? (
         <div className="rounded-xl border border-ungrd-border bg-ungrd-surface p-3 text-ungrd-heading">
           <p className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
-            Ficha micro completa de la base
+            {isFic
+              ? "Detalle FIC · legalización y plazos"
+              : "Ficha micro completa de la base"}
           </p>
           <ThemeBriefDetail
             themeId={themeId}
@@ -398,7 +413,8 @@ export function DecisionDashboard({
         </div>
       ) : null}
 
-      {scale === "macro" &&
+      {!isFic &&
+      scale === "macro" &&
       (brief.alerts.length > 5 ||
         brief.byLayer.length > 8 ||
         brief.priorityList.length > 10) ? (

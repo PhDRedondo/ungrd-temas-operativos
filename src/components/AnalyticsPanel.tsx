@@ -216,7 +216,7 @@ export function AnalyticsPanel({
         { label: theme.valueLabel, value: formatCop(valor) },
         { label: "Departamentos", value: formatNumber(depts) },
         {
-          label: capas ? "Capas / tipos" : "Claves seguimiento",
+          label: theme.id === "fic" ? "Vigencias" : capas ? "Capas / tipos" : "Claves seguimiento",
           value: formatNumber(capas || claves),
         },
       ];
@@ -231,7 +231,7 @@ export function AnalyticsPanel({
         value: `${total ? Math.round((finalizados / total) * 100) : 0}%`,
       },
     ];
-  }, [filtered, theme.valueLabel, sourceTheme]);
+  }, [filtered, theme.valueLabel, theme.id, sourceTheme]);
 
   const byEstado = useMemo(() => {
     const map = new Map<string, number>();
@@ -461,7 +461,11 @@ export function AnalyticsPanel({
         municipioOptions={municipioOptions}
         themeId={theme.id}
         capaLabel={
-          tipoRegistroField?.label || categoryField?.label || "Tipo de registro"
+          theme.id === "fic"
+            ? "Vigencia"
+            : tipoRegistroField?.label ||
+              categoryField?.label ||
+              "Tipo de registro"
         }
         matched={filtered.length}
         total={workingRecords.length}
@@ -480,6 +484,7 @@ export function AnalyticsPanel({
       {sourceTheme ? (
         <ClaveCapasTimeline
           themeName={theme.name}
+          themeId={theme.id}
           records={hasFilters ? filtered : workingRecords}
           initialQuery={filters.q}
         />
@@ -491,24 +496,54 @@ export function AnalyticsPanel({
             Cómo usar este tablero
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
-            <li>
-              El <strong className="font-bold text-ungrd-heading">resumen</strong>{" "}
-              muestra alertas y prioridades del tema.
-            </li>
-            <li>
-              Si un registro no trae municipio, el sistema completa ubicación y
-              valor con la misma orden, placa o CDP.
-            </li>
-            <li>
-              Mapa y gráficos muestran{" "}
-              <strong className="font-bold text-ungrd-heading">valor en pesos</strong>{" "}
-              cuando existe; si no, muestran{" "}
-              <strong className="font-bold text-ungrd-heading">cantidad de registros</strong>.
-            </li>
-            <li>
-              La tabla inferior lista los registros filtrados. Use «Detalle» para
-              ver más información.
-            </li>
+            {theme.id === "fic" ? (
+              <>
+                <li>
+                  El{" "}
+                  <strong className="font-bold text-ungrd-heading">mando</strong>{" "}
+                  prioriza FIC con saldo por legalizar y fecha final vencida.
+                </li>
+                <li>
+                  Filtros y mapa usan número FIC, vigencia, estado de
+                  legalización y valor desembolsado por departamento.
+                </li>
+                <li>
+                  La serie temporal sigue la fecha final de legalización (o
+                  desembolso si aún no hay plazo).
+                </li>
+                <li>
+                  La tabla lista plazos inicial / prórroga / final y valores por
+                  legalizar.
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  El{" "}
+                  <strong className="font-bold text-ungrd-heading">resumen</strong>{" "}
+                  muestra alertas y prioridades del tema.
+                </li>
+                <li>
+                  Si un registro no trae municipio, el sistema completa ubicación
+                  y valor con la misma orden, placa o CDP.
+                </li>
+                <li>
+                  Mapa y gráficos muestran{" "}
+                  <strong className="font-bold text-ungrd-heading">
+                    valor en pesos
+                  </strong>{" "}
+                  cuando existe; si no, muestran{" "}
+                  <strong className="font-bold text-ungrd-heading">
+                    cantidad de registros
+                  </strong>
+                  .
+                </li>
+                <li>
+                  La tabla inferior lista los registros filtrados. Use «Detalle»
+                  para ver más información.
+                </li>
+              </>
+            )}
           </ul>
         </aside>
       ) : null}
@@ -691,7 +726,10 @@ export function AnalyticsPanel({
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface p-3 sm:p-4">
           <h3 className="mb-3 text-sm font-extrabold text-ungrd-heading">
-            Distribución · {categoryField?.label || "Estado"}
+            Distribución ·{" "}
+            {theme.id === "fic"
+              ? "Vigencia"
+              : categoryField?.label || "Estado"}
           </h3>
           <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">

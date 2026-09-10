@@ -375,7 +375,8 @@ test("mapa Puentes prioriza conteo, no $ genérico", () => {
   };
   const fic = getThemeMapSemantics(ficTheme);
   assert.equal(resolveAutoMapMetric(ficTheme, true), "valor");
-  assert.match(fic.legendTitle("valor"), /COP|transferenc/i);
+  assert.match(fic.legendTitle("valor"), /FIC|COP/i);
+  assert.match(fic.legendTitle("count"), /FIC/i);
 });
 
 console.log(`\n${passed} pruebas nacionales OK`);

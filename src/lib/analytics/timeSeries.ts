@@ -22,8 +22,11 @@ export type SeriesWindow = "12" | "24" | "36" | "all";
 /** Campos de fecha preferidos por tema (orden de prioridad). */
 const DATE_FIELDS_BY_THEME: Record<string, string[]> = {
   fic: [
+    "fecha_final_para_legalizacion",
+    "fecha_de_legalizacion_por_prorroga",
+    "fecha_inicial_para_legalizacion",
     "fecha",
-    "fecha_de_desembolso",
+    "fecha_cdp",
     "fecha_acto_administrativo_resolucion",
     "fecha_formato_de_aprobacion_de_la_atencion",
   ],
@@ -85,7 +88,7 @@ const DEFAULT_DATE_FIELDS = [
 ];
 
 const DATE_LABEL: Record<string, string> = {
-  fic: "Fecha de desembolso / acto",
+  fic: "Fecha final legalización (o desembolso)",
   "agua-y-saneamiento": "Fecha de pago / seguimiento / inicio orden",
   carrotanques: "Fecha de estado / corte del reporte",
   "banco-de-maquinaria": "Fecha de recibo / entrega / acta",

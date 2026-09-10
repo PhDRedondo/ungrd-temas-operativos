@@ -37,7 +37,7 @@ type Props = {
   showDates?: boolean;
 };
 
-const GUIDE = [
+const GUIDE_DEFAULT = [
   {
     icon: Search,
     title: "Buscar clave",
@@ -59,14 +59,46 @@ const GUIDE = [
   {
     icon: CalendarRange,
     title: "Fechas",
-    detail:
-      "Acota los registros a un rango de fechas del evento.",
+    detail: "Acota los registros a un rango de fechas del evento.",
   },
   {
     icon: Share2,
     title: "Enlace compartible",
     detail:
       "Los filtros quedan en la dirección del navegador. Puede copiar el enlace y abrirlo con la misma vista.",
+  },
+] as const;
+
+const GUIDE_FIC = [
+  {
+    icon: Search,
+    title: "Buscar FIC",
+    detail:
+      "Número FIC (No. CDP), municipio, vigencia o ID AppSheet. Actualiza mando, mapa y tabla.",
+  },
+  {
+    icon: MapPinned,
+    title: "Territorio",
+    detail:
+      "Departamento y municipio de la transferencia. El mapa coroplético usa el valor desembolsado.",
+  },
+  {
+    icon: Layers,
+    title: "Legalización y vigencia",
+    detail:
+      "Estado de legalización UNGRD y vigencia (capa Transferencia FIC por año).",
+  },
+  {
+    icon: CalendarRange,
+    title: "Fechas FIC",
+    detail:
+      "Rango sobre fecha final de legalización (inicial + prórroga) o, si falta, fecha de desembolso.",
+  },
+  {
+    icon: Share2,
+    title: "Enlace compartible",
+    detail:
+      "Los filtros quedan en la URL. Puede compartir la misma vista filtrada.",
   },
 ] as const;
 
@@ -87,6 +119,19 @@ export function RecordFilterBar({
   const active = hasActiveFilters(filters);
   const pct =
     total > 0 ? Math.min(100, Math.round((matched / total) * 100)) : 0;
+  const isFic = themeId === "fic";
+  const guide = isFic ? GUIDE_FIC : GUIDE_DEFAULT;
+  const searchLabel = isFic ? "Buscar número FIC" : "Buscar clave u OP";
+  const searchPlaceholder = isFic
+    ? "Ej. 25-0516, SUCRE, vigencia 2025…"
+    : "Ej. SMD-12, placa, CDP, municipio…";
+  const estadoLabel = isFic ? "Estado legalización" : "Estado";
+  const resolvedCapaLabel = isFic
+    ? "Vigencia"
+    : capaLabel;
+  const blurb = isFic
+    ? "Filtre por número FIC, territorio, estado de legalización, vigencia y fechas de legalización. Mando, mapa y tabla se actualizan al instante."
+    : "Busque por clave o recorte por territorio, estado, capa y fechas. El resto del panel (mando, mapa, red y tabla) se actualiza al instante.";
 
   function capaText(raw: string) {
     return themeId ? displayCapaLabel(themeId, raw) : raw;
@@ -111,9 +156,7 @@ export function RecordFilterBar({
             Encuentre lo que necesita sin desplazarse
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/70 sm:text-sm">
-            Busque por clave o recorte por territorio, estado, capa y fechas.
-            El resto del panel (mando, mapa, red y tabla) se actualiza al
-            instante.
+            {blurb}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +184,7 @@ export function RecordFilterBar({
 
       {showGuide ? (
         <ul className="grid gap-2 border-b border-ungrd-border bg-[#f4f8fc] p-3 sm:grid-cols-2 lg:grid-cols-5 sm:p-4">
-          {GUIDE.map((item) => (
+          {guide.map((item) => (
             <li
               key={item.title}
               className="rounded-xl border border-ungrd-border/80 bg-ungrd-surface px-3 py-2.5 text-ungrd-text"
@@ -189,7 +232,7 @@ export function RecordFilterBar({
         <label className="block min-w-0">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-ungrd-heading uppercase">
             <Search className="h-3.5 w-3.5 text-ungrd-navy" aria-hidden />
-            Buscar clave u OP
+            {searchLabel}
           </span>
           <div className="relative mt-1">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ungrd-muted" />
@@ -197,7 +240,7 @@ export function RecordFilterBar({
               type="search"
               value={filters.q}
               onChange={(e) => patch({ q: e.target.value })}
-              placeholder="Ej. SMD-12, placa, CDP, municipio…"
+              placeholder={searchPlaceholder}
               className="w-full rounded-xl border border-ungrd-border bg-ungrd-input py-2.5 pr-3 pl-9 text-sm font-semibold text-ungrd-text shadow-sm outline-none ring-ungrd-navy/20 focus:ring-2"
             />
           </div>
@@ -254,7 +297,7 @@ export function RecordFilterBar({
           <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
             <span className="inline-flex items-center gap-1.5">
               <Layers className="h-3.5 w-3.5 text-ungrd-navy" aria-hidden />
-              Estado
+              {estadoLabel}
             </span>
             <select
               value={filters.estado}
@@ -273,7 +316,7 @@ export function RecordFilterBar({
           <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
             <span className="inline-flex items-center gap-1.5">
               <Layers className="h-3.5 w-3.5 text-ungrd-navy" aria-hidden />
-              {capaLabel}
+              {resolvedCapaLabel}
             </span>
             <select
               value={filters.capa}
@@ -301,6 +344,7 @@ export function RecordFilterBar({
                     aria-hidden
                   />
                   Desde
+                  {isFic ? " (legalización)" : ""}
                 </span>
                 <input
                   type="date"
@@ -318,6 +362,7 @@ export function RecordFilterBar({
                     aria-hidden
                   />
                   Hasta
+                  {isFic ? " (legalización)" : ""}
                 </span>
                 <input
                   type="date"
@@ -407,8 +452,9 @@ export function RecordFilterBar({
           </div>
         ) : (
           <p className="text-xs text-ungrd-muted">
-            Tip: también puede filtrar con un clic en el mapa o en los gráficos.
-            Use «¿Para qué sirve?» si es la primera vez.
+            {isFic
+              ? "Tip: clic en el mapa o en los gráficos también filtra por departamento o vigencia FIC."
+              : "Tip: también puede filtrar con un clic en el mapa o en los gráficos. Use «¿Para qué sirve?» si es la primera vez."}
           </p>
         )}
       </div>

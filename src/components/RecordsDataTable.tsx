@@ -152,7 +152,11 @@ export function RecordsDataTable({ theme, records }: Props) {
             type="search"
             value={tableQuery}
             onChange={(e) => setTableQuery(e.target.value)}
-            placeholder="Buscar en esta tabla (clave, OP, placa, municipio…)"
+            placeholder={
+              theme.id === "fic"
+                ? "Buscar FIC, municipio, vigencia o estado…"
+                : "Buscar en esta tabla (clave, OP, placa, municipio…)"
+            }
             className="w-full rounded-lg border border-ungrd-border bg-ungrd-input py-2 pr-3 pl-9 text-sm font-semibold text-ungrd-text"
           />
         </div>
@@ -162,7 +166,8 @@ export function RecordsDataTable({ theme, records }: Props) {
         {pageRows.map((row) => {
           const title =
             String(
-              row.clave_seguimiento ||
+              (theme.id === "fic" ? row.no_cdp : "") ||
+                row.clave_seguimiento ||
                 row.id_puente ||
                 row.municipio ||
                 row.departamento ||

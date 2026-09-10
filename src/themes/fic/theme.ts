@@ -50,7 +50,7 @@ const base = buildThemeFromSource({
     "Seguimiento y control de transferencias directas del Fondo de Inversión Colectiva (FR-1703-SMD-44) — una capa por vigencia, unidos por número FIC.",
   icon: "building-2",
   unit: "transferencias",
-  valueLabel: "Transferencias FIC",
+  valueLabel: "Valor FIC",
   schemaVersion: SCHEMA_VERSION,
   sourceFields: SOURCE_FIELDS,
 });
