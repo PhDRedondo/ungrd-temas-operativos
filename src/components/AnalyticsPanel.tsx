@@ -474,12 +474,29 @@ export function AnalyticsPanel({
       />
 
       {sourceTheme ? (
-        <DecisionDashboard
-          themeId={theme.id}
-          themeName={theme.name}
-          records={hasFilters ? filtered : workingRecords}
-          filterSummary={summarizeFilters(filters)}
-        />
+        <>
+          {hasFilters && filtered.length === 0 && workingRecords.length > 0 ? (
+            <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-amber-950">
+                Los filtros no dejan ningún FIC visible ({formatNumber(workingRecords.length)}{" "}
+                hay en la base). Quite filtros para ver la tabla operativa.
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="shrink-0 rounded-lg bg-ungrd-navy px-4 py-2 text-sm font-bold text-white hover:bg-ungrd-navy-mid"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          ) : null}
+          <DecisionDashboard
+            themeId={theme.id}
+            themeName={theme.name}
+            records={filtered}
+            filterSummary={summarizeFilters(filters)}
+          />
+        </>
       ) : null}
 
       {sourceTheme && !isFic ? (
@@ -554,9 +571,15 @@ export function AnalyticsPanel({
           {sourceTheme
             ? "Mapa y cortes sobre los registros del tema"
             : "Mapa y gráficos del tema"}
-          {sqlAgg
-            ? ` · ${formatNumber(sqlAgg.totals.count)} filas / ${formatCop(sqlAgg.totals.valor)}`
-            : ""}
+          {hasFilters
+            ? ` · ${formatNumber(filtered.length)} filtrados / ${formatCop(
+                filtered.reduce((s, r) => s + Number(r.valor || 0), 0),
+              )}`
+            : sqlAgg
+              ? ` · ${formatNumber(sqlAgg.totals.count)} filas / ${formatCop(sqlAgg.totals.valor)}`
+              : workingRecords.length
+                ? ` · ${formatNumber(workingRecords.length)} filas`
+                : ""}
         </span>
         {sqlSynced ? (
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-800">
