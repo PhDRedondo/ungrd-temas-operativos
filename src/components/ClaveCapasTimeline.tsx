@@ -23,13 +23,16 @@ type Event = {
 export function ClaveCapasTimeline({
   records,
   themeName,
+  themeId,
   initialQuery = "",
 }: {
   records: RecordRow[];
   themeName: string;
+  themeId?: string;
   initialQuery?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
+  const isFic = themeId === "fic";
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -41,24 +44,31 @@ export function ClaveCapasTimeline({
     const out: Event[] = [];
     for (const r of records) {
       const clave = normalizeTrackingKey(
-        r.clave_seguimiento ||
+        r.no_cdp ||
+          r.clave_seguimiento ||
           r.orden_de_proveeduria ||
           r.placa ||
           r.serial ||
-          r.no_cdp ||
           r.no_declaratoria ||
           r.no_convenio ||
+          String(r.id_transferencia || "") ||
           "",
       );
       if (!clave) continue;
       if (!clave.includes(q) && !q.includes(clave)) continue;
       out.push({
         id: String(r.id),
-        fecha: String(r.fecha || "").slice(0, 10),
+        fecha: String(
+          r.fecha_final_para_legalizacion ||
+            r.fecha_inicial_para_legalizacion ||
+            r.fecha ||
+            "",
+        ).slice(0, 10),
         capa: String(r.tipo_registro || r.capa || "Registro"),
         estado: String(r.estado || "—"),
         clave: String(
-          r.clave_seguimiento ||
+          r.no_cdp ||
+            r.clave_seguimiento ||
             r.orden_de_proveeduria ||
             r.placa ||
             r.serial ||
@@ -82,10 +92,12 @@ export function ClaveCapasTimeline({
   return (
     <section className="rounded-2xl border border-ungrd-border bg-ungrd-surface p-4 sm:p-5">
       <h3 className="text-sm font-extrabold text-ungrd-heading">
-        Buscar en {themeName}
+        {isFic ? "Línea de tiempo FIC" : `Buscar en ${themeName}`}
       </h3>
       <p className="mt-1 text-xs text-ungrd-muted">
-        Escriba una orden, placa, CDP o número de declaratoria.
+        {isFic
+          ? "Escriba el número FIC para ver legalización y vigencias asociadas."
+          : "Escriba una orden, placa, CDP o número de declaratoria."}
       </p>
       <div className="mt-3 flex gap-2">
         <div className="relative min-w-0 flex-1">
@@ -93,7 +105,11 @@ export function ClaveCapasTimeline({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ej. SMD-GS-MQ-151-2023 o placa OCJ581"
+            placeholder={
+              isFic
+                ? "Ej. 25-0516 o 21-0247"
+                : "Ej. SMD-GS-MQ-151-2023 o placa OCJ581"
+            }
             className="w-full rounded-lg border border-ungrd-border bg-ungrd-input py-2.5 pr-3 pl-9 text-sm font-semibold text-ungrd-text"
           />
         </div>

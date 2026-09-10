@@ -284,7 +284,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     themeId: "fic",
     title: "Tablero de decisión — FIC",
     subtitle:
-      "Criterio: semáforo por estado de legalización · crítico si hay saldo por legalizar con fecha final vencida (inicial + prórroga; clave FIC)",
+      "Semáforo por estado de legalización · prioridad si hay saldo por legalizar con fecha final vencida",
     kpis: [
       {
         id: "desembolso",

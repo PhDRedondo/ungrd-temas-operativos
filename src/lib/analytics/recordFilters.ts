@@ -84,6 +84,7 @@ function trackingCandidates(r: RecordRow): string[] {
     r.placa,
     r.serial,
     r.no_cdp,
+    r.id_transferencia,
     r.no_declaratoria,
     r.no_convenio,
     r.id,
@@ -108,11 +109,14 @@ export function matchRecordQuery(r: RecordRow, rawQ: string): boolean {
     r.placa,
     r.serial,
     r.no_cdp,
+    r.id_transferencia,
+    r.objeto_transferencia,
     r.departamento,
     r.municipio,
     r.estado,
     r.tipo_registro,
     r.capa,
+    r.vigencia,
     r.id,
   ]
     .map((v) => String(v ?? "").toLowerCase())
