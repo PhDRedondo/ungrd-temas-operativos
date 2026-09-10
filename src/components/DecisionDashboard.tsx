@@ -232,6 +232,83 @@ export function DecisionDashboard({
         </div>
       ) : null}
 
+      {isFic ? (
+        <div className="rounded-xl border border-ungrd-border bg-ungrd-surface p-3.5 text-ungrd-heading shadow-sm sm:p-4">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-navy uppercase">
+                Tabla operativa
+              </h3>
+              <p className="mt-1 text-xs text-ungrd-muted">
+                Nº CDP, Nº RC, fecha acto administrativo, fecha desembolso y %
+                avance de legalización.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-ungrd-muted">
+              {formatNumber(visiblePriority.length)} FIC
+            </span>
+          </div>
+          {visiblePriority.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-ungrd-border px-3 py-6 text-center text-sm text-ungrd-muted">
+              No hay FIC en este filtro. Quite filtros arriba para ver la base.
+            </p>
+          ) : (
+            <div className="scroll-thin max-h-[28rem] overflow-auto rounded-lg border border-ungrd-border">
+              <table className="min-w-[48rem] w-full border-collapse text-left text-sm">
+                <thead className="sticky top-0 z-[1] bg-ungrd-bg text-[11px] tracking-wide text-ungrd-muted uppercase">
+                  <tr>
+                    <th className="px-3 py-2.5 font-bold">#</th>
+                    <th className="px-3 py-2.5 font-bold">Nº CDP</th>
+                    <th className="px-3 py-2.5 font-bold">Nº RC</th>
+                    <th className="px-3 py-2.5 font-bold">Acto admin.</th>
+                    <th className="px-3 py-2.5 font-bold">Desembolso</th>
+                    <th className="px-3 py-2.5 font-bold">% avance</th>
+                    <th className="px-3 py-2.5 text-right font-bold">
+                      Por legalizar
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visiblePriority.map((item, idx) => (
+                    <tr
+                      key={item.key}
+                      className="border-t border-ungrd-border align-top hover:bg-ungrd-yellow/10"
+                    >
+                      <td className="px-3 py-2.5 text-xs font-extrabold text-ungrd-navy">
+                        {idx + 1}
+                      </td>
+                      <td className="px-3 py-2.5 font-bold text-ungrd-heading">
+                        {item.noCdp || item.label}
+                        {item.extra ? (
+                          <span className="mt-0.5 block text-[11px] font-medium text-ungrd-muted">
+                            {item.extra}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2.5 text-ungrd-text">
+                        {item.noRc || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.fechaActo || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.fechaDesembolso || "—"}
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-ungrd-heading">
+                        {item.avancePct || "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-ungrd-heading">
+                        {formatCop(item.valor)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="space-y-3 lg:col-span-2">
           <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
@@ -334,7 +411,7 @@ export function DecisionDashboard({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={`grid gap-4 ${isFic ? "" : "lg:grid-cols-2"}`}>
         <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
           <h3 className="mb-3 flex items-center gap-2 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
             <CircleDot className="h-3.5 w-3.5" />
@@ -370,47 +447,49 @@ export function DecisionDashboard({
           )}
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
-          <h3 className="mb-3 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
-            {brief.focusLabel}
-            {!isFic && scale === "micro"
-              ? ` · ${formatNumber(visiblePriority.length)}`
-              : ""}
-          </h3>
-          {visiblePriority.length === 0 ? (
-            <p className="text-sm text-white/55">
-              {isFic
-                ? "Ningún FIC vencido con saldo pendiente en este filtro."
-                : "No hay claves prioritarias con los criterios actuales."}
-            </p>
-          ) : (
-            <ul
-              className={`space-y-2 overflow-auto pr-1 ${
-                isFic || scale === "micro" ? "max-h-96" : "max-h-56"
-              }`}
-            >
-              {visiblePriority.map((item, idx) => (
-                <li
-                  key={item.key}
-                  className="grid grid-cols-[1.5rem_1fr_auto] items-start gap-2 border-b border-white/10 py-1.5 text-sm last:border-0"
-                >
-                  <span className="pt-0.5 text-xs font-extrabold text-ungrd-yellow">
-                    {idx + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate font-bold text-white">{item.label}</p>
-                    {item.extra ? (
-                      <p className="truncate text-xs text-white/55">{item.extra}</p>
-                    ) : null}
-                  </div>
-                  <span className="shrink-0 text-right text-xs tabular-nums text-white/75">
-                    {formatCop(item.valor)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {!isFic ? (
+          <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
+            <h3 className="mb-3 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
+              {brief.focusLabel}
+              {scale === "micro"
+                ? ` · ${formatNumber(visiblePriority.length)}`
+                : ""}
+            </h3>
+            {visiblePriority.length === 0 ? (
+              <p className="text-sm text-white/55">
+                No hay claves prioritarias con los criterios actuales.
+              </p>
+            ) : (
+              <ul
+                className={`space-y-2 overflow-auto pr-1 ${
+                  scale === "micro" ? "max-h-96" : "max-h-56"
+                }`}
+              >
+                {visiblePriority.map((item, idx) => (
+                  <li
+                    key={item.key}
+                    className="grid grid-cols-[1.5rem_1fr_auto] items-start gap-2 border-b border-white/10 py-1.5 text-sm last:border-0"
+                  >
+                    <span className="pt-0.5 text-xs font-extrabold text-ungrd-yellow">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-white">{item.label}</p>
+                      {item.extra ? (
+                        <p className="truncate text-xs text-white/55">
+                          {item.extra}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 text-right text-xs tabular-nums text-white/75">
+                      {formatCop(item.valor)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {!isFic && scale === "micro" && source ? (

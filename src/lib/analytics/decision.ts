@@ -42,6 +42,12 @@ export type RankedItem = {
   count: number;
   valor: number;
   extra?: string;
+  /** Campos operativos FIC (tarjeta / tabla prioritaria). */
+  noCdp?: string;
+  noRc?: string;
+  fechaActo?: string;
+  fechaDesembolso?: string;
+  avancePct?: string;
 };
 
 export type DecisionBrief = {
@@ -211,6 +217,13 @@ function layerBreakdown(rows: RecordRow[]): RankedItem[] {
   return topN(m, 12);
 }
 
+function formatAvancePct(raw: string | number | undefined | null): string {
+  if (raw === undefined || raw === null || String(raw).trim() === "") return "—";
+  const n = typeof raw === "number" ? raw : Number(String(raw).replace(",", "."));
+  if (!Number.isFinite(n)) return String(raw);
+  return `${n % 1 === 0 ? String(n) : n.toFixed(1)}%`;
+}
+
 function buildFic(rows: RecordRow[]): DecisionBrief {
   const sem = new Map<string, SemaphoreBucket>();
   const alerts: DecisionAlert[] = [];
@@ -219,7 +232,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
   let legalizado = 0;
   let vencidos = 0;
   let vencidosValor = 0;
-  const priority = new Map<string, { count: number; valor: number; extra?: string }>();
+  const priorityRows: RankedItem[] = [];
 
   for (const r of rows) {
     const valor = num(r, "valor");
@@ -245,12 +258,26 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     if (critico) {
       vencidos += 1;
       vencidosValor += pendiente || valor;
-      const key = str(r, "clave_seguimiento", "no_cdp") || "Sin FIC";
-      const cur = priority.get(key) || { count: 0, valor: 0 };
-      cur.count += 1;
-      cur.valor += pendiente || valor;
-      cur.extra = estado || "Pendiente legalización";
-      priority.set(key, cur);
+      const noCdp = str(r, "no_cdp", "clave_seguimiento") || "Sin FIC";
+      const muni = str(r, "municipio");
+      const depto = str(r, "departamento");
+      const lugar = [muni, depto]
+        .filter((x) => x && !/^sin (departamento|municipio)$/i.test(x))
+        .join(" · ");
+      priorityRows.push({
+        key: String(r.id || `${noCdp}-${plazo}-${pendiente}`),
+        label: noCdp,
+        count: 1,
+        valor: pendiente || valor,
+        extra: [estado || "Pendiente legalización", lugar].filter(Boolean).join(" · "),
+        noCdp,
+        noRc: str(r, "no_rc") || "—",
+        fechaActo: str(r, "fecha_acto_administrativo_resolucion") || "—",
+        fechaDesembolso: str(r, "fecha") || "—",
+        avancePct: formatAvancePct(
+          r.porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
+        ),
+      });
     }
   }
 
@@ -276,6 +303,73 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
       action: "Revise por vigencia y pida avance a las entidades receptoras.",
       valor: porLegalizar,
     });
+  }
+
+  const seenKeys = new Set(priorityRows.map((p) => p.key));
+  const padRows: RankedItem[] = [];
+  for (const r of rows) {
+    const pendiente = num(r, "valor_por_legalizar");
+    if (pendiente <= 0) continue;
+    const key = String(r.id || str(r, "no_cdp"));
+    if (!key || seenKeys.has(key)) continue;
+    const noCdp = str(r, "no_cdp", "clave_seguimiento") || "Sin FIC";
+    const muni = str(r, "municipio");
+    const depto = str(r, "departamento");
+    const lugar = [muni, depto]
+      .filter((x) => x && !/^sin (departamento|municipio)$/i.test(x))
+      .join(" · ");
+    const estado = str(r, "estado");
+    padRows.push({
+      key,
+      label: noCdp,
+      count: 1,
+      valor: pendiente,
+      extra: [estado || "Pendiente", lugar].filter(Boolean).join(" · "),
+      noCdp,
+      noRc: str(r, "no_rc") || "—",
+      fechaActo: str(r, "fecha_acto_administrativo_resolucion") || "—",
+      fechaDesembolso: str(r, "fecha") || "—",
+      avancePct: formatAvancePct(
+        r.porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
+      ),
+    });
+  }
+  padRows.sort((a, b) => b.valor - a.valor);
+  let priorityList = [
+    ...priorityRows.sort(
+      (a, b) => b.valor - a.valor || a.label.localeCompare(b.label),
+    ),
+    ...padRows,
+  ].slice(0, 20);
+
+  // Si no hay saldo pendiente, igual listar FIC recientes/mayores para la tabla operativa.
+  if (priorityList.length === 0 && rows.length > 0) {
+    priorityList = rows
+      .map((r) => {
+        const noCdp = str(r, "no_cdp", "clave_seguimiento") || "Sin FIC";
+        const muni = str(r, "municipio");
+        const depto = str(r, "departamento");
+        const lugar = [muni, depto]
+          .filter((x) => x && !/^sin (departamento|municipio)$/i.test(x))
+          .join(" · ");
+        const estado = str(r, "estado");
+        return {
+          key: String(r.id || noCdp),
+          label: noCdp,
+          count: 1,
+          valor: num(r, "valor"),
+          extra: [estado || "—", lugar].filter(Boolean).join(" · "),
+          noCdp,
+          noRc: str(r, "no_rc") || "—",
+          fechaActo: str(r, "fecha_acto_administrativo_resolucion") || "—",
+          fechaDesembolso: str(r, "fecha") || "—",
+          avancePct: formatAvancePct(
+            r.porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
+          ),
+        } satisfies RankedItem;
+      })
+      .sort((a, b) => b.valor - a.valor || a.label.localeCompare(b.label))
+      .slice(0, 20);
   }
 
   return {
@@ -314,8 +408,8 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     semaphores: orderSemaphores(sem),
     alerts,
     byLayer: layerBreakdown(rows),
-    priorityList: topN(priority, 15),
-    focusLabel: "FIC a atender primero",
+    priorityList,
+    focusLabel: "Tabla operativa",
     layerLabel: "Por vigencia",
   };
 }
@@ -1169,7 +1263,7 @@ export function buildDecisionBrief(
         alerts: [],
         byLayer: [],
         priorityList: [],
-        focusLabel: "FIC a atender primero",
+        focusLabel: "Tabla operativa",
         layerLabel: "Por vigencia",
       };
     }
