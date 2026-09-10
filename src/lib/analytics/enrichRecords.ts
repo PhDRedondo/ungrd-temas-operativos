@@ -160,18 +160,25 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
   switch (themeId) {
     case "fic":
       return [
-        { key: "clave_seguimiento", label: "Número FIC" },
-        { key: "tipo_registro", label: "Capa" },
+        { key: "no_cdp", label: "Nº CDP" },
+        { key: "no_rc", label: "Nº RC" },
+        { key: "fecha_acto_administrativo_resolucion", label: "Fecha acto administrativo" },
+        { key: "fecha", label: "Fecha desembolso" },
+        {
+          key: "porcentaje_de_avance_en_el_ejericicio_de_legalizacion",
+          label: "% avance legalización",
+        },
         { key: "departamento", label: "Departamento" },
+        { key: "municipio", label: "Municipio" },
         { key: "estado", label: "Legalización", kind: "badge" },
-        { key: "valor", label: "Desembolso", kind: "money" },
+        { key: "valor", label: "Valor desembolso", kind: "money" },
         { key: "valor_por_legalizar", label: "Por legalizar", kind: "money" },
+        { key: "vigencia", label: "Vigencia" },
         { key: "plazo_ejecucion_dias", label: "Plazo inicial (días)" },
         { key: "plazo_adicion_dias", label: "Plazo prórroga (días)" },
         { key: "plazo_final_dias", label: "Plazo final (días)" },
         { key: "fecha_inicial_para_legalizacion", label: "Fecha inicial legalización" },
         { key: "fecha_final_para_legalizacion", label: "Fecha final legalización" },
-        { key: "fecha_actual", label: "Fecha actual" },
       ];
     case "agua-y-saneamiento":
       return [

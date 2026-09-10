@@ -113,11 +113,12 @@ export function AnalyticsPanel({
   );
   const [mapMetricOverride, setMapMetricOverride] = useState<
     MapMetric | "auto"
-  >("auto");
+  >(theme.id === "fic" ? "valor" : "auto");
   const [seriesMetricOverride, setSeriesMetricOverride] = useState<
     MapMetric | "auto"
-  >("auto");
+  >(theme.id === "fic" ? "valor" : "auto");
   const [seriesWindow, setSeriesWindow] = useState<SeriesWindow>("24");
+  const isFic = theme.id === "fic";
 
   const workingRecords = useMemo(
     () => (sourceTheme ? enrichRecordsForDecision(records) : records),
@@ -481,7 +482,7 @@ export function AnalyticsPanel({
         />
       ) : null}
 
-      {sourceTheme ? (
+      {sourceTheme && !isFic ? (
         <ClaveCapasTimeline
           themeName={theme.name}
           themeId={theme.id}
@@ -490,7 +491,7 @@ export function AnalyticsPanel({
         />
       ) : null}
 
-      {sourceTheme ? (
+      {sourceTheme && !isFic ? (
         <aside className="rounded-2xl border border-ungrd-navy/15 bg-ungrd-surface px-4 py-3 text-sm text-ungrd-muted sm:px-5">
           <p className="text-xs font-extrabold tracking-[0.16em] text-ungrd-navy uppercase">
             Cómo usar este tablero
@@ -606,6 +607,7 @@ export function AnalyticsPanel({
               .
             </p>
           </div>
+          {!isFic ? (
           <div className="inline-flex max-w-full flex-wrap rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
             {(
               [
@@ -629,6 +631,11 @@ export function AnalyticsPanel({
               </button>
             ))}
           </div>
+          ) : (
+            <p className="rounded-lg bg-ungrd-bg px-3 py-1.5 text-xs font-bold text-ungrd-muted">
+              Mapa por valor desembolsado (COP)
+            </p>
+          )}
         </div>
 
         <div className="grid min-w-0 gap-4 lg:grid-cols-5">
@@ -842,6 +849,7 @@ export function AnalyticsPanel({
               </p>
             </div>
             <div className="flex flex-col items-end gap-1.5">
+              {!isFic ? (
               <div className="inline-flex max-w-full flex-wrap rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
                 {(
                   [
@@ -865,6 +873,7 @@ export function AnalyticsPanel({
                   </button>
                 ))}
               </div>
+              ) : null}
               <div className="inline-flex rounded-xl border border-ungrd-border bg-ungrd-bg p-1">
                 {(
                   [

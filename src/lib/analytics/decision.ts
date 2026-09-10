@@ -260,10 +260,9 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "fic-vencidos",
       severity: "critica",
-      title: "Legalización vencida o en riesgo",
-      detail: `${formatNumber(vencidos)} transferencias con saldo pendiente y plazo vencido (o estado VENCIDO). Dinero en riesgo: ${formatCop(vencidosValor)}.`,
-      action:
-        "Priorice FIC de la lista de la derecha y gestione prórroga o legalización inmediata.",
+      title: "Plazo vencido con plata pendiente",
+      detail: `${formatNumber(vencidos)} FIC aún deben legalizar ${formatCop(vencidosValor)}.`,
+      action: "Revise la lista de la derecha y gestione prórroga o legalización.",
       count: vencidos,
       valor: vencidosValor,
     });
@@ -272,25 +271,24 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "fic-gap",
       severity: porLegalizar > desembolso * 0.15 ? "alta" : "media",
-      title: "Saldo aún no legalizado",
-      detail: `Pendiente ${formatCop(porLegalizar)} de ${formatCop(desembolso)} desembolsados (${gapPct.toFixed(1)}%).`,
-      action:
-        "Revise la brecha por vigencia y exija avance de legalización a las entidades receptoras.",
+      title: "Saldo por legalizar",
+      detail: `Quedan ${formatCop(porLegalizar)} de ${formatCop(desembolso)} desembolsados (${gapPct.toFixed(1)}%).`,
+      action: "Revise por vigencia y pida avance a las entidades receptoras.",
       valor: porLegalizar,
     });
   }
 
   return {
     themeId: "fic",
-    title: "Tablero de decisión — FIC",
+    title: "Resumen FIC",
     subtitle:
-      "Semáforo por estado de legalización · prioridad si hay saldo por legalizar con fecha final vencida",
+      "Cuánto se desembolsó, cuánto falta por legalizar y qué FIC van vencidos.",
     kpis: [
       {
         id: "desembolso",
         label: "Desembolsado",
         value: formatCop(desembolso),
-        hint: `${formatNumber(rows.length)} transferencias`,
+        hint: `${formatNumber(rows.length)} FIC`,
       },
       {
         id: "por-legalizar",
@@ -301,13 +299,13 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
       },
       {
         id: "legalizado",
-        label: "Legalizado (campo)",
+        label: "Legalizado",
         value: formatCop(legalizado),
         tone: "verde",
       },
       {
         id: "riesgo",
-        label: "En riesgo / vencidos",
+        label: "Vencidos",
         value: formatNumber(vencidos),
         tone: vencidos > 0 ? "rojo" : "verde",
         hint: vencidosValor ? formatCop(vencidosValor) : undefined,
@@ -317,7 +315,8 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts,
     byLayer: layerBreakdown(rows),
     priorityList: topN(priority, 15),
-    focusLabel: "FIC prioritarios (saldo + plazo)",
+    focusLabel: "FIC a atender primero",
+    layerLabel: "Por vigencia",
   };
 }
 
@@ -1160,6 +1159,20 @@ export function buildDecisionBrief(
   rows: RecordRow[],
 ): DecisionBrief {
   if (!rows.length) {
+    if (themeId === "fic") {
+      return {
+        themeId,
+        title: "Resumen FIC",
+        subtitle: "No hay transferencias en este filtro. Quite filtros o importe la base.",
+        kpis: [],
+        semaphores: [],
+        alerts: [],
+        byLayer: [],
+        priorityList: [],
+        focusLabel: "FIC a atender primero",
+        layerLabel: "Por vigencia",
+      };
+    }
     return {
       themeId,
       title: "Tablero de decisión",
