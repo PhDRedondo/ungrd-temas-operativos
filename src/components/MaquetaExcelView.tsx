@@ -170,15 +170,19 @@ const PIN_LEFT_SUBSIDIOS = [
 ];
 
 const PIN_LEFT_FIC = [
-  "clave_seguimiento",
   "no_cdp",
+  "no_rc",
+  "fecha_acto_administrativo_resolucion",
+  "fecha",
+  "porcentaje_de_avance_en_el_ejericicio_de_legalizacion",
   "vigencia",
   "departamento",
   "municipio",
   "estado",
+  "valor",
+  "valor_por_legalizar",
   "fecha_inicial_para_legalizacion",
   "fecha_final_para_legalizacion",
-  "fecha_actual",
   "plazo_ejecucion_dias",
   "plazo_adicion_dias",
   "plazo_final_dias",

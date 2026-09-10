@@ -18,6 +18,10 @@ export type RecordFilterState = {
   periodo: string;
   from: string;
   to: string;
+  /** FIC: número CDP (parcial) */
+  no_cdp: string;
+  /** FIC: número RC (parcial) */
+  no_rc: string;
 };
 
 export const EMPTY_RECORD_FILTERS: RecordFilterState = {
@@ -30,6 +34,8 @@ export const EMPTY_RECORD_FILTERS: RecordFilterState = {
   periodo: "",
   from: "",
   to: "",
+  no_cdp: "",
+  no_rc: "",
 };
 
 /** Params compartibles en la URL del tema (sin tercero de charts). */
@@ -42,6 +48,8 @@ export const FILTER_URL_KEYS = [
   "periodo",
   "from",
   "to",
+  "no_cdp",
+  "no_rc",
 ] as const;
 
 export type FilterUrlKey = (typeof FILTER_URL_KEYS)[number];
@@ -56,7 +64,9 @@ export function hasActiveFilters(f: RecordFilterState): boolean {
       f.tercero ||
       f.periodo ||
       f.from ||
-      f.to,
+      f.to ||
+      f.no_cdp?.trim() ||
+      f.no_rc?.trim(),
   );
 }
 
@@ -65,6 +75,8 @@ export function summarizeFilters(f: RecordFilterState): string {
   if (!hasActiveFilters(f)) return "Sin filtros · base completa";
   const parts: string[] = [];
   if (f.q.trim()) parts.push(`Búsqueda: ${f.q.trim()}`);
+  if (f.no_cdp?.trim()) parts.push(`CDP: ${f.no_cdp.trim()}`);
+  if (f.no_rc?.trim()) parts.push(`RC: ${f.no_rc.trim()}`);
   if (f.departamento) parts.push(`Depto: ${f.departamento}`);
   if (f.municipio) parts.push(`Mpio: ${f.municipio}`);
   if (f.estado) parts.push(`Estado: ${f.estado}`);
@@ -84,6 +96,7 @@ function trackingCandidates(r: RecordRow): string[] {
     r.placa,
     r.serial,
     r.no_cdp,
+    r.no_rc,
     r.id_transferencia,
     r.no_declaratoria,
     r.no_convenio,
@@ -109,6 +122,7 @@ export function matchRecordQuery(r: RecordRow, rawQ: string): boolean {
     r.placa,
     r.serial,
     r.no_cdp,
+    r.no_rc,
     r.id_transferencia,
     r.objeto_transferencia,
     r.departamento,
@@ -117,6 +131,8 @@ export function matchRecordQuery(r: RecordRow, rawQ: string): boolean {
     r.tipo_registro,
     r.capa,
     r.vigencia,
+    r.fecha_acto_administrativo_resolucion,
+    r.fecha,
     r.id,
   ]
     .map((v) => String(v ?? "").toLowerCase())
@@ -128,6 +144,30 @@ export function capaOf(r: RecordRow): string {
   return String(r.tipo_registro || r.capa || "").trim();
 }
 
+function containsLoose(hay: unknown, needle: string): boolean {
+  const n = normalizeTrackingKey(needle);
+  if (!n) return true;
+  const h = normalizeTrackingKey(hay);
+  return Boolean(h && (h.includes(n) || n.includes(h)));
+}
+
+/** Fecha usada en filtros from/to (FIC prioriza acto administrativo). */
+export function resolveFilterDate(row: RecordRow, themeId: string): string {
+  if (themeId === "fic") {
+    for (const key of [
+      "fecha_acto_administrativo_resolucion",
+      "fecha",
+      "fecha_final_para_legalizacion",
+      "fecha_inicial_para_legalizacion",
+      "fecha_cdp",
+    ]) {
+      const d = String(row[key] || "").trim().slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    }
+  }
+  return resolveEventDate(row, themeId);
+}
+
 export function applyRecordFilters(
   rows: RecordRow[],
   f: RecordFilterState,
@@ -136,12 +176,16 @@ export function applyRecordFilters(
   const thirdKey = opts.thirdKey || "municipio";
   return rows.filter((r) => {
     if (!matchRecordQuery(r, f.q)) return false;
+    if (f.no_cdp?.trim() && !containsLoose(r.no_cdp || r.clave_seguimiento, f.no_cdp)) {
+      return false;
+    }
+    if (f.no_rc?.trim() && !containsLoose(r.no_rc, f.no_rc)) return false;
     if (f.departamento && r.departamento !== f.departamento) return false;
     if (f.municipio && r.municipio !== f.municipio) return false;
     if (f.estado && r.estado !== f.estado) return false;
     if (f.capa && capaOf(r) !== f.capa) return false;
     if (f.tercero && String(r[thirdKey] || "") !== f.tercero) return false;
-    const eventDate = resolveEventDate(r, opts.themeId);
+    const eventDate = resolveFilterDate(r, opts.themeId);
     if (f.periodo && !eventDate.startsWith(f.periodo)) return false;
     if (!f.periodo && f.from && eventDate && eventDate < f.from) return false;
     if (!f.periodo && f.to && eventDate && eventDate > f.to) return false;
@@ -181,6 +225,8 @@ export function parseFiltersFromParams(
     periodo: paramGet(sp, "periodo"),
     from: paramGet(sp, "from"),
     to: paramGet(sp, "to"),
+    no_cdp: paramGet(sp, "no_cdp"),
+    no_rc: paramGet(sp, "no_rc"),
   };
 }
 

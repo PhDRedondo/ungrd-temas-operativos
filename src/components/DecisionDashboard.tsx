@@ -21,6 +21,7 @@ import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
 import { downloadThemeBriefingPdf } from "@/lib/analytics/themeBriefingPdf";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { ThemeBriefDetail } from "@/components/ThemeBriefDetail";
+import { displayCapaLabel } from "@/lib/capa-display";
 
 type Props = {
   themeId: string;
@@ -135,7 +136,7 @@ export function DecisionDashboard({
       <header className="flex min-w-0 flex-wrap items-end justify-between gap-3 border-b border-white/15 pb-4">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold tracking-[0.22em] text-ungrd-yellow uppercase">
-            Dashboard Operativo · UNGRD
+            {isFic ? "FIC · Legalización" : "Dashboard Operativo · UNGRD"}
           </p>
           <h2 className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">
             {brief.title}
@@ -144,16 +145,24 @@ export function DecisionDashboard({
             {brief.subtitle}
           </p>
         </div>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => void onDownloadPdf()}
             disabled={records.length === 0 || pdfBusy}
             className="inline-flex items-center gap-1.5 rounded-lg bg-ungrd-yellow px-3 py-1.5 text-[11px] font-extrabold text-ungrd-navy-deep hover:brightness-105 disabled:opacity-50"
-            title="Descargar briefing PDF con identidad UNGRD (respeta filtros)"
+            title={
+              isFic
+                ? "Descargar reporte PDF del resumen FIC (respeta filtros)"
+                : "Descargar briefing PDF con identidad UNGRD (respeta filtros)"
+            }
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
-            {pdfBusy ? "Generando…" : "Briefing PDF"}
+            {pdfBusy
+              ? "Generando…"
+              : isFic
+                ? "Descargar reporte PDF"
+                : "Briefing PDF"}
           </button>
           {!isFic ? (
             <div className="inline-flex rounded-lg bg-black/30 p-1 ring-1 ring-white/20">
@@ -182,9 +191,9 @@ export function DecisionDashboard({
               </button>
             </div>
           ) : null}
-          {source ? (
+          {!isFic && source ? (
             <span className="rounded-full bg-ungrd-yellow px-3 py-1 text-[11px] font-extrabold tracking-wide text-ungrd-navy-deep uppercase">
-              {isFic ? "Base FIC" : "Base oficial conectada"}
+              Base oficial conectada
             </span>
           ) : null}
         </div>
@@ -226,7 +235,7 @@ export function DecisionDashboard({
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="space-y-3 lg:col-span-2">
           <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
-            Semáforo operativo
+            {isFic ? "Estado de legalización" : "Semáforo operativo"}
           </h3>
           {brief.semaphores.length === 0 ? (
             <p className="rounded-xl bg-white/5 px-3 py-3 text-sm text-white/65">
@@ -269,7 +278,7 @@ export function DecisionDashboard({
 
         <div className="space-y-3 lg:col-span-3">
           <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
-            Alertas para el tomador de decisión
+            {isFic ? "Alertas" : "Alertas para el tomador de decisión"}
           </h3>
           {visibleAlerts.length === 0 ? (
             <p className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-ungrd-surface px-3 py-3 text-sm font-semibold text-ungrd-success">
@@ -329,14 +338,17 @@ export function DecisionDashboard({
         <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
           <h3 className="mb-3 flex items-center gap-2 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
             <CircleDot className="h-3.5 w-3.5" />
-            {brief.layerLabel || "Distribución por capa / tipo de registro"}
+            {brief.layerLabel ||
+              (isFic
+                ? "Por vigencia"
+                : "Distribución por capa / tipo de registro")}
           </h3>
           {visibleLayers.length === 0 ? (
             <p className="text-sm text-white/55">Sin capas.</p>
           ) : (
             <ul
               className={`space-y-2 overflow-auto pr-1 ${
-                scale === "micro" ? "max-h-96" : "max-h-56"
+                isFic || scale === "micro" ? "max-h-96" : "max-h-56"
               }`}
             >
               {visibleLayers.map((item) => (
@@ -345,7 +357,9 @@ export function DecisionDashboard({
                   className="flex items-center justify-between gap-3 border-b border-white/10 py-1.5 text-sm last:border-0"
                 >
                   <span className="min-w-0 truncate font-semibold text-white">
-                    {item.label}
+                    {isFic
+                      ? displayCapaLabel(themeId, item.label)
+                      : item.label}
                   </span>
                   <span className="shrink-0 tabular-nums text-white/70">
                     {formatNumber(item.count)} · {formatCop(item.valor)}
@@ -359,18 +373,20 @@ export function DecisionDashboard({
         <div className="rounded-xl border border-white/10 bg-black/25 p-3.5">
           <h3 className="mb-3 text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
             {brief.focusLabel}
-            {scale === "micro"
+            {!isFic && scale === "micro"
               ? ` · ${formatNumber(visiblePriority.length)}`
               : ""}
           </h3>
           {visiblePriority.length === 0 ? (
             <p className="text-sm text-white/55">
-              No hay claves prioritarias con los criterios actuales.
+              {isFic
+                ? "Ningún FIC vencido con saldo pendiente en este filtro."
+                : "No hay claves prioritarias con los criterios actuales."}
             </p>
           ) : (
             <ul
               className={`space-y-2 overflow-auto pr-1 ${
-                scale === "micro" ? "max-h-96" : "max-h-56"
+                isFic || scale === "micro" ? "max-h-96" : "max-h-56"
               }`}
             >
               {visiblePriority.map((item, idx) => (
@@ -397,12 +413,10 @@ export function DecisionDashboard({
         </div>
       </div>
 
-      {(isFic || scale === "micro") && source ? (
+      {!isFic && scale === "micro" && source ? (
         <div className="rounded-xl border border-ungrd-border bg-ungrd-surface p-3 text-ungrd-heading">
           <p className="mb-2 text-xs font-extrabold tracking-wide text-ungrd-navy uppercase">
-            {isFic
-              ? "Detalle FIC · legalización y plazos"
-              : "Ficha micro completa de la base"}
+            Ficha micro completa de la base
           </p>
           <ThemeBriefDetail
             themeId={themeId}

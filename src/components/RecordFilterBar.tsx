@@ -123,14 +123,12 @@ export function RecordFilterBar({
   const guide = isFic ? GUIDE_FIC : GUIDE_DEFAULT;
   const searchLabel = isFic ? "Buscar número FIC" : "Buscar clave u OP";
   const searchPlaceholder = isFic
-    ? "Ej. 25-0516, SUCRE, vigencia 2025…"
+    ? "Ej. 25-0516, municipio, vigencia…"
     : "Ej. SMD-12, placa, CDP, municipio…";
   const estadoLabel = isFic ? "Estado legalización" : "Estado";
-  const resolvedCapaLabel = isFic
-    ? "Vigencia"
-    : capaLabel;
+  const resolvedCapaLabel = isFic ? "Vigencia" : capaLabel;
   const blurb = isFic
-    ? "Filtre por número FIC, territorio, estado de legalización, vigencia y fechas de legalización. Mando, mapa y tabla se actualizan al instante."
+    ? "Filtre por CDP, RC, acto administrativo, territorio, vigencia y estado. Mapa y tabla se actualizan al instante."
     : "Busque por clave o recorte por territorio, estado, capa y fechas. El resto del panel (mando, mapa, red y tabla) se actualiza al instante.";
 
   function capaText(raw: string) {
@@ -246,6 +244,31 @@ export function RecordFilterBar({
           </div>
         </label>
 
+        {isFic ? (
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+            <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
+              Nº CDP
+              <input
+                type="search"
+                value={filters.no_cdp || ""}
+                onChange={(e) => patch({ no_cdp: e.target.value })}
+                placeholder="Ej. 25-0516"
+                className="mt-1 w-full rounded-xl border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case shadow-sm outline-none ring-ungrd-navy/20 focus:ring-2"
+              />
+            </label>
+            <label className="min-w-0 text-xs font-bold tracking-wide text-ungrd-heading uppercase">
+              Nº RC
+              <input
+                type="search"
+                value={filters.no_rc || ""}
+                onChange={(e) => patch({ no_rc: e.target.value })}
+                placeholder="Ej. 10261"
+                className="mt-1 w-full rounded-xl border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-semibold text-ungrd-text normal-case shadow-sm outline-none ring-ungrd-navy/20 focus:ring-2"
+              />
+            </label>
+          </div>
+        ) : null}
+
         <div
           className={`grid min-w-0 gap-3 sm:grid-cols-2 ${
             showDates ? "xl:grid-cols-3 2xl:grid-cols-6" : "xl:grid-cols-4"
@@ -344,7 +367,7 @@ export function RecordFilterBar({
                     aria-hidden
                   />
                   Desde
-                  {isFic ? " (legalización)" : ""}
+                  {isFic ? " (acto admin.)" : ""}
                 </span>
                 <input
                   type="date"
@@ -362,7 +385,7 @@ export function RecordFilterBar({
                     aria-hidden
                   />
                   Hasta
-                  {isFic ? " (legalización)" : ""}
+                  {isFic ? " (acto admin.)" : ""}
                 </span>
                 <input
                   type="date"
@@ -384,6 +407,24 @@ export function RecordFilterBar({
                 className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
                 Buscar: {filters.q.trim()} ×
+              </button>
+            ) : null}
+            {filters.no_cdp?.trim() ? (
+              <button
+                type="button"
+                onClick={() => patch({ no_cdp: "" })}
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+              >
+                CDP: {filters.no_cdp.trim()} ×
+              </button>
+            ) : null}
+            {filters.no_rc?.trim() ? (
+              <button
+                type="button"
+                onClick={() => patch({ no_rc: "" })}
+                className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
+              >
+                RC: {filters.no_rc.trim()} ×
               </button>
             ) : null}
             {filters.departamento ? (
@@ -419,7 +460,7 @@ export function RecordFilterBar({
                 onClick={() => patch({ capa: "" })}
                 className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
-                {capaLabel}: {capaText(filters.capa)} ×
+                {resolvedCapaLabel}: {capaText(filters.capa)} ×
               </button>
             ) : null}
             {filters.tercero ? (
