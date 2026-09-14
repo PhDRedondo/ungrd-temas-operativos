@@ -6,6 +6,7 @@ import type { ValidatedRecord } from "@/lib/validation/record-schema";
 import type { AppRole } from "@/themes/shared/types";
 import type { RecordRow } from "@/lib/records/types";
 import { dbToRow } from "@/lib/records/db-to-row";
+import { normalizeRecordGeo } from "@/lib/geo";
 
 export type { RecordRow } from "@/lib/records/types";
 export { formatCop, formatNumber } from "@/lib/records/types";
@@ -136,19 +137,22 @@ export async function insertValidatedRecords(params: {
     const rows = await db
       .insert(records)
       .values(
-        chunk.map((item) => ({
-          themeId: params.themeId,
-          departamento: item.departamento || "SIN DEPARTAMENTO",
-          municipio: item.municipio || "SIN MUNICIPIO",
-          fecha: item.fecha || new Date().toISOString().slice(0, 10),
-          estado: item.estado || "SIN ESTADO",
-          valor: String(item.valor ?? 0),
-          payload: item.payload,
-          source: params.source,
-          contentHash: item.contentHash,
-          uploadId: params.uploadId,
-          createdBy: params.userId,
-        })),
+        chunk.map((item) => {
+          const geo = normalizeRecordGeo(item.departamento, item.municipio);
+          return {
+            themeId: params.themeId,
+            departamento: geo.departamento || "SIN DEPARTAMENTO",
+            municipio: geo.municipio || "SIN MUNICIPIO",
+            fecha: item.fecha || new Date().toISOString().slice(0, 10),
+            estado: item.estado || "SIN ESTADO",
+            valor: String(item.valor ?? 0),
+            payload: item.payload,
+            source: params.source,
+            contentHash: item.contentHash,
+            uploadId: params.uploadId,
+            createdBy: params.userId,
+          };
+        }),
       )
       .onConflictDoNothing({
         target: [records.themeId, records.contentHash],
