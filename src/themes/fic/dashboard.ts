@@ -3,6 +3,7 @@
  * Solo lectura sobre registros; no persiste.
  */
 import type { RecordRow } from "@/lib/records/types";
+import { canonicalEstadoLegalizacion } from "./select-options";
 
 export type FicOperativeRow = {
   key: string;
@@ -64,10 +65,13 @@ function formatAvancePct(raw: string | number | undefined | null): string {
   return `${n % 1 === 0 ? String(n) : n.toFixed(1)}%`;
 }
 
+/** Igual que filtrar la base por estado de legalización = VENCIDO. */
+export function isFicEstadoVencido(estado: unknown): boolean {
+  return canonicalEstadoLegalizacion(estado) === "VENCIDO";
+}
+
 function isCritico(r: RecordRow): boolean {
-  const estado = str(r, "estado");
-  const pendiente = num(r, "valor_por_legalizar");
-  return pendiente > 0 && /VENCID/i.test(estado);
+  return isFicEstadoVencido(str(r, "estado"));
 }
 
 /** Tabla operativa: toda la base filtrada, vencidos y saldo primero. */
