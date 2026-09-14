@@ -7,6 +7,7 @@ import { calculateObrasIndicadores } from "@/themes/obras-de-emergencia/calculat
 import { aggregateObrasDashboard } from "@/themes/obras-de-emergencia/dashboard";
 import { calculateImpuestosIndicadores } from "@/themes/obras-por-impuestos/calculations";
 import { aggregateImpuestosDashboard } from "@/themes/obras-por-impuestos/dashboard";
+import { isFicEstadoVencido } from "@/themes/fic/dashboard";
 
 export type SemaphoreLevel = "verde" | "amarillo" | "rojo" | "gris";
 
@@ -260,17 +261,8 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     const level = classifyLegalizacion(estado);
     bump(sem, level, labelForLevel(level, "fic"), valor);
 
-    const plazo = str(
-      r,
-      "fecha_final_para_legalizacion",
-      "fecha_de_legalizacion_por_prorroga",
-      "fecha_inicial_para_legalizacion",
-    );
-    const days = daysFromToday(plazo);
-    const critico =
-      pendiente > 0 &&
-      ((days !== null && days > 0) || /VENCID/i.test(estado));
-    if (critico) {
+    const vencido = isFicEstadoVencido(estado);
+    if (vencido) {
       vencidos += 1;
       vencidosValor += pendiente || valor;
       const noCdp = str(r, "no_cdp", "clave_seguimiento") || "Sin FIC";
@@ -280,7 +272,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
         .filter((x) => x && !/^sin (departamento|municipio)$/i.test(x))
         .join(" · ");
       priorityRows.push({
-        key: String(r.id || `${noCdp}-${plazo}-${pendiente}`),
+        key: String(r.id || `${noCdp}-${estado}-${pendiente}`),
         label: noCdp,
         count: 1,
         valor: pendiente || valor,
@@ -302,9 +294,9 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "fic-vencidos",
       severity: "critica",
-      title: "Plazo vencido con plata pendiente",
-      detail: `${formatNumber(vencidos)} FIC aún deben legalizar ${formatCop(vencidosValor)}.`,
-      action: "Revise la lista de la derecha y gestione prórroga o legalización.",
+      title: "Estado de legalización VENCIDO",
+      detail: `${formatNumber(vencidos)} FIC están en VENCIDO (${formatCop(vencidosValor)} por legalizar).`,
+      action: "Mismo conteo que filtrar la base por estado VENCIDO. Gestione prórroga o legalización.",
       count: vencidos,
       valor: vencidosValor,
     });
@@ -391,7 +383,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     themeId: "fic",
     title: "Resumen FIC",
     subtitle:
-      "Base FIC cargada: desembolso, saldo por legalizar, formato de aprobación y plazos vencidos.",
+      "Base FIC cargada: desembolso, saldo por legalizar, formato de aprobación y estado de legalización.",
     kpis: [
       {
         id: "desembolso",
@@ -417,7 +409,9 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
         label: "Vencidos",
         value: formatNumber(vencidos),
         tone: vencidos > 0 ? "rojo" : "verde",
-        hint: vencidosValor ? formatCop(vencidosValor) : undefined,
+        hint: vencidosValor
+          ? `${formatCop(vencidosValor)} · estado de legalización`
+          : "Estado de legalización",
       },
     ],
     semaphores: orderSemaphores(sem),

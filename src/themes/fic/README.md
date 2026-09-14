@@ -36,6 +36,8 @@ La capa se deriva de la **vigencia** al guardar (`prepareTrackingRow`); no hace 
 
 Ejemplo: inicial 180 días + prórroga 30 → plazo final 210; la fecha final corre 210 días desde la fecha inicial.
 
+El KPI **Vencidos** del tablero es la columna **estado de legalización** (`VENCIDO`), el mismo filtro que en Excel. No se infiere por `fecha_final_para_legalizacion`.
+
 El **% de avance** = `(desembolso − por legalizar) / desembolso × 100`.
 
 Excel `fields-from-source.ts` intacto. Campos de plantilla v3 (`formato_de_aprobacion`, acto/fecha 2, `fecha_acto_administrativo_modificacion`, valor/fecha desembolso, anticipo) viven en `theme.ts` + `excel-aliases.ts`. Bitácora/expedientes quedan fuera de esta entrega.
