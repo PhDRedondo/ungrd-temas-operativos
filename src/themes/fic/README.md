@@ -7,8 +7,8 @@
 | **Carpeta** | `src/themes/fic/` |
 | **Fuente** | `transferencias_fic.parquet` (AppSheet CONTROL FIC) + Excel histórico `Seguimiento_FIC_2026.xlsx` |
 | **Captura** | AppSheet CONTROL FIC (`alimentador.fic_transferencias_Form`) |
-| **schemaVersion** | 3 |
-| **Import** | `npx tsx scripts/import-fic-parquet.ts [/ruta/transferencias_fic.parquet]` → soft-delete + 388 filas en Supabase |
+| **schemaVersion** | 4 |
+| **Import** | `npx tsx scripts/import-fic-xlsx.ts [/ruta/plantilla_fic_v3.xlsx]` · parquet: `import-fic-parquet.ts` |
 
 ## Capas
 
@@ -18,9 +18,9 @@ La capa se deriva de la **vigencia** al guardar (`prepareTrackingRow`); no hace 
 
 ## Formularios de captura
 
-1. **Transferencia FIC** — alta del FIC (plazo inicial + fecha inicial de legalización).
+1. **Transferencia FIC** — alta del FIC (formato de aprobación, actos 1 y 2, valor/fecha desembolso, plazos).
 2. **Seguimiento legalización** — estado/valores; el visor usa la **fecha final** (con prórroga si hubo).
-3. **Modificación / prórroga** — conserva plazo/fecha inicial; suma adición y recalcula plazo/fecha final.
+3. **Modificación / prórroga** — acto de prórroga + fecha acto administrativo modificación; recalcula plazo/fecha final.
 
 ### Plazos y fechas (misma fila / tabla principal)
 
@@ -38,7 +38,20 @@ Ejemplo: inicial 180 días + prórroga 30 → plazo final 210; la fecha final co
 
 El **% de avance** = `(desembolso − por legalizar) / desembolso × 100`.
 
-Excel `fields-from-source.ts` intacto. `fecha_cdp` / `fecha_rc` / `plazo_final_dias` / `fecha_final_para_legalizacion` se agregan en `theme.ts` solo para captura. Bitácora/expedientes quedan fuera de esta entrega.
+Excel `fields-from-source.ts` intacto. Campos de plantilla v3 (`formato_de_aprobacion`, acto/fecha 2, `fecha_acto_administrativo_modificacion`, valor/fecha desembolso, anticipo) viven en `theme.ts` + `excel-aliases.ts`. Bitácora/expedientes quedan fuera de esta entrega.
+
+## Plantilla Excel v3 (carga)
+
+Cabeceras de `plantilla_fic_v3.xlsx` (hoja `FIC`) que se mapean al tema:
+
+| Columna plantilla | Campo |
+|---|---|
+| `#formato de aprobacion` | `formato_de_aprobacion_de_la_atencion` |
+| `acto_administrativo_otorgamiento_del_recurso -2` | `acto_administrativo_otorgamiento_del_recurso_2` |
+| `fecha_acto_administrativo_resolucion-2` | `fecha_acto_administrativo_resolucion_2` |
+| `valor desembolso` | `valor` |
+| `fecha de desembolso` | `fecha` |
+| `fecha acto administrativo modificacion` | `fecha_acto_administrativo_modificacion` |
 
 ## Regenerar campos
 

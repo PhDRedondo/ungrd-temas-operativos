@@ -172,8 +172,13 @@ const PIN_LEFT_SUBSIDIOS = [
 const PIN_LEFT_FIC = [
   "no_cdp",
   "no_rc",
+  "formato_de_aprobacion_de_la_atencion",
+  "acto_administrativo_otorgamiento_del_recurso",
+  "acto_administrativo_otorgamiento_del_recurso_2",
   "fecha_acto_administrativo_resolucion",
+  "fecha_acto_administrativo_resolucion_2",
   "fecha",
+  "fecha_acto_administrativo_modificacion",
   "porcentaje_de_avance_en_el_ejericicio_de_legalizacion",
   "vigencia",
   "departamento",

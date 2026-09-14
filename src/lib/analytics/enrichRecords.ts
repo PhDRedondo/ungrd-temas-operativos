@@ -162,8 +162,13 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
       return [
         { key: "no_cdp", label: "Nº CDP" },
         { key: "no_rc", label: "Nº RC" },
+        { key: "formato_de_aprobacion_de_la_atencion", label: "Formato de aprobación" },
+        { key: "acto_administrativo_otorgamiento_del_recurso", label: "Acto admin." },
+        { key: "acto_administrativo_otorgamiento_del_recurso_2", label: "Acto admin. 2" },
         { key: "fecha_acto_administrativo_resolucion", label: "Fecha acto administrativo" },
+        { key: "fecha_acto_administrativo_resolucion_2", label: "Fecha acto admin. 2" },
         { key: "fecha", label: "Fecha desembolso" },
+        { key: "fecha_acto_administrativo_modificacion", label: "Fecha acto modificación" },
         {
           key: "porcentaje_de_avance_en_el_ejericicio_de_legalizacion",
           label: "% avance legalización",

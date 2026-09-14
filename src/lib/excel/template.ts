@@ -3,6 +3,7 @@ import type { ThemeConfig, FormField } from "@/themes/shared/types";
 import { schemaFingerprint } from "@/lib/validation/record-schema";
 import { DEPARTMENTS, departmentNames } from "@/lib/geo";
 import { feedingGuideForTheme } from "@/lib/uploads/capa-inference";
+import { applyFicExcelAliases } from "@/themes/fic/excel-aliases";
 
 function normKey(s: string): string {
   return String(s || "")
@@ -179,6 +180,10 @@ export function remapRowToThemeFields(
       const y = String(out.ano_modelo).trim().replace(/\.0$/, "");
       if (/^\d{4}$/.test(y)) out.ano_modelo = y;
     }
+  }
+
+  if (theme.id === "fic") {
+    return applyFicExcelAliases(out);
   }
 
   return out;

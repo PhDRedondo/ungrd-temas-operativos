@@ -24,6 +24,7 @@ import {
   ficCapaFromVigencia,
   normalizeFicCapa,
 } from "@/themes/fic/capture-forms";
+import { applyFicExcelAliases } from "@/themes/fic/excel-aliases";
 import { canonicalEstadoLegalizacion } from "@/themes/fic/select-options";
 
 /** Opciones oficiales de capa por tema (alineadas a fields-from-source). */
@@ -487,6 +488,7 @@ export function prepareTrackingRow(
   }
 
   if (theme.id === "fic") {
+    Object.assign(out, applyFicExcelAliases(out));
     const fromVig =
       ficCapaFromVigencia(out.vigencia) ||
       ficCapaFromVigencia(out.tipo_registro) ||
