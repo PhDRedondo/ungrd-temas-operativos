@@ -142,9 +142,12 @@ export function enrichRecordsForDecision(rows: RecordRow[]): RecordRow[] {
     if (isEmptyMun(next.municipio) && fill.municipio) {
       next.municipio = fill.municipio;
     }
-    const own = bestValor(r);
-    const valor = Math.max(own, fill.valor);
-    if (valor > 0) next.valor = valor;
+    // No pisar un valor ya cargado (FIC: desembolso ≠ max de CDP/legalizado).
+    const ownCol = numVal(r.valor);
+    if (ownCol <= 0) {
+      const valor = Math.max(bestValor(r), fill.valor);
+      if (valor > 0) next.valor = valor;
+    }
     return next;
   });
 }

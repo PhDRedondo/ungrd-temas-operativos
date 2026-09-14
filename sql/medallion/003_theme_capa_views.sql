@@ -1278,7 +1278,9 @@ SELECT
   r.payload->>'tipo_registro' AS tipo_registro,
   r.payload->>'clave_seguimiento' AS clave_seguimiento,
   r.payload->>'acto_administrativo_otorgamiento_del_recurso' AS acto_administrativo_otorgamiento_del_recurso,
+  r.payload->>'acto_administrativo_otorgamiento_del_recurso_2' AS acto_administrativo_otorgamiento_del_recurso_2,
   r.payload->>'fecha_acto_administrativo_resolucion' AS fecha_acto_administrativo_resolucion,
+  r.payload->>'fecha_acto_administrativo_resolucion_2' AS fecha_acto_administrativo_resolucion_2,
   r.payload->>'vigencia' AS vigencia,
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
@@ -1286,8 +1288,6 @@ SELECT
   r.payload->>'tipo_de_evento' AS tipo_de_evento,
   r.payload->>'formato_de_aprobacion_de_la_atencion' AS formato_de_aprobacion_de_la_atencion,
   r.payload->>'fecha_formato_de_aprobacion_de_la_atencion' AS fecha_formato_de_aprobacion_de_la_atencion,
-  r.payload->>'acto_administrativo_otorgamiento_del_recurso_2' AS acto_administrativo_otorgamiento_del_recurso_2,
-  r.payload->>'fecha_acto_administrativo_resolucion_2' AS fecha_acto_administrativo_resolucion_2,
   r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
   r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
   r.payload->>'plazo_final_dias' AS plazo_final_dias,
@@ -1319,7 +1319,14 @@ SELECT
   r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
   r.payload->>'porcentaje_de_avance_en_el_ejericicio_de_legalizacion' AS porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
   r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
-  r.payload->>'observaciones' AS observaciones
+  r.payload->>'observaciones' AS observaciones,
+  r.payload->>'id_transferencia' AS id_transferencia,
+  r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
+  r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
+  r.payload->>'describa_el_resultado_de_las_visitas_realizadas' AS describa_el_resultado_de_las_visitas_realizadas,
+  r.payload->>'fecha_de_radicacion_en_gafc' AS fecha_de_radicacion_en_gafc,
+  r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
+  r.payload->>'fecha_acto_administrativo_modificacion' AS fecha_acto_administrativo_modificacion
 FROM public.records r
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
@@ -1362,7 +1369,12 @@ SELECT
   r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
   r.payload->>'describa_el_resultado_de_las_visitas_realizadas' AS describa_el_resultado_de_las_visitas_realizadas,
   r.payload->>'fecha_de_radicacion_en_gafc' AS fecha_de_radicacion_en_gafc,
-  r.payload->>'observaciones' AS observaciones
+  r.payload->>'observaciones' AS observaciones,
+  r.payload->>'no_cdp' AS no_cdp,
+  r.payload->>'no_rc' AS no_rc,
+  r.payload->>'vigencia' AS vigencia,
+  nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
+  nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio
 FROM public.records r
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
@@ -1391,8 +1403,14 @@ SELECT
   r.payload->>'plazo_final_dias' AS plazo_final_dias,
   r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
   r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
+  r.payload->>'fecha_actual' AS fecha_actual,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
-  r.payload->>'observaciones' AS observaciones
+  r.payload->>'observaciones' AS observaciones,
+  r.payload->>'no_cdp' AS no_cdp,
+  r.payload->>'no_rc' AS no_rc,
+  r.payload->>'vigencia' AS vigencia,
+  nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
+  nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio
 FROM public.records r
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
@@ -1400,6 +1418,76 @@ WHERE r.theme_id = 'fic'
   AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
 
 COMMENT ON VIEW fic.modificacion IS 'FIC — hoja Excel «Modificación / prórroga»';
+
+
+DROP VIEW IF EXISTS fic.fic CASCADE;
+CREATE VIEW fic.fic AS
+SELECT
+  r.id AS record_id,
+  r.theme_id,
+  r.source,
+  r.created_at,
+  r.updated_at,
+  r.payload->>'capa' AS capa,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  r.payload->>'no_cdp' AS no_cdp,
+  r.payload->>'fecha_cdp' AS fecha_cdp,
+  r.payload->>'vigencia' AS vigencia,
+  nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
+  nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
+  r.payload->>'tipo_de_evento' AS tipo_de_evento,
+  r.payload->>'formato_de_aprobacion_de_la_atencion' AS formato_de_aprobacion_de_la_atencion,
+  r.payload->>'fecha_formato_de_aprobacion_de_la_atencion' AS fecha_formato_de_aprobacion_de_la_atencion,
+  r.payload->>'acto_administrativo_otorgamiento_del_recurso' AS acto_administrativo_otorgamiento_del_recurso,
+  r.payload->>'acto_administrativo_otorgamiento_del_recurso_2' AS acto_administrativo_otorgamiento_del_recurso_2,
+  r.payload->>'fecha_acto_administrativo_resolucion' AS fecha_acto_administrativo_resolucion,
+  r.payload->>'fecha_acto_administrativo_resolucion_2' AS fecha_acto_administrativo_resolucion_2,
+  r.payload->>'clasificacion' AS clasificacion,
+  r.payload->>'no_rc' AS no_rc,
+  r.payload->>'fecha_rc' AS fecha_rc,
+  COALESCE(
+    CASE
+      WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+      THEN nullif(trim(r.payload->>'valor'), '')::numeric
+      ELSE NULL
+    END,
+    r.valor
+  ) AS valor,
+  coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
+  r.payload->>'fecha_de_notificacion' AS fecha_de_notificacion,
+  r.payload->>'comunicacion_de_notificacion_ente_territorial' AS comunicacion_de_notificacion_ente_territorial,
+  r.payload->>'fecha_de_radicacion_comunicacion_ente_territorial' AS fecha_de_radicacion_comunicacion_ente_territorial,
+  r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
+  r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
+  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  r.payload->>'fecha_actual' AS fecha_actual,
+  r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
+  r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
+  r.payload->>'porcentaje_de_avance_en_el_ejericicio_de_legalizacion' AS porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
+  r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
+  r.payload->>'describa_el_resultado_de_las_visitas_realizadas' AS describa_el_resultado_de_las_visitas_realizadas,
+  r.payload->>'observaciones' AS observaciones,
+  r.payload->>'fecha_de_radicacion_en_gafc' AS fecha_de_radicacion_en_gafc,
+  r.payload->>'objeto_transferencia' AS objeto_transferencia,
+  r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
+  r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
+  r.payload->>'fecha_acto_administrativo_modificacion' AS fecha_acto_administrativo_modificacion,
+  r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
+  r.payload->>'plazo_final_dias' AS plazo_final_dias,
+  r.payload->>'valor_legalizado' AS valor_legalizado,
+  r.payload->>'id_transferencia' AS id_transferencia,
+  r.payload->>'tiene_anticipo' AS tiene_anticipo,
+  r.payload->>'valor_anticipo' AS valor_anticipo
+FROM public.records r
+WHERE r.theme_id = 'fic'
+  AND r.deleted_at IS NULL
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+
+COMMENT ON VIEW fic.fic IS 'FIC — hoja Excel «FIC» (plantilla v3, todos los campos)';
 
 
 -- === Convenios → schema convenios ===
@@ -1692,6 +1780,18 @@ DROP VIEW IF EXISTS medallion.v_subsidios_arriendos_consolidado CASCADE;
 CREATE VIEW medallion.v_subsidios_arriendos_consolidado AS SELECT * FROM subsidios_arriendos.consolidado;
 
 
+DROP VIEW IF EXISTS medallion.v_fic_all CASCADE;
+CREATE VIEW medallion.v_fic_all AS SELECT * FROM fic.fic;
+
+
+DROP VIEW IF EXISTS medallion.v_fic_fic CASCADE;
+CREATE VIEW medallion.v_fic_fic AS SELECT * FROM fic.fic;
+
+
+DROP VIEW IF EXISTS medallion.v_fic_transferencia CASCADE;
+CREATE VIEW medallion.v_fic_transferencia AS SELECT * FROM fic.transferencia;
+
+
 DROP VIEW IF EXISTS medallion.v_puentes_all CASCADE;
 DROP VIEW IF EXISTS medallion.v_agua_all CASCADE;
 DROP VIEW IF EXISTS medallion.v_agua_y_saneamiento_all CASCADE;
@@ -1740,6 +1840,7 @@ SELECT * FROM (VALUES
   ('fic.transferencia', 'fic', 'transferencia', 'fic', 'Transferencia FIC', 'FIC — Transferencia FIC', 'SELECT * FROM fic.transferencia'),
   ('fic.legalizacion', 'fic', 'legalizacion', 'fic', 'Legalización', 'FIC — Legalización', 'SELECT * FROM fic.legalizacion'),
   ('fic.modificacion', 'fic', 'modificacion', 'fic', 'Modificación / prórroga', 'FIC — Modificación / prórroga', 'SELECT * FROM fic.modificacion'),
+  ('fic.fic', 'fic', 'fic', 'fic', 'FIC', 'FIC — FIC', 'SELECT * FROM fic.fic'),
   ('convenios.base', 'convenios', 'base', 'convenios', 'base', 'Convenios — base', 'SELECT * FROM convenios.base'),
   ('presupuesto.base', 'presupuesto', 'base', 'presupuesto', 'base', 'Presupuesto — base', 'SELECT * FROM presupuesto.base'),
   ('ejecucion_financiera.base', 'ejecucion_financiera', 'base', 'ejecucion-financiera', 'base', 'Ejecución financiera — base', 'SELECT * FROM ejecucion_financiera.base'),
@@ -1774,7 +1875,10 @@ SELECT * FROM (VALUES
   ('agua', 'agua.control_y_seguimiento_detalle_m', 'agua.general', 'orden_de_proveeduria', 'primaria', 'OP une control físico con General', 'SELECT ct.*, g.tipo_de_orden FROM agua.control_y_seguimiento_detalle_m ct JOIN agua.general g ON g.orden_de_proveeduria = ct.orden_de_proveeduria'),
   ('agua', 'agua.variables_lider', 'agua.general', 'orden_de_proveeduria', 'primaria', 'OP une variables líder con General', 'SELECT v.*, g.objeto FROM agua.variables_lider v JOIN agua.general g ON g.orden_de_proveeduria = v.orden_de_proveeduria'),
   ('agua', 'agua.pagos', 'agua.bitacora', 'orden_de_proveeduria', 'secundaria', 'Misma OP entre satélites (historial distinto)', 'SELECT p.orden_de_proveeduria, count(DISTINCT b.record_id) AS eventos FROM agua.pagos p LEFT JOIN agua.bitacora b ON b.orden_de_proveeduria = p.orden_de_proveeduria GROUP BY 1'),
-  ('subsidios_arriendos', 'subsidios_arriendos.consolidado', 'subsidios_arriendos.consolidado', 'uuid', 'primaria', 'Identidad del registro (UUID). Capas futuras de seguimiento se unen por uuid', 'SELECT c.uuid, c.numero_envio, c.n_orden, c.municipio FROM subsidios_arriendos.consolidado c')
+  ('subsidios_arriendos', 'subsidios_arriendos.consolidado', 'subsidios_arriendos.consolidado', 'uuid', 'primaria', 'Identidad del registro (UUID). Capas futuras de seguimiento se unen por uuid', 'SELECT c.uuid, c.numero_envio, c.n_orden, c.municipio FROM subsidios_arriendos.consolidado c'),
+  ('fic', 'fic.legalizacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une legalización con la hoja FIC', 'SELECT l.*, f.no_cdp, f.valor, f.formato_de_aprobacion_de_la_atencion FROM fic.legalizacion l JOIN fic.fic f ON f.clave_seguimiento = l.clave_seguimiento'),
+  ('fic', 'fic.modificacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une modificación/prórroga con la hoja FIC', 'SELECT m.*, f.no_cdp, f.plazo_final_dias FROM fic.modificacion m JOIN fic.fic f ON f.clave_seguimiento = m.clave_seguimiento'),
+  ('fic', 'fic.transferencia', 'fic.fic', 'no_cdp', 'primaria', 'Misma fila de la plantilla v3 (alta = hoja FIC)', 'SELECT t.no_cdp, f.formato_de_aprobacion_de_la_atencion, f.valor FROM fic.transferencia t JOIN fic.fic f ON f.no_cdp = t.no_cdp')
 ) AS t(schema_name, left_table, right_table, join_key, priority, description, sample_sql);
 
 

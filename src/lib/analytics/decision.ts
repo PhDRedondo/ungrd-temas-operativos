@@ -217,6 +217,19 @@ function layerBreakdown(rows: RecordRow[]): RankedItem[] {
   return topN(m, 12);
 }
 
+function ficVigenciaBreakdown(rows: RecordRow[]): RankedItem[] {
+  const m = new Map<string, { count: number; valor: number }>();
+  for (const r of rows) {
+    const key =
+      str(r, "vigencia") || str(r, "tipo_registro", "capa") || "Sin vigencia";
+    const cur = m.get(key) || { count: 0, valor: 0 };
+    cur.count += 1;
+    cur.valor += num(r, "valor");
+    m.set(key, cur);
+  }
+  return topN(m, 20);
+}
+
 function formatAvancePct(raw: string | number | undefined | null): string {
   if (raw === undefined || raw === null || String(raw).trim() === "") return "—";
   const n = typeof raw === "number" ? raw : Number(String(raw).replace(",", "."));
@@ -237,7 +250,9 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
   for (const r of rows) {
     const valor = num(r, "valor");
     const pendiente = num(r, "valor_por_legalizar");
-    const hecho = num(r, "valor_legalizado");
+    const hechoCampo = num(r, "valor_legalizado");
+    const hecho =
+      hechoCampo > 0 ? hechoCampo : Math.max(0, valor - pendiente);
     desembolso += valor;
     porLegalizar += pendiente;
     legalizado += hecho;
@@ -376,7 +391,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     themeId: "fic",
     title: "Resumen FIC",
     subtitle:
-      "Cuánto se desembolsó, cuánto falta por legalizar y qué FIC van vencidos.",
+      "Base FIC cargada: desembolso, saldo por legalizar, formato de aprobación y plazos vencidos.",
     kpis: [
       {
         id: "desembolso",
@@ -407,7 +422,7 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     ],
     semaphores: orderSemaphores(sem),
     alerts,
-    byLayer: layerBreakdown(rows),
+    byLayer: ficVigenciaBreakdown(rows),
     priorityList,
     focusLabel: "Tabla operativa",
     layerLabel: "Por vigencia",

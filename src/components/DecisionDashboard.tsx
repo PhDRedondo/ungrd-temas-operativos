@@ -8,6 +8,7 @@ import {
   CircleDot,
   Download,
   Microscope,
+  Search,
   ShieldAlert,
   Siren,
 } from "lucide-react";
@@ -22,6 +23,10 @@ import { downloadThemeBriefingPdf } from "@/lib/analytics/themeBriefingPdf";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { ThemeBriefDetail } from "@/components/ThemeBriefDetail";
 import { displayCapaLabel } from "@/lib/capa-display";
+import {
+  buildFicOperativeRows,
+  matchFicOperativeRow,
+} from "@/themes/fic/dashboard";
 
 type Props = {
   themeId: string;
@@ -85,12 +90,25 @@ export function DecisionDashboard({
 }: Props) {
   const [scale, setScale] = useState<Scale>("macro");
   const [pdfBusy, setPdfBusy] = useState(false);
-  const brief = useMemo(() => {
-    const rows = isSourceTheme(themeId)
+  const [ficQuery, setFicQuery] = useState("");
+  const working = useMemo(() => {
+    return isSourceTheme(themeId)
       ? enrichRecordsForDecision(records)
       : records;
-    return buildDecisionBrief(themeId, rows);
   }, [themeId, records]);
+  const brief = useMemo(
+    () => buildDecisionBrief(themeId, working),
+    [themeId, working],
+  );
+  const ficRows = useMemo(
+    () => (themeId === "fic" ? buildFicOperativeRows(working) : []),
+    [themeId, working],
+  );
+  const visibleFicRows = useMemo(() => {
+    const q = ficQuery.trim();
+    if (!q) return ficRows;
+    return ficRows.filter((row) => matchFicOperativeRow(row, q));
+  }, [ficRows, ficQuery]);
 
   const totalSem = brief.semaphores.reduce((a, s) => a + s.count, 0) || 1;
   const source = isSourceTheme(themeId);
@@ -240,36 +258,62 @@ export function DecisionDashboard({
                 Tabla operativa
               </h3>
               <p className="mt-1 text-xs text-ungrd-muted">
-                Nº CDP, Nº RC, fecha acto administrativo, fecha desembolso y %
-                avance de legalización.
+                Base FIC cargada: formato de aprobación, actos 1 y 2, desembolso,
+                fecha de modificación y % de avance.
               </p>
             </div>
             <span className="text-xs font-bold text-ungrd-muted">
-              {formatNumber(visiblePriority.length)} FIC
+              {formatNumber(visibleFicRows.length)}
+              {visibleFicRows.length !== ficRows.length
+                ? ` de ${formatNumber(ficRows.length)}`
+                : ""}{" "}
+              FIC
             </span>
           </div>
-          {visiblePriority.length === 0 ? (
+          {ficRows.length > 0 ? (
+            <label className="mb-3 flex items-center gap-2 rounded-lg border border-ungrd-border bg-ungrd-bg px-3 py-2 text-sm">
+              <Search className="h-4 w-4 shrink-0 text-ungrd-muted" aria-hidden />
+              <input
+                type="search"
+                value={ficQuery}
+                onChange={(e) => setFicQuery(e.target.value)}
+                placeholder="Buscar CDP, RC, formato, acto, vigencia…"
+                className="w-full bg-transparent text-ungrd-heading outline-none placeholder:text-ungrd-muted"
+              />
+            </label>
+          ) : null}
+          {visibleFicRows.length === 0 ? (
             <p className="rounded-lg border border-dashed border-ungrd-border px-3 py-6 text-center text-sm text-ungrd-muted">
-              No hay FIC en este filtro. Quite filtros arriba para ver la base.
+              {ficRows.length === 0
+                ? "No hay FIC en este filtro. Quite filtros arriba para ver la base."
+                : "Ningún FIC coincide con esa búsqueda."}
             </p>
           ) : (
             <div className="scroll-thin max-h-[28rem] overflow-auto rounded-lg border border-ungrd-border">
-              <table className="min-w-[48rem] w-full border-collapse text-left text-sm">
+              <table className="min-w-[72rem] w-full border-collapse text-left text-sm">
                 <thead className="sticky top-0 z-[1] bg-ungrd-bg text-[11px] tracking-wide text-ungrd-muted uppercase">
                   <tr>
                     <th className="px-3 py-2.5 font-bold">#</th>
                     <th className="px-3 py-2.5 font-bold">Nº CDP</th>
                     <th className="px-3 py-2.5 font-bold">Nº RC</th>
+                    <th className="px-3 py-2.5 font-bold">Formato</th>
                     <th className="px-3 py-2.5 font-bold">Acto admin.</th>
+                    <th className="px-3 py-2.5 font-bold">Acto 2</th>
+                    <th className="px-3 py-2.5 font-bold">Fecha acto</th>
+                    <th className="px-3 py-2.5 font-bold">Fecha acto 2</th>
                     <th className="px-3 py-2.5 font-bold">Desembolso</th>
+                    <th className="px-3 py-2.5 font-bold">Fecha mod.</th>
                     <th className="px-3 py-2.5 font-bold">% avance</th>
+                    <th className="px-3 py-2.5 text-right font-bold">
+                      Valor desembolso
+                    </th>
                     <th className="px-3 py-2.5 text-right font-bold">
                       Por legalizar
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visiblePriority.map((item, idx) => (
+                  {visibleFicRows.map((item, idx) => (
                     <tr
                       key={item.key}
                       className="border-t border-ungrd-border align-top hover:bg-ungrd-yellow/10"
@@ -278,27 +322,45 @@ export function DecisionDashboard({
                         {idx + 1}
                       </td>
                       <td className="px-3 py-2.5 font-bold text-ungrd-heading">
-                        {item.noCdp || item.label}
-                        {item.extra ? (
-                          <span className="mt-0.5 block text-[11px] font-medium text-ungrd-muted">
-                            {item.extra}
-                          </span>
-                        ) : null}
+                        {item.noCdp}
+                        <span className="mt-0.5 block text-[11px] font-medium text-ungrd-muted">
+                          {[item.estado, item.lugar, item.vigencia !== "—" ? `Vig. ${item.vigencia}` : ""]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
                       </td>
                       <td className="px-3 py-2.5 text-ungrd-text">
-                        {item.noRc || "—"}
+                        {item.noRc}
+                      </td>
+                      <td className="max-w-[10rem] truncate px-3 py-2.5 text-ungrd-text" title={item.formatoAprobacion}>
+                        {item.formatoAprobacion}
+                      </td>
+                      <td className="max-w-[10rem] truncate px-3 py-2.5 text-ungrd-text" title={item.acto}>
+                        {item.acto}
+                      </td>
+                      <td className="max-w-[8rem] truncate px-3 py-2.5 text-ungrd-text" title={item.acto2}>
+                        {item.acto2}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
-                        {item.fechaActo || "—"}
+                        {item.fechaActo}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
-                        {item.fechaDesembolso || "—"}
+                        {item.fechaActo2}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.fechaDesembolso}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.fechaModificacion}
                       </td>
                       <td className="px-3 py-2.5 font-semibold text-ungrd-heading">
-                        {item.avancePct || "—"}
+                        {item.avancePct}
                       </td>
                       <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-ungrd-heading">
                         {formatCop(item.valor)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-ungrd-heading">
+                        {formatCop(item.porLegalizar)}
                       </td>
                     </tr>
                   ))}

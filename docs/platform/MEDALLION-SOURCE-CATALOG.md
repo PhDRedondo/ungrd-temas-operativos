@@ -190,6 +190,30 @@ SELECT uuid, numero_envio, n_orden, departamento, municipio,
 FROM subsidios_arriendos.consolidado;
 ```
 
+### FIC (plantilla v3 — una hoja, todos los campos)
+
+Igual que Agua: **una tabla = la hoja Excel**. Conectar Alibaba a:
+
+| Tabla Postgres | Hoja / uso | Llave |
+|----------------|------------|-------|
+| **`fic.fic`** | Plantilla `FIC` (todos los campos) | **`no_cdp`** / `clave_seguimiento` |
+| `fic.transferencia` | Alta (mismos 387 registros, columnas de captura) | `no_cdp` |
+| `fic.legalizacion` | Seguimiento legalización | `clave_seguimiento` |
+| `fic.modificacion` | Prórroga | `clave_seguimiento` |
+
+Alias: `medallion.v_fic_all` → `fic.fic`.
+
+```sql
+SELECT * FROM medallion.v_connections WHERE schema_name = 'fic';
+SELECT count(*) FROM fic.fic;
+SELECT no_cdp, vigencia, formato_de_aprobacion_de_la_atencion,
+       acto_administrativo_otorgamiento_del_recurso,
+       acto_administrativo_otorgamiento_del_recurso_2,
+       fecha, valor, estado
+FROM fic.fic
+LIMIT 20;
+```
+
 **Import maqueta ancha:** en prod, CDP/RC y variables líder llegaron dentro de
 filas `Alta / orden` (no como capa aparte). Las vistas `agua.cdps_y_rc` y
 `agua.variables_lider` incluyen esas filas Alta cuando hay marcadores
