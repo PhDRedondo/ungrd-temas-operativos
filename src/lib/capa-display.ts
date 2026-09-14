@@ -42,7 +42,7 @@ export function displayCapaLabel(themeId: string, capa: string): string {
   const raw = String(capa || "").trim();
   if (!raw) return "Sin tipo";
   if (themeId === "fic") {
-    const y = raw.match(/transferencia\s*fic\s*(20\d{2})/i);
+    const y = raw.match(/^(?:transferencia\s*fic\s*)?(20\d{2})$/i);
     if (y) return `Vigencia ${y[1]}`;
   }
   return BY_THEME[themeId]?.[raw] || raw;

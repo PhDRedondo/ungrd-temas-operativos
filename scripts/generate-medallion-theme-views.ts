@@ -80,6 +80,7 @@ const SHEET_LABEL: Record<string, string> = {
   transferencia: "Transferencia FIC",
   legalizacion: "Legalización",
   modificacion: "Modificación / prórroga",
+  fic: "FIC",
 };
 
 /**
@@ -196,6 +197,31 @@ const AGUA_JOIN_OP =
   "nullif(trim(coalesce(r.payload->>'orden_de_proveeduria', r.payload->>'clave_seguimiento', r.payload->>'op', '')), '')";
 
 const SHEET_EXTRA_FIELDS: Record<string, Record<string, string[]>> = {
+  fic: {
+    // Plantilla v3 es una sola hoja: la vista transferencia debe llevar el resto del schema.
+    transferencia: [
+      "id_transferencia",
+      "fecha_de_legalizacion_por_prorroga",
+      "se_realizaron_visitas_de_seguimiento",
+      "describa_el_resultado_de_las_visitas_realizadas",
+      "fecha_de_radicacion_en_gafc",
+      "acto_administrativo_prorroga",
+    ],
+    legalizacion: [
+      "no_cdp",
+      "no_rc",
+      "vigencia",
+      "departamento",
+      "municipio",
+    ],
+    modificacion: [
+      "no_cdp",
+      "no_rc",
+      "vigencia",
+      "departamento",
+      "municipio",
+    ],
+  },
   puentes: {
     // Base General: Contrato / comentarios / ID alias (no se digitan en alta)
     inventario: [
@@ -696,6 +722,10 @@ CREATE SCHEMA IF NOT EXISTS medallion;
         const table = sheetFor(form.id);
         const sheetLabel = SHEET_LABEL[table] || table;
         const extras = SHEET_EXTRA_FIELDS[theme.id]?.[form.id] || [];
+        const ficWide =
+          theme.id === "fic" && form.id === "transferencia"
+            ? theme.fields.map((f) => f.name)
+            : [];
         const built = buildSheetView({
           schema,
           table,
@@ -707,6 +737,7 @@ CREATE SCHEMA IF NOT EXISTS medallion;
             "clave_seguimiento",
             ...(form.fieldNames || []),
             ...extras,
+            ...ficWide,
           ],
           fields: theme.fields,
           capa: form.capa,
@@ -716,6 +747,31 @@ CREATE SCHEMA IF NOT EXISTS medallion;
         built.conn.description = `${theme.name} — ${sheetLabel}`;
         parts.push(built.sql);
         conns.push(built.conn);
+      }
+      // FIC plantilla v3 = una hoja «FIC» con todos los campos (conexión Alibaba).
+      if (theme.id === "fic") {
+        const ficCapa = forms[0]?.capa;
+        if (!ficCapa) {
+          throw new Error("[medallion] fic sin capa en el primer formulario");
+        }
+        const ficSheet = buildSheetView({
+          schema,
+          table: "fic",
+          themeId: theme.id,
+          description: `${theme.name} — hoja Excel «FIC» (plantilla v3, todos los campos)`,
+          fieldNames: [
+            "capa",
+            "tipo_registro",
+            "clave_seguimiento",
+            ...theme.fields.map((f) => f.name),
+          ],
+          fields: theme.fields,
+          capa: ficCapa,
+        });
+        ficSheet.conn.sheet = "FIC";
+        ficSheet.conn.description = `${theme.name} — FIC`;
+        parts.push(ficSheet.sql);
+        conns.push(ficSheet.conn);
       }
       // No crear *.general / *.all: solo las hojas reales del Excel.
     } else {
@@ -771,6 +827,9 @@ CREATE SCHEMA IF NOT EXISTS medallion;
     ["medallion.v_declaratoria_all", "declaratoria", "base"],
     ["medallion.v_subsidios_arriendos_all", "subsidios_arriendos", "consolidado"],
     ["medallion.v_subsidios_arriendos_consolidado", "subsidios_arriendos", "consolidado"],
+    ["medallion.v_fic_all", "fic", "fic"],
+    ["medallion.v_fic_fic", "fic", "fic"],
+    ["medallion.v_fic_transferencia", "fic", "transferencia"],
   ];
 
   parts.push("\n-- Alias legacy medallion.v_* → hojas reales");
@@ -834,7 +893,10 @@ SELECT * FROM (VALUES
   ('agua', 'agua.control_y_seguimiento_detalle_m', 'agua.general', 'orden_de_proveeduria', 'primaria', 'OP une control físico con General', 'SELECT ct.*, g.tipo_de_orden FROM agua.control_y_seguimiento_detalle_m ct JOIN agua.general g ON g.orden_de_proveeduria = ct.orden_de_proveeduria'),
   ('agua', 'agua.variables_lider', 'agua.general', 'orden_de_proveeduria', 'primaria', 'OP une variables líder con General', 'SELECT v.*, g.objeto FROM agua.variables_lider v JOIN agua.general g ON g.orden_de_proveeduria = v.orden_de_proveeduria'),
   ('agua', 'agua.pagos', 'agua.bitacora', 'orden_de_proveeduria', 'secundaria', 'Misma OP entre satélites (historial distinto)', 'SELECT p.orden_de_proveeduria, count(DISTINCT b.record_id) AS eventos FROM agua.pagos p LEFT JOIN agua.bitacora b ON b.orden_de_proveeduria = p.orden_de_proveeduria GROUP BY 1'),
-  ('subsidios_arriendos', 'subsidios_arriendos.consolidado', 'subsidios_arriendos.consolidado', 'uuid', 'primaria', 'Identidad del registro (UUID). Capas futuras de seguimiento se unen por uuid', 'SELECT c.uuid, c.numero_envio, c.n_orden, c.municipio FROM subsidios_arriendos.consolidado c')
+  ('subsidios_arriendos', 'subsidios_arriendos.consolidado', 'subsidios_arriendos.consolidado', 'uuid', 'primaria', 'Identidad del registro (UUID). Capas futuras de seguimiento se unen por uuid', 'SELECT c.uuid, c.numero_envio, c.n_orden, c.municipio FROM subsidios_arriendos.consolidado c'),
+  ('fic', 'fic.legalizacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une legalización con la hoja FIC', 'SELECT l.*, f.no_cdp, f.valor, f.formato_de_aprobacion_de_la_atencion FROM fic.legalizacion l JOIN fic.fic f ON f.clave_seguimiento = l.clave_seguimiento'),
+  ('fic', 'fic.modificacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une modificación/prórroga con la hoja FIC', 'SELECT m.*, f.no_cdp, f.plazo_final_dias FROM fic.modificacion m JOIN fic.fic f ON f.clave_seguimiento = m.clave_seguimiento'),
+  ('fic', 'fic.transferencia', 'fic.fic', 'no_cdp', 'primaria', 'Misma fila de la plantilla v3 (alta = hoja FIC)', 'SELECT t.no_cdp, f.formato_de_aprobacion_de_la_atencion, f.valor FROM fic.transferencia t JOIN fic.fic f ON f.no_cdp = t.no_cdp')
 ) AS t(schema_name, left_table, right_table, join_key, priority, description, sample_sql);
 `);
 
