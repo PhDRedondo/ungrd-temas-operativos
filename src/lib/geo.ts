@@ -69,6 +69,8 @@ const DEPARTMENT_ALIASES: Record<string, string> = {
   "archipielago de san andres providencia y santa catalina":
     "San Andrés y Providencia",
   guiainia: "Guainía",
+  valle: "Valle del Cauca",
+  providencia: "San Andrés y Providencia",
 };
 
 export function findDepartment(name: string): Department | undefined {
@@ -184,6 +186,80 @@ export function sameMunicipality(
   const a = matchMunicipalityInDept(dept, rec);
   const b = matchMunicipalityInDept(dept, filter);
   return Boolean(a && b && a.code === b.code);
+}
+
+const EMPTY_DEPT = /^(sin departamento|n\/?a|#n\/?a|no registra|s\/?d)?$/i;
+const EMPTY_MUN = /^(sin municipio|n\/?a|#n\/?a|no registra|s\/?d)?$/i;
+
+export function isBlankDepartment(raw: string): boolean {
+  const s = String(raw || "").replace(/\s+/g, " ").trim();
+  return !s || EMPTY_DEPT.test(s);
+}
+
+export function isBlankMunicipality(raw: string): boolean {
+  const s = String(raw || "").replace(/\s+/g, " ").trim();
+  return !s || EMPTY_MUN.test(s);
+}
+
+function looksLikeDepartmentName(raw: string, dept: Department): boolean {
+  const folded = foldGeo(raw);
+  if (/^\d{1,2}$/.test(String(raw).trim())) return true;
+  if (foldGeo(dept.name) === folded) return true;
+  const stripped = folded.replace(/^(la|el|los|las)\s+/, "");
+  if (foldGeo(dept.name).replace(/^(la|el|los|las)\s+/, "") === stripped) {
+    return true;
+  }
+  return Boolean(DEPARTMENT_ALIASES[folded] || DEPARTMENT_ALIASES[stripped]);
+}
+
+/**
+ * Persistible: nombres DIVIPOLA canónicos.
+ * Si el Excel puso un municipio en departamento y el mpio viene vacío, se parte.
+ * No inventa territorio para entidades (Cruz Roja, SENA, etc.).
+ */
+export function normalizeRecordGeo(
+  departamento: string,
+  municipio: string,
+): { departamento: string; municipio: string } {
+  const deptRaw = String(departamento || "").replace(/\s+/g, " ").trim();
+  const muniRaw = String(municipio || "").replace(/\s+/g, " ").trim();
+  const deptBlank = isBlankDepartment(deptRaw);
+  const muniBlank = isBlankMunicipality(muniRaw);
+
+  if (deptBlank) {
+    return { departamento: deptRaw, municipio: muniRaw };
+  }
+
+  const dept = findDepartment(deptRaw);
+  if (!dept) {
+    const dashed = deptRaw.split(/\s+[-–]\s+/);
+    if (dashed.length === 2) {
+      const dashDept = findDepartment(dashed[0]!);
+      if (dashDept) {
+        const fromDash = canonicalizeMunicipality(dashDept.name, dashed[1]!);
+        return {
+          departamento: dashDept.name,
+          municipio: muniBlank ? fromDash : canonicalizeMunicipality(dashDept.name, muniRaw),
+        };
+      }
+    }
+    return { departamento: deptRaw, municipio: muniRaw };
+  }
+
+  if (!looksLikeDepartmentName(deptRaw, dept) && muniBlank) {
+    const muniHit = matchMunicipalityInDept(dept, deptRaw);
+    return {
+      departamento: dept.name,
+      municipio: muniHit?.name || muniRaw,
+    };
+  }
+
+  return {
+    departamento: dept.name,
+    municipio: muniBlank
+      ? muniRaw
+      : canonicalizeMunicipality(dept.name, muniRaw),
+  };
 }
 
 /** Valida que el municipio pertenezca al departamento (DIVIPOLA). */

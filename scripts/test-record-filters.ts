@@ -12,7 +12,7 @@ import {
   writeFiltersToParams,
   type RecordFilterState,
 } from "../src/lib/analytics/recordFilters";
-import { canonicalizeDepartment } from "../src/lib/geo";
+import { canonicalizeDepartment, normalizeRecordGeo } from "../src/lib/geo";
 import type { RecordRow } from "../src/lib/records/types";
 
 function row(partial: Partial<RecordRow>): RecordRow {
@@ -75,6 +75,15 @@ assert.equal(
   "San Andrés y Providencia",
 );
 assert.equal(canonicalizeDepartment("SAN ANDRES Y PROVIDENCIA ISLAS"), "San Andrés y Providencia");
+
+const geoCordoba = normalizeRecordGeo("CORDOBA", "MONTERIA");
+assert.equal(geoCordoba.departamento, "Córdoba");
+assert.equal(geoCordoba.municipio, "Montería");
+const geoEntidad = normalizeRecordGeo("CRUZ ROJA COLOMBIANA", "SIN MUNICIPIO");
+assert.equal(geoEntidad.departamento, "CRUZ ROJA COLOMBIANA");
+const geoDash = normalizeRecordGeo("TOLIMA - HONDA", "SIN MUNICIPIO");
+assert.equal(geoDash.departamento, "Tolima");
+assert.equal(geoDash.municipio, "Honda");
 
 const cordobaRow = row({
   departamento: "CORDOBA",

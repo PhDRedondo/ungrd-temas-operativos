@@ -4,10 +4,7 @@
  * No altera la BD: solo vista analítica para el tomador de decisión.
  */
 import type { RecordRow } from "@/lib/records/types";
-import {
-  canonicalizeDepartment,
-  canonicalizeMunicipality,
-} from "@/lib/geo";
+import { normalizeRecordGeo } from "@/lib/geo";
 
 const EMPTY_DEPT = /^(sin departamento|n\/?a|no registra|s\/?d)?$/i;
 const EMPTY_MUN = /^(sin municipio|n\/?a|no registra|s\/?d)?$/i;
@@ -77,17 +74,17 @@ type Canon = {
 };
 
 function canonicalizeRecordGeo(r: RecordRow): RecordRow {
-  const next: RecordRow = { ...r };
-  if (!isEmptyDept(next.departamento)) {
-    next.departamento = canonicalizeDepartment(String(next.departamento));
+  const geo = normalizeRecordGeo(
+    String(r.departamento || ""),
+    String(r.municipio || ""),
+  );
+  if (
+    geo.departamento === String(r.departamento || "") &&
+    geo.municipio === String(r.municipio || "")
+  ) {
+    return r;
   }
-  if (!isEmptyMun(next.municipio)) {
-    next.municipio = canonicalizeMunicipality(
-      String(next.departamento || ""),
-      String(next.municipio),
-    );
-  }
-  return next;
+  return { ...r, departamento: geo.departamento, municipio: geo.municipio };
 }
 
 export function enrichRecordsForDecision(rows: RecordRow[]): RecordRow[] {
