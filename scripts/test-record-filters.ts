@@ -7,10 +7,12 @@ import {
   buildThemeHref,
   EMPTY_RECORD_FILTERS,
   matchRecordQuery,
+  municipalityOptionsForFilter,
   parseFiltersFromParams,
   writeFiltersToParams,
   type RecordFilterState,
 } from "../src/lib/analytics/recordFilters";
+import { canonicalizeDepartment } from "../src/lib/geo";
 import type { RecordRow } from "../src/lib/records/types";
 
 function row(partial: Partial<RecordRow>): RecordRow {
@@ -63,5 +65,46 @@ const round = writeFiltersToParams(parsed, "avanzado");
 assert.equal(round.get("tab"), "avanzado");
 assert.equal(round.get("departamento"), "Meta");
 assert.equal(round.get("municipio"), null);
+
+assert.equal(canonicalizeDepartment("CORDOBA"), "Córdoba");
+assert.equal(canonicalizeDepartment("LA GUAJIRA"), "La Guajira");
+assert.equal(
+  canonicalizeDepartment(
+    "ARCHIPIELAGO DE SAN ANDRÉS, PROVIDENCIA Y SANTA CATALINA",
+  ),
+  "San Andrés y Providencia",
+);
+assert.equal(canonicalizeDepartment("SAN ANDRES Y PROVIDENCIA ISLAS"), "San Andrés y Providencia");
+
+const cordobaRow = row({
+  departamento: "CORDOBA",
+  municipio: "MONTERIA",
+  clave_seguimiento: "25-0516",
+});
+const cordobaFilter: RecordFilterState = {
+  ...EMPTY_RECORD_FILTERS,
+  departamento: "Córdoba",
+};
+const cordobaHits = applyRecordFilters([cordobaRow, base], cordobaFilter, {
+  themeId: "fic",
+});
+assert.equal(cordobaHits.length, 1);
+assert.equal(cordobaHits[0]!.clave_seguimiento, "25-0516");
+
+const muniHits = applyRecordFilters(
+  [cordobaRow],
+  { ...EMPTY_RECORD_FILTERS, departamento: "Córdoba", municipio: "Montería" },
+  { themeId: "fic" },
+);
+assert.equal(muniHits.length, 1);
+
+const munOpts = municipalityOptionsForFilter([cordobaRow], "Córdoba");
+assert.ok(munOpts.includes("Montería"));
+
+const fromUrl = parseFiltersFromParams(
+  new URLSearchParams("departamento=CORDOBA&municipio=MONTERIA"),
+);
+assert.equal(fromUrl.departamento, "Córdoba");
+assert.equal(fromUrl.municipio, "Montería");
 
 console.log("test-record-filters: OK");

@@ -27,6 +27,7 @@ import {
   applyRecordFilters,
   capaOf,
   EMPTY_RECORD_FILTERS,
+  municipalityOptionsForFilter,
   uniqueSorted,
   type RecordFilterState,
 } from "@/lib/analytics/recordFilters";
@@ -128,16 +129,10 @@ export function AdvancedAnalysisPanel({
     [enriched],
   );
 
-  const municipioOptions = useMemo(() => {
-    const rows = filters.departamento
-      ? enriched.filter((r) => r.departamento === filters.departamento)
-      : enriched;
-    return uniqueSorted(
-      rows
-        .map((r) => String(r.municipio || ""))
-        .filter((m) => m && !/^sin municipio$/i.test(m)),
-    );
-  }, [enriched, filters.departamento]);
+  const municipioOptions = useMemo(
+    () => municipalityOptionsForFilter(enriched, filters.departamento),
+    [enriched, filters.departamento],
+  );
 
   const decision = useMemo(
     () => (source ? buildDecisionBrief(theme.id, working) : null),

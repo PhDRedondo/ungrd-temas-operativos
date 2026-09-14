@@ -4,6 +4,10 @@
  * No altera la BD: solo vista analítica para el tomador de decisión.
  */
 import type { RecordRow } from "@/lib/records/types";
+import {
+  canonicalizeDepartment,
+  canonicalizeMunicipality,
+} from "@/lib/geo";
 
 const EMPTY_DEPT = /^(sin departamento|n\/?a|no registra|s\/?d)?$/i;
 const EMPTY_MUN = /^(sin municipio|n\/?a|no registra|s\/?d)?$/i;
@@ -72,10 +76,20 @@ type Canon = {
   valor: number;
 };
 
-/**
- * Cruza filas por clave_seguimiento / OP / placa / CDP para completar
- * departamento, municipio y valor cuando la capa no los trae.
- */
+function canonicalizeRecordGeo(r: RecordRow): RecordRow {
+  const next: RecordRow = { ...r };
+  if (!isEmptyDept(next.departamento)) {
+    next.departamento = canonicalizeDepartment(String(next.departamento));
+  }
+  if (!isEmptyMun(next.municipio)) {
+    next.municipio = canonicalizeMunicipality(
+      String(next.departamento || ""),
+      String(next.municipio),
+    );
+  }
+  return next;
+}
+
 export function enrichRecordsForDecision(rows: RecordRow[]): RecordRow[] {
   if (!rows.length) return rows;
 
@@ -131,8 +145,9 @@ export function enrichRecordsForDecision(rows: RecordRow[]): RecordRow[] {
     const fill = key ? canon.get(key) : undefined;
     if (!fill) {
       const v = bestValor(r);
-      if (v > 0 && Number(r.valor || 0) <= 0) return { ...r, valor: v };
-      return r;
+      const next =
+        v > 0 && Number(r.valor || 0) <= 0 ? { ...r, valor: v } : r;
+      return canonicalizeRecordGeo(next);
     }
 
     const next: RecordRow = { ...r };
@@ -148,7 +163,7 @@ export function enrichRecordsForDecision(rows: RecordRow[]): RecordRow[] {
       const valor = Math.max(bestValor(r), fill.valor);
       if (valor > 0) next.valor = valor;
     }
-    return next;
+    return canonicalizeRecordGeo(next);
   });
 }
 

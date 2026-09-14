@@ -4,6 +4,12 @@
  */
 import { normalizeTrackingKey } from "@/lib/analytics/enrichRecords";
 import { resolveEventDate } from "@/lib/analytics/timeSeries";
+import {
+  canonicalizeDepartment,
+  canonicalizeMunicipality,
+  sameDepartment,
+  sameMunicipality,
+} from "@/lib/geo";
 import type { RecordRow } from "@/lib/records/types";
 
 export type RecordFilterState = {
@@ -180,8 +186,23 @@ export function applyRecordFilters(
       return false;
     }
     if (f.no_rc?.trim() && !containsLoose(r.no_rc, f.no_rc)) return false;
-    if (f.departamento && r.departamento !== f.departamento) return false;
-    if (f.municipio && r.municipio !== f.municipio) return false;
+    if (
+      f.departamento &&
+      !sameDepartment(String(r.departamento || ""), f.departamento)
+    ) {
+      return false;
+    }
+    if (
+      f.municipio &&
+      !sameMunicipality(
+        String(r.departamento || ""),
+        String(r.municipio || ""),
+        f.departamento,
+        f.municipio,
+      )
+    ) {
+      return false;
+    }
     if (f.estado && r.estado !== f.estado) return false;
     if (f.capa && capaOf(r) !== f.capa) return false;
     if (f.tercero && String(r[thirdKey] || "") !== f.tercero) return false;
@@ -196,6 +217,26 @@ export function applyRecordFilters(
 export function uniqueSorted(values: Iterable<string>): string[] {
   return [...new Set([...values].map((v) => v.trim()).filter(Boolean))].sort(
     (a, b) => a.localeCompare(b, "es"),
+  );
+}
+
+/** Municipios del filtro con nombre DIVIPOLA, solo los que hay en la base. */
+export function municipalityOptionsForFilter(
+  rows: RecordRow[],
+  departamento: string,
+): string[] {
+  const scoped = departamento
+    ? rows.filter((r) => sameDepartment(String(r.departamento || ""), departamento))
+    : rows;
+  return uniqueSorted(
+    scoped
+      .map((r) =>
+        canonicalizeMunicipality(
+          departamento || String(r.departamento || ""),
+          String(r.municipio || ""),
+        ),
+      )
+      .filter((m) => m && !/^sin municipio$/i.test(m)),
   );
 }
 
@@ -215,11 +256,12 @@ function paramGet(
 export function parseFiltersFromParams(
   sp: URLSearchParams | Record<string, string | string[] | undefined>,
 ): RecordFilterState {
+  const departamento = canonicalizeDepartment(paramGet(sp, "departamento"));
   return {
     ...EMPTY_RECORD_FILTERS,
     q: paramGet(sp, "q"),
-    departamento: paramGet(sp, "departamento"),
-    municipio: paramGet(sp, "municipio"),
+    departamento,
+    municipio: canonicalizeMunicipality(departamento, paramGet(sp, "municipio")),
     estado: paramGet(sp, "estado"),
     capa: paramGet(sp, "capa"),
     periodo: paramGet(sp, "periodo"),

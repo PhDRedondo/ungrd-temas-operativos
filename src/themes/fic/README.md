@@ -36,6 +36,8 @@ La capa se deriva de la **vigencia** al guardar (`prepareTrackingRow`); no hace 
 
 Ejemplo: inicial 180 días + prórroga 30 → plazo final 210; la fecha final corre 210 días desde la fecha inicial.
 
+Los filtros de **departamento y municipio** usan DIVIPOLA: `CORDOBA` = Córdoba, `MONTERIA` = Montería. No se inventan municipios; si el Excel trae una entidad (Cruz Roja, SENA) se deja como texto.
+
 El KPI **Vencidos** del tablero es la columna **estado de legalización** (`VENCIDO`), el mismo filtro que en Excel. No se infiere por `fecha_final_para_legalizacion`.
 
 El **% de avance** = `(desembolso − por legalizar) / desembolso × 100`.

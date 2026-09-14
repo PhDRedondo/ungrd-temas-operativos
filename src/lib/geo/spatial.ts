@@ -1,7 +1,11 @@
 /**
  * Normalización y emparejamiento geo (DIVIPOLA) para mapas y filtros.
  */
-import { DEPARTMENTS, type Department, type Municipality } from "@/lib/geo";
+import {
+  findDepartment,
+  type Department,
+  type Municipality,
+} from "@/lib/geo";
 
 export function normalizeGeoKey(raw: string): string {
   return String(raw || "")
@@ -14,51 +18,13 @@ export function normalizeGeoKey(raw: string): string {
     .trim();
 }
 
-/** Alias frecuentes en Excel UNGRD / ArcGIS → clave normalizada DIVIPOLA */
-const DEPT_ALIASES: Record<string, string> = {
-  guajira: "laguajira",
-  laguajira: "laguajira",
-  bogota: "bogotadc",
-  bogotadistritocapital: "bogotadc",
-  bogotadc: "bogotadc",
-  sanandres: "sanandresprovidenciaysantacatalina",
-  sanandresyprovidencia: "sanandresprovidenciaysantacatalina",
-  archipielagodesanandres: "sanandresprovidenciaysantacatalina",
-  providencia: "sanandresprovidenciaysantacatalina",
-  nortedesantander: "nortedesantander",
-  valledelcauca: "valledelcauca",
-  risaralda: "risaralda",
-  quindio: "quindio",
-  chocho: "choco",
-  choco: "choco",
-};
-
-let deptIndex: Map<string, Department> | null = null;
-
-function getDeptIndex() {
-  if (!deptIndex) {
-    deptIndex = new Map();
-    for (const d of DEPARTMENTS) {
-      deptIndex.set(normalizeGeoKey(d.name), d);
-      deptIndex.set(d.code, d);
-    }
-    for (const [alias, target] of Object.entries(DEPT_ALIASES)) {
-      const hit = deptIndex.get(target);
-      if (hit) deptIndex.set(alias, hit);
-    }
-  }
-  return deptIndex;
-}
-
 export function resolveDepartment(raw: string): Department | undefined {
   const s = String(raw || "").trim();
   if (!s || /^sin departamento$/i.test(s) || /^#?n\/?a$/i.test(s)) {
     return undefined;
   }
   if (/nivel nacional/i.test(s)) return undefined;
-  const idx = getDeptIndex();
-  const key = normalizeGeoKey(s);
-  return idx.get(key) || idx.get(DEPT_ALIASES[key] || "");
+  return findDepartment(s);
 }
 
 export function resolveMunicipality(
