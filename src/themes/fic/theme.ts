@@ -14,6 +14,49 @@ const CAPTURE_ONLY_FIELDS: FormField[] = [
     type: "text",
     excelWidth: 22,
   },
+  {
+    name: "formato_de_aprobacion_de_la_atencion",
+    label: "Formato de aprobación",
+    type: "text",
+    excelWidth: 28,
+  },
+  {
+    name: "acto_administrativo_otorgamiento_del_recurso_2",
+    label: "Acto administrativo (otorgamiento) 2",
+    type: "text",
+    excelWidth: 28,
+  },
+  {
+    name: "fecha_acto_administrativo_resolucion_2",
+    label: "Fecha acto administrativo (resolución) 2",
+    type: "date",
+    excelWidth: 22,
+  },
+  {
+    name: "fecha_acto_administrativo_modificacion",
+    label: "Fecha acto administrativo modificación",
+    type: "date",
+    excelWidth: 24,
+  },
+  {
+    name: "fecha_de_notificacion",
+    label: "Fecha de notificación",
+    type: "date",
+    excelWidth: 18,
+  },
+  {
+    name: "tiene_anticipo",
+    label: "Tiene anticipo",
+    type: "select",
+    options: ["SI", "NO"],
+    excelWidth: 14,
+  },
+  {
+    name: "valor_anticipo",
+    label: "Valor anticipo",
+    type: "number",
+    excelWidth: 16,
+  },
   { name: "fecha_cdp", label: "Fecha FIC", type: "date", excelWidth: 14 },
   { name: "fecha_rc", label: "Fecha RC", type: "date", excelWidth: 14 },
   {
@@ -50,7 +93,7 @@ const base = buildThemeFromSource({
     "Seguimiento y control de transferencias directas del Fondo de Inversión Colectiva (FR-1703-SMD-44) — una capa por vigencia, unidos por número FIC.",
   icon: "building-2",
   unit: "transferencias",
-  valueLabel: "Valor FIC",
+  valueLabel: "Valor desembolso",
   schemaVersion: SCHEMA_VERSION,
   sourceFields: SOURCE_FIELDS,
 });
@@ -85,8 +128,37 @@ function withCaptureOnlyFields(fields: FormField[]): FormField[] {
       next = { ...f, label: "Número FIC" };
     } else if (f.name === "clave_seguimiento") {
       next = { ...f, label: "Clave de seguimiento (FIC)" };
+    } else if (f.name === "fecha_formato_de_aprobacion_de_la_atencion") {
+      next = { ...f, label: "Fecha del formato de aprobación" };
+    } else if (f.name === "valor") {
+      next = { ...f, label: "Valor desembolso" };
+    } else if (f.name === "fecha") {
+      next = { ...f, label: "Fecha de desembolso" };
+    } else if (f.name === "acto_administrativo_otorgamiento_del_recurso") {
+      next = { ...f, label: "Acto administrativo (otorgamiento del recurso)" };
+    }
+    if (
+      f.name === "fecha_formato_de_aprobacion_de_la_atencion" &&
+      extras.has("formato_de_aprobacion_de_la_atencion")
+    ) {
+      out.push(extras.get("formato_de_aprobacion_de_la_atencion")!);
+      extras.delete("formato_de_aprobacion_de_la_atencion");
     }
     out.push(next);
+    if (
+      f.name === "acto_administrativo_otorgamiento_del_recurso" &&
+      extras.has("acto_administrativo_otorgamiento_del_recurso_2")
+    ) {
+      out.push(extras.get("acto_administrativo_otorgamiento_del_recurso_2")!);
+      extras.delete("acto_administrativo_otorgamiento_del_recurso_2");
+    }
+    if (
+      f.name === "fecha_acto_administrativo_resolucion" &&
+      extras.has("fecha_acto_administrativo_resolucion_2")
+    ) {
+      out.push(extras.get("fecha_acto_administrativo_resolucion_2")!);
+      extras.delete("fecha_acto_administrativo_resolucion_2");
+    }
     if (f.name === "no_cdp" && extras.has("fecha_cdp")) {
       out.push(extras.get("fecha_cdp")!);
       extras.delete("fecha_cdp");
@@ -94,6 +166,17 @@ function withCaptureOnlyFields(fields: FormField[]): FormField[] {
     if (f.name === "no_rc" && extras.has("fecha_rc")) {
       out.push(extras.get("fecha_rc")!);
       extras.delete("fecha_rc");
+    }
+    if (f.name === "fecha" && extras.has("fecha_de_notificacion")) {
+      out.push(extras.get("fecha_de_notificacion")!);
+      extras.delete("fecha_de_notificacion");
+    }
+    if (
+      f.name === "acto_administrativo_prorroga" &&
+      extras.has("fecha_acto_administrativo_modificacion")
+    ) {
+      out.push(extras.get("fecha_acto_administrativo_modificacion")!);
+      extras.delete("fecha_acto_administrativo_modificacion");
     }
     if (f.name === "plazo_adicion_dias" && extras.has("plazo_final_dias")) {
       out.push(extras.get("plazo_final_dias")!);
@@ -135,6 +218,7 @@ export const config: ThemeModule["config"] = {
     return f;
   }),
   captureForms: FIC_CAPTURE_FORMS,
+  schemaVersion: 4,
 };
 
 const themeModule: ThemeModule = { config };
