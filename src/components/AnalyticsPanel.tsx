@@ -31,6 +31,7 @@ import {
   capaOf,
   EMPTY_RECORD_FILTERS,
   hasActiveFilters,
+  municipalityOptionsForFilter,
   uniqueSorted,
   summarizeFilters,
   type RecordFilterState,
@@ -169,16 +170,10 @@ export function AnalyticsPanel({
     [workingRecords],
   );
 
-  const municipioOptions = useMemo(() => {
-    const rows = departamento
-      ? workingRecords.filter((r) => r.departamento === departamento)
-      : workingRecords;
-    return uniqueSorted(
-      rows
-        .map((r) => String(r.municipio || ""))
-        .filter((m) => m && !/^sin municipio$/i.test(m)),
-    );
-  }, [workingRecords, departamento]);
+  const municipioOptions = useMemo(
+    () => municipalityOptionsForFilter(workingRecords, departamento),
+    [workingRecords, departamento],
+  );
 
   const filtered = useMemo(
     () =>

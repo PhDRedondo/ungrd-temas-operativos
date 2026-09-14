@@ -1,7 +1,12 @@
 import { createHash } from "crypto";
 import { z } from "zod";
 import type { FormField, ThemeConfig } from "@/themes/shared/types";
-import { findDepartment, isValidMunicipio } from "@/lib/geo";
+import {
+  canonicalizeDepartment,
+  canonicalizeMunicipality,
+  findDepartment,
+  isValidMunicipio,
+} from "@/lib/geo";
 
 const FIXED_KEYS = new Set([
   "departamento",
@@ -394,9 +399,15 @@ export function normalizeValidated(
     if (key !== undefined) payload.clave_seguimiento = String(key).trim();
   }
 
+  const departamento = canonicalizeDepartment(String(raw.departamento || ""));
+  const municipio = canonicalizeMunicipality(
+    departamento,
+    String(raw.municipio || ""),
+  );
+
   const base = {
-    departamento: String(raw.departamento || ""),
-    municipio: String(raw.municipio || ""),
+    departamento,
+    municipio,
     fecha: String(raw.fecha || new Date().toISOString().slice(0, 10)),
     estado: String(raw.estado || "Programado"),
     valor: Number.isFinite(valor) ? valor : 0,
