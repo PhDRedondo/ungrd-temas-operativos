@@ -46,7 +46,7 @@ export function resolveAdminDatabaseUrl(): {
   source: "DATABASE_URL" | "MEDALLION_DERIVED";
 } {
   const db = process.env.DATABASE_URL || "";
-  if (db && !/127\.0\.0\.1|localhost/i.test(db) && /supabase|pooler/i.test(db)) {
+  if (db && !/127\.0\.0\.1|localhost/i.test(db)) {
     return { adminUrl: db, source: "DATABASE_URL" };
   }
   const med = process.env.MEDALLION_DATABASE_URL || "";
