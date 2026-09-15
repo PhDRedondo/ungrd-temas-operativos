@@ -7,7 +7,7 @@ import { calculateObrasIndicadores } from "@/themes/obras-de-emergencia/calculat
 import { aggregateObrasDashboard } from "@/themes/obras-de-emergencia/dashboard";
 import { calculateImpuestosIndicadores } from "@/themes/obras-por-impuestos/calculations";
 import { aggregateImpuestosDashboard } from "@/themes/obras-por-impuestos/dashboard";
-import { isFicEstadoVencido } from "@/themes/fic/dashboard";
+import { isFicVencido } from "@/themes/fic/dashboard";
 
 export type SemaphoreLevel = "verde" | "amarillo" | "rojo" | "gris";
 
@@ -258,10 +258,10 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     porLegalizar += pendiente;
     legalizado += hecho;
     const estado = str(r, "estado");
-    const level = classifyLegalizacion(estado);
+    const vencido = isFicVencido(r);
+    const level = vencido ? "rojo" : classifyLegalizacion(estado);
     bump(sem, level, labelForLevel(level, "fic"), valor);
 
-    const vencido = isFicEstadoVencido(estado);
     if (vencido) {
       vencidos += 1;
       vencidosValor += pendiente || valor;
@@ -294,9 +294,10 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
     alerts.push({
       id: "fic-vencidos",
       severity: "critica",
-      title: "Estado de legalización VENCIDO",
-      detail: `${formatNumber(vencidos)} FIC están en VENCIDO (${formatCop(vencidosValor)} por legalizar).`,
-      action: "Mismo conteo que filtrar la base por estado VENCIDO. Gestione prórroga o legalización.",
+      title: "Plazo de legalización vencido",
+      detail: `${formatNumber(vencidos)} FIC superaron la fecha de vencimiento (${formatCop(vencidosValor)} por legalizar).`,
+      action:
+        "La fecha vence con fecha inicial + plazo de ejecución + prórroga (acto de modificación y plazo adicional). Gestione prórroga o legalización.",
       count: vencidos,
       valor: vencidosValor,
     });
@@ -410,8 +411,8 @@ function buildFic(rows: RecordRow[]): DecisionBrief {
         value: formatNumber(vencidos),
         tone: vencidos > 0 ? "rojo" : "verde",
         hint: vencidosValor
-          ? `${formatCop(vencidosValor)} · estado de legalización`
-          : "Estado de legalización",
+          ? `${formatCop(vencidosValor)} · inicial + plazo + prórroga`
+          : "Inicial + plazo + prórroga",
       },
     ],
     semaphores: orderSemaphores(sem),

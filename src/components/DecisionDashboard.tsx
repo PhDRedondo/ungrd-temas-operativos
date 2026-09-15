@@ -258,7 +258,8 @@ export function DecisionDashboard({
                 Tabla operativa
               </h3>
               <p className="mt-1 text-xs text-ungrd-muted">
-                Departamento, municipio, plazos, formato, actos y desembolso.
+                Departamento, municipio, plazos, prórroga, fecha de vencimiento,
+                formato, actos y desembolso.
                 Desplace la tabla para ver todas las columnas; el texto largo
                 queda completo.
               </p>
@@ -291,7 +292,7 @@ export function DecisionDashboard({
             </p>
           ) : (
             <div className="scroll-thin max-h-[min(70vh,44rem)] overflow-auto rounded-lg border border-ungrd-border">
-              <table className="min-w-[118rem] w-full border-collapse text-left text-sm">
+              <table className="min-w-[132rem] w-full border-collapse text-left text-sm">
                 <thead className="sticky top-0 z-[1] bg-ungrd-bg text-[11px] tracking-wide text-ungrd-muted uppercase">
                   <tr>
                     <th className="px-3 py-2.5 font-bold">#</th>
@@ -301,7 +302,9 @@ export function DecisionDashboard({
                     <th className="px-3 py-2.5 font-bold">Vigencia</th>
                     <th className="px-3 py-2.5 font-bold">Estado</th>
                     <th className="px-3 py-2.5 font-bold">Plazo ejecución</th>
+                    <th className="px-3 py-2.5 font-bold">Plazo adición</th>
                     <th className="px-3 py-2.5 font-bold">Plazo final</th>
+                    <th className="px-3 py-2.5 font-bold">Fecha vencimiento</th>
                     <th className="px-3 py-2.5 font-bold">Nº RC</th>
                     <th className="px-3 py-2.5 font-bold">Formato</th>
                     <th className="px-3 py-2.5 font-bold">Acto admin.</th>
@@ -323,7 +326,11 @@ export function DecisionDashboard({
                   {visibleFicRows.map((item, idx) => (
                     <tr
                       key={item.key}
-                      className="border-t border-ungrd-border align-top hover:bg-ungrd-yellow/10"
+                      className={
+                        item.critico
+                          ? "border-t border-red-200 bg-red-50/80 align-top hover:bg-red-100/80"
+                          : "border-t border-ungrd-border align-top hover:bg-ungrd-yellow/10"
+                      }
                     >
                       <td className="px-3 py-2.5 text-xs font-extrabold text-ungrd-navy">
                         {idx + 1}
@@ -347,7 +354,19 @@ export function DecisionDashboard({
                         {item.plazoEjecucion}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.plazoAdicion}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
                         {item.plazoFinal}
+                      </td>
+                      <td
+                        className={
+                          item.critico
+                            ? "whitespace-nowrap px-3 py-2.5 font-bold text-ungrd-danger"
+                            : "whitespace-nowrap px-3 py-2.5 text-ungrd-text"
+                        }
+                      >
+                        {item.fechaVencimiento}
                       </td>
                       <td className="px-3 py-2.5 text-ungrd-text">
                         {item.noRc}
