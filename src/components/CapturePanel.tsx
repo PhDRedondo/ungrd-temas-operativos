@@ -398,6 +398,12 @@ type DrySummary = {
   wouldSkipDuplicate: number;
   withoutTrackingKey: number;
   tip?: string;
+  fidusap?: {
+    sheetName: string;
+    keptRows: number;
+    fromSmdTab: boolean;
+    byEjecutora: Record<string, number>;
+  };
 };
 
 function rowCapa(r: RecordRow) {
@@ -490,6 +496,7 @@ export function CapturePanel({
     () => (isSourceTheme(theme.id) ? feedingGuideForTheme(theme.id) : null),
     [theme.id],
   );
+  const isFidusapSmd = theme.id === "ejecucion-financiera";
 
   const activeForm = useMemo(
     () => captureForms.find((f) => f.id === activeFormId) || captureForms[0],
@@ -2163,7 +2170,7 @@ export function CapturePanel({
       const body = new FormData();
       body.append("file", file);
       body.append("dryRun", dryRun ? "1" : "0");
-      body.append("mode", upsertMode ? "upsert" : "insert");
+      body.append("mode", isFidusapSmd || upsertMode ? "upsert" : "insert");
       const res = await fetch(`/api/themes/${theme.id}/uploads`, {
         method: "POST",
         body,
@@ -2187,9 +2194,21 @@ export function CapturePanel({
           wouldSkipDuplicate: data.wouldSkipDuplicate ?? data.duplicates ?? 0,
           withoutTrackingKey: data.withoutTrackingKey ?? 0,
           tip: data.tip,
+          fidusap: data.fidusap
+            ? {
+                sheetName: String(data.fidusap.sheetName || ""),
+                keptRows: Number(data.fidusap.keptRows || 0),
+                fromSmdTab: Boolean(data.fidusap.fromSmdTab),
+                byEjecutora:
+                  (data.fidusap.byEjecutora as Record<string, number>) || {},
+              }
+            : undefined,
         });
         setMessage(
-          "Validación lista (no se guardó nada). Revise el resumen y pulse «Subir y guardar» si está correcto.",
+          isFidusapSmd
+            ? data.tip ||
+                "Validación lista. Revise el recorte SMD y pulse «Subir y guardar» para reemplazar el corte anterior."
+            : "Validación lista (no se guardó nada). Revise el resumen y pulse «Subir y guardar» si está correcto.",
         );
         return;
       }
@@ -2202,8 +2221,12 @@ export function CapturePanel({
       } else {
         const ins = data.inserted ?? data.accepted ?? 0;
         const upd = data.updated ?? 0;
+        const removed = data.removed ?? 0;
         setMessage(
-          `Guardado: ${ins} nuevos · ${upd} actualizados · ${data.rejected ?? 0} rechazados · ${data.duplicates ?? 0} omitidos (duplicados).`,
+          isFidusapSmd
+            ? data.tip ||
+                `Corte SMD guardado: ${ins} nuevos · ${upd} actualizados · ${removed} archivados del corte anterior.`
+            : `Guardado: ${ins} nuevos · ${upd} actualizados · ${data.rejected ?? 0} rechazados · ${data.duplicates ?? 0} omitidos (duplicados).`,
         );
       }
       if (data.accepted > 0 || data.updated > 0 || data.async) onSaved();
@@ -2903,22 +2926,32 @@ export function CapturePanel({
           {feedGuide ? (
             <div className="rounded-xl border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-4 py-3 text-sm">
               <p className="text-[11px] font-extrabold tracking-wide text-ungrd-navy uppercase">
-                Cómo cargar este tema
+                {isFidusapSmd ? "Carga Fidusap · recorte SMD" : "Cómo cargar este tema"}
               </p>
               <ul className="mt-2 list-disc space-y-1 pl-4 text-ungrd-muted">
                 <li>
                   <strong className="text-ungrd-heading">Identificador:</strong>{" "}
                   {feedGuide.clave}
                 </li>
-                <li>
-                  <strong className="text-ungrd-heading">Formularios:</strong>{" "}
-                  {feedGuide.capas.join(" · ")}
-                </li>
+                {isFidusapSmd ? (
+                  <li>
+                    Use el reporte Fidusap tal como sale. Se lee la pestaña{" "}
+                    <strong className="text-ungrd-heading">SMD</strong> (incluye
+                    GRUPO y CDP de SDG). Si no existe, se usa CDP extendido
+                    filtrado a Área ejecutora SMD o Área solicitante = Manejo.
+                  </li>
+                ) : (
+                  <li>
+                    <strong className="text-ungrd-heading">Formularios:</strong>{" "}
+                    {feedGuide.capas.join(" · ")}
+                  </li>
+                )}
                 <li>{feedGuide.tip}</li>
               </ul>
             </div>
           ) : null}
 
+          {!isFidusapSmd ? (
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ungrd-navy/20 bg-ungrd-navy/[0.04] px-4 py-3">
             <input
               type="checkbox"
@@ -2938,8 +2971,15 @@ export function CapturePanel({
               </span>
             </span>
           </label>
+          ) : (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              Cada carga limpia y reemplaza el corte SMD anterior. No use una
+              plantilla de la plataforma: suba el Excel de Fidusap.
+            </p>
+          )}
 
           <div className="flex flex-wrap gap-3">
+            {!isFidusapSmd ? (
             <button
               type="button"
               onClick={downloadTemplate}
@@ -2949,9 +2989,10 @@ export function CapturePanel({
               <FileSpreadsheet className="h-4 w-4 text-ungrd-navy" />
               Descargar plantilla de {theme.shortName || theme.name}
             </button>
+            ) : null}
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-ungrd-navy px-4 py-2.5 text-sm font-bold text-white">
               <Upload className="h-4 w-4" />
-              Validar Excel
+              {isFidusapSmd ? "Validar reporte Fidusap" : "Validar Excel"}
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
@@ -2968,18 +3009,31 @@ export function CapturePanel({
                 className="inline-flex items-center gap-2 rounded-lg bg-ungrd-yellow px-4 py-2.5 text-sm font-extrabold text-ungrd-navy-deep"
               >
                 <ShieldCheck className="h-4 w-4" />
-                Subir y guardar
+                {isFidusapSmd ? "Subir y reemplazar corte" : "Subir y guardar"}
               </button>
             ) : null}
           </div>
+
+          {drySummary?.tip ? (
+            <p className="rounded-xl border border-ungrd-navy/15 bg-ungrd-navy/[0.04] px-4 py-3 text-sm text-ungrd-heading">
+              {drySummary.tip}
+            </p>
+          ) : null}
 
           {drySummary ? (
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-ungrd-border p-3 text-sm">
                 <p className="text-[11px] font-bold uppercase text-ungrd-muted">
-                  Filas
+                  {drySummary.fidusap
+                    ? `Pestaña ${drySummary.fidusap.sheetName}`
+                    : "Filas"}
                 </p>
                 <p className="text-lg font-extrabold">{drySummary.totalRows}</p>
+                {drySummary.fidusap?.fromSmdTab ? (
+                  <p className="mt-1 text-[11px] leading-snug text-ungrd-muted">
+                    Recorte SMD del Excel, sin filtro extra por columna W.
+                  </p>
+                ) : null}
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-sm">
                 <p className="text-[11px] font-bold uppercase text-emerald-800">

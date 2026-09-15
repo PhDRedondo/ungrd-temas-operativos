@@ -45,6 +45,7 @@ export function fillFixedAliases(
   }
   if (!out.fecha || String(out.fecha).trim() === "") {
     const v = pick(
+      "fecha_cdp",
       "fecha_de_instalacion",
       "fecha_inicio",
       "fecha_de_inicio",
@@ -64,6 +65,7 @@ export function fillFixedAliases(
   }
   if (out.valor === undefined || out.valor === "" || out.valor === null) {
     const v = pick(
+      "valor_cdp",
       "valor_contrato",
       "valor_de_la_orden",
       "valor_convenio",

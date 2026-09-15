@@ -27,6 +27,10 @@ import {
   buildFicOperativeRows,
   matchFicOperativeRow,
 } from "@/themes/fic/dashboard";
+import {
+  aggregateSmdDashboard,
+  matchSmdOperativeRow,
+} from "@/themes/ejecucion-financiera/dashboard";
 
 type Props = {
   themeId: string;
@@ -91,6 +95,7 @@ export function DecisionDashboard({
   const [scale, setScale] = useState<Scale>("macro");
   const [pdfBusy, setPdfBusy] = useState(false);
   const [ficQuery, setFicQuery] = useState("");
+  const [smdQuery, setSmdQuery] = useState("");
   const working = useMemo(() => {
     return isSourceTheme(themeId)
       ? enrichRecordsForDecision(records)
@@ -110,21 +115,36 @@ export function DecisionDashboard({
     return ficRows.filter((row) => matchFicOperativeRow(row, q));
   }, [ficRows, ficQuery]);
 
+  const smdRows = useMemo(
+    () =>
+      themeId === "ejecucion-financiera"
+        ? aggregateSmdDashboard(working).rows
+        : [],
+    [themeId, working],
+  );
+  const visibleSmdRows = useMemo(() => {
+    const q = smdQuery.trim();
+    if (!q) return smdRows;
+    return smdRows.filter((row) => matchSmdOperativeRow(row, q));
+  }, [smdRows, smdQuery]);
+
   const totalSem = brief.semaphores.reduce((a, s) => a + s.count, 0) || 1;
   const source = isSourceTheme(themeId);
   const isFic = themeId === "fic";
-  // FIC: sin Macro/Micro — el tablero muestra el detalle completo de una sola vez.
-  const visibleAlerts = isFic
+  const isSmd = themeId === "ejecucion-financiera";
+  const fullDetail = isFic || isSmd;
+  // FIC / SMD: el tablero muestra el detalle completo de una sola vez.
+  const visibleAlerts = fullDetail
     ? brief.alerts
     : scale === "macro"
       ? brief.alerts.slice(0, 5)
       : brief.alerts;
-  const visibleLayers = isFic
+  const visibleLayers = fullDetail
     ? brief.byLayer
     : scale === "macro"
       ? brief.byLayer.slice(0, 8)
       : brief.byLayer;
-  const visiblePriority = isFic
+  const visiblePriority = fullDetail
     ? brief.priorityList
     : scale === "macro"
       ? brief.priorityList.slice(0, 10)
@@ -154,7 +174,11 @@ export function DecisionDashboard({
       <header className="flex min-w-0 flex-wrap items-end justify-between gap-3 border-b border-white/15 pb-4">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold tracking-[0.22em] text-ungrd-yellow uppercase">
-            {isFic ? "FIC · Legalización" : "Dashboard Operativo · UNGRD"}
+            {isFic
+              ? "FIC · Legalización"
+              : isSmd
+                ? "Ejecución · SMD"
+                : "Dashboard Operativo · UNGRD"}
           </p>
           <h2 className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">
             {brief.title}
@@ -182,7 +206,7 @@ export function DecisionDashboard({
                 ? "Descargar reporte PDF"
                 : "Briefing PDF"}
           </button>
-          {!isFic ? (
+          {!fullDetail ? (
             <div className="inline-flex rounded-lg bg-black/30 p-1 ring-1 ring-white/20">
               <button
                 type="button"
@@ -410,10 +434,132 @@ export function DecisionDashboard({
         </div>
       ) : null}
 
+      {isSmd ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-3.5 text-slate-900 shadow-sm sm:p-4">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-navy uppercase">
+                CDP Subdirección de Manejo
+              </h3>
+              <p className="mt-1 text-xs text-slate-600">
+                Pestaña SMD del reporte Fidusap (grupo, rubro, RC, pagado y por
+                pagar).
+              </p>
+            </div>
+            <span className="text-xs font-bold text-slate-600">
+              {formatNumber(visibleSmdRows.length)}
+              {visibleSmdRows.length !== smdRows.length
+                ? ` de ${formatNumber(smdRows.length)}`
+                : ""}{" "}
+              CDP
+            </span>
+          </div>
+          {smdRows.length > 0 ? (
+            <label className="mb-3 flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+              <Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+              <input
+                type="search"
+                value={smdQuery}
+                onChange={(e) => setSmdQuery(e.target.value)}
+                placeholder="Buscar CDP, grupo, rubro, RC, departamento…"
+                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-500"
+              />
+            </label>
+          ) : null}
+          {visibleSmdRows.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-600">
+              {smdRows.length === 0
+                ? "Cargue el Excel Fidusap (pestaña SMD o CDP extendido) para ver el recorte."
+                : "Ningún CDP coincide con esa búsqueda."}
+            </p>
+          ) : (
+            <div className="scroll-thin max-h-[min(70vh,44rem)] overflow-auto rounded-lg border border-slate-300">
+              <table className="min-w-[90rem] w-full border-collapse text-left text-sm text-slate-900">
+                <thead className="sticky top-0 z-[1] bg-ungrd-navy text-[11px] tracking-wide text-white uppercase">
+                  <tr>
+                    <th className="px-3 py-2.5 font-bold">#</th>
+                    <th className="px-3 py-2.5 font-bold">No. CDP</th>
+                    <th className="px-3 py-2.5 font-bold">Grupo</th>
+                    <th className="px-3 py-2.5 font-bold">Departamento</th>
+                    <th className="px-3 py-2.5 font-bold">Estado</th>
+                    <th className="px-3 py-2.5 font-bold">Tipo</th>
+                    <th className="px-3 py-2.5 font-bold">No. RC</th>
+                    <th className="px-3 py-2.5 font-bold">Fecha CDP</th>
+                    <th className="px-3 py-2.5 font-bold">Fecha final</th>
+                    <th className="px-3 py-2.5 text-right font-bold">Valor CDP</th>
+                    <th className="px-3 py-2.5 text-right font-bold">Valor RC</th>
+                    <th className="px-3 py-2.5 text-right font-bold">Pagado</th>
+                    <th className="px-3 py-2.5 text-right font-bold">Por pagar</th>
+                    <th className="px-3 py-2.5 font-bold">Rubro</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {visibleSmdRows.map((item, idx) => (
+                    <tr
+                      key={item.key}
+                      className={
+                        item.critico
+                          ? "border-t border-red-200 bg-red-50 align-top text-slate-900 hover:bg-red-100"
+                          : "border-t border-slate-200 align-top text-slate-900 odd:bg-white even:bg-slate-50 hover:bg-amber-50"
+                      }
+                    >
+                      <td className="px-3 py-2.5 text-xs font-extrabold text-ungrd-navy">
+                        {idx + 1}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 font-bold text-slate-900">
+                        {item.noCdp}
+                      </td>
+                      <td className="min-w-[8rem] px-3 py-2.5 leading-snug text-slate-800">
+                        {item.grupo}
+                      </td>
+                      <td className="min-w-[9rem] px-3 py-2.5 leading-snug text-slate-800">
+                        {item.departamento}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-800">{item.estado}</td>
+                      <td className="min-w-[10rem] px-3 py-2.5 leading-snug text-slate-800">
+                        {item.tipo}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
+                        {item.noRc}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
+                        {item.fechaCdp}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
+                        {item.fechaFinal}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-slate-900">
+                        {formatCop(item.valorCdp)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-800">
+                        {formatCop(item.valorRc)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-800">
+                        {formatCop(item.valorPagado)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-slate-900">
+                        {formatCop(item.valorPorPagar)}
+                      </td>
+                      <td className="min-w-[14rem] max-w-[24rem] px-3 py-2.5 leading-snug text-slate-800">
+                        {item.rubro}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="space-y-3 lg:col-span-2">
           <h3 className="text-xs font-extrabold tracking-[0.18em] text-ungrd-yellow uppercase">
-            {isFic ? "Estado de legalización" : "Semáforo operativo"}
+            {isFic
+              ? "Estado de legalización"
+              : isSmd
+                ? "Semáforo de ejecución"
+                : "Semáforo operativo"}
           </h3>
           {brief.semaphores.length === 0 ? (
             <p className="rounded-xl bg-white/5 px-3 py-3 text-sm text-white/65">

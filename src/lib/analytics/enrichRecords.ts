@@ -271,6 +271,22 @@ export function previewColumnsForTheme(themeId: string): PreviewColumn[] {
         { key: "valor", label: "Valor", kind: "money" },
         { key: "fecha", label: "Fecha" },
       ];
+    case "ejecucion-financiera":
+      return [
+        { key: "no_cdp", label: "No. CDP" },
+        { key: "grupo", label: "Grupo" },
+        { key: "departamento", label: "Departamento" },
+        { key: "estado", label: "Estado", kind: "badge" },
+        { key: "tipo", label: "Tipo" },
+        { key: "no_rc", label: "No. RC" },
+        { key: "fecha_cdp", label: "Fecha CDP" },
+        { key: "fecha_final", label: "Fecha final" },
+        { key: "valor_cdp", label: "Valor CDP", kind: "money" },
+        { key: "valor_rc", label: "Valor RC", kind: "money" },
+        { key: "valor_pagado", label: "Pagado", kind: "money" },
+        { key: "valor_por_pagar", label: "Por pagar", kind: "money" },
+        { key: "rubro", label: "Rubro" },
+      ];
     default:
       return [
         { key: "departamento", label: "Departamento" },

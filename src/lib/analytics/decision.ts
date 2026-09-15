@@ -8,6 +8,7 @@ import { aggregateObrasDashboard } from "@/themes/obras-de-emergencia/dashboard"
 import { calculateImpuestosIndicadores } from "@/themes/obras-por-impuestos/calculations";
 import { aggregateImpuestosDashboard } from "@/themes/obras-por-impuestos/dashboard";
 import { isFicVencido } from "@/themes/fic/dashboard";
+import { aggregateSmdDashboard } from "@/themes/ejecucion-financiera/dashboard";
 
 export type SemaphoreLevel = "verde" | "amarillo" | "rojo" | "gris";
 
@@ -74,6 +75,7 @@ export const SOURCE_THEME_IDS = [
   "obras-por-impuestos",
   "puentes",
   "declaratoria-de-emergencia",
+  "ejecucion-financiera",
 ] as const;
 
 export type SourceThemeId = (typeof SOURCE_THEME_IDS)[number];
@@ -1233,6 +1235,112 @@ function buildDeclaratoria(rows: RecordRow[]): DecisionBrief {
   };
 }
 
+function buildEjecucionFinanciera(rows: RecordRow[]): DecisionBrief {
+  const agg = aggregateSmdDashboard(rows);
+  const sem = new Map<string, SemaphoreBucket>();
+  for (const r of agg.rows) {
+    if (r.critico) bump(sem, "rojo", "Sin RC / plazo vencido", r.valorCdp);
+    else if (r.valorPorPagar > 0) bump(sem, "amarillo", "Saldo por pagar", r.valorPorPagar);
+    else bump(sem, "verde", "Con RC / al día", r.valorPagado || r.valorCdp);
+  }
+  const alerts: DecisionAlert[] = [];
+  if (agg.sinRc > 0) {
+    alerts.push({
+      id: "smd-sin-rc",
+      severity: "alta",
+      title: "CDP sin registro de compromiso",
+      detail: `${formatNumber(agg.sinRc)} CDP de SMD no tienen No. RC.`,
+      action: "Revise con Fiduprevisora el trámite de RC.",
+      count: agg.sinRc,
+    });
+  }
+  if (agg.vencidos > 0) {
+    alerts.push({
+      id: "smd-vencidos",
+      severity: "critica",
+      title: "Plazo contractual vencido con saldo",
+      detail: `${formatNumber(agg.vencidos)} CDP tienen fecha final vencida y valor por pagar.`,
+      action: "Priorice pagos o modificación de plazo.",
+      count: agg.vencidos,
+      valor: agg.valorPorPagar,
+    });
+  }
+  if (agg.valorPorPagar > 0) {
+    alerts.push({
+      id: "smd-por-pagar",
+      severity: agg.valorPorPagar > agg.valorRc * 0.4 ? "alta" : "media",
+      title: "Saldo por pagar",
+      detail: `Quedan ${formatCop(agg.valorPorPagar)} por pagar sobre ${formatCop(agg.valorRc || agg.valorCdp)} comprometidos.`,
+      action: "Cruce con cuentas de cobro y giros pendientes.",
+      valor: agg.valorPorPagar,
+    });
+  }
+
+  const byLayer = agg.porGrupo.map((g) => ({
+    key: g.name,
+    label: g.name,
+    count: g.count,
+    valor: g.valorCdp,
+  }));
+  const priority = agg.rows
+    .filter((r) => r.critico || r.valorPorPagar > 0)
+    .slice(0, 20)
+    .map((r) => ({
+      key: r.key,
+      label: r.noCdp,
+      count: 1,
+      valor: r.valorPorPagar || r.valorCdp,
+      extra: [r.grupo, r.estado, r.departamento].filter(Boolean).join(" · "),
+      noCdp: r.noCdp,
+      noRc: r.noRc,
+    }));
+
+  return {
+    themeId: "ejecucion-financiera",
+    title: "Ejecución financiera SMD",
+    subtitle:
+      "Corte Fidusap · pestaña SMD (Subdirección de Manejo de Desastres).",
+    kpis: [
+      {
+        id: "cdp",
+        label: "CDP SMD",
+        value: formatNumber(agg.cdpUnicos),
+        hint: `${formatNumber(agg.n)} filas`,
+      },
+      {
+        id: "valor-cdp",
+        label: "Valor CDP",
+        value: formatCop(agg.valorCdp),
+      },
+      {
+        id: "valor-rc",
+        label: "Valor RC",
+        value: formatCop(agg.valorRc),
+        tone: agg.valorRc > 0 ? "verde" : "gris",
+      },
+      {
+        id: "pagado",
+        label: "Pagado",
+        value: formatCop(agg.valorPagado),
+        tone: "verde",
+        hint: agg.pctEjecucion != null ? `${agg.pctEjecucion.toFixed(1)}% del RC/CDP` : undefined,
+      },
+      {
+        id: "por-pagar",
+        label: "Por pagar",
+        value: formatCop(agg.valorPorPagar),
+        tone: agg.valorPorPagar > 0 ? "rojo" : "verde",
+      },
+    ],
+    semaphores: orderSemaphores(sem),
+    alerts,
+    byLayer,
+    priorityList: priority,
+    focusLabel: "CDP con saldo o alerta",
+    layerLabel: "Por grupo",
+  };
+}
+
 function buildGeneric(themeId: string, rows: RecordRow[]): DecisionBrief {
   const sem = new Map<string, SemaphoreBucket>();
   let valor = 0;
@@ -1277,6 +1385,21 @@ export function buildDecisionBrief(
         layerLabel: "Por vigencia",
       };
     }
+    if (themeId === "ejecucion-financiera") {
+      return {
+        themeId,
+        title: "Ejecución financiera SMD",
+        subtitle:
+          "Cargue el reporte Fidusap (hoja CDP extendido). Se filtra Subdirección de Manejo de Desastres.",
+        kpis: [],
+        semaphores: [],
+        alerts: [],
+        byLayer: [],
+        priorityList: [],
+        focusLabel: "CDP SMD",
+        layerLabel: "Por grupo",
+      };
+    }
     return {
       themeId,
       title: "Tablero de decisión",
@@ -1315,6 +1438,8 @@ export function buildDecisionBrief(
       return buildPuentes(rows);
     case "declaratoria-de-emergencia":
       return buildDeclaratoria(rows);
+    case "ejecucion-financiera":
+      return buildEjecucionFinanciera(rows);
     default:
       return buildGeneric(themeId, rows);
   }

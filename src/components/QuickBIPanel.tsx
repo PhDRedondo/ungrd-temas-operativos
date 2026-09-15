@@ -55,18 +55,21 @@ export function QuickBIPanel({ theme }: Props) {
   const [ticketBoard, setTicketBoard] = useState<QuickBiDashboard | null>(null);
   const [loadingTicket, setLoadingTicket] = useState(false);
   const [ticketError, setTicketError] = useState<string | null>(null);
+  const [publicFallback, setPublicFallback] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!activeMeta) {
       setTicketBoard(null);
       setTicketError(null);
+      setPublicFallback(false);
       return;
     }
 
     let cancelled = false;
     setLoadingTicket(true);
     setTicketError(null);
+    setPublicFallback(false);
     setTicketBoard(null);
 
     // Equivalente a QuickBiTokenService.getDashboard(key) en SNI.
@@ -77,21 +80,18 @@ export function QuickBIPanel({ theme }: Props) {
       .then((result) => {
         if (cancelled) return;
         setTicketBoard(result.dashboard);
-        // fallback silencioso: el tablero puede cargar igual con ticket de catálogo
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        if (activeMeta.accessTicket) {
-          setTicketBoard({
-            ...activeMeta,
-            accessTicket: activeMeta.accessTicket,
-          });
-          setTicketError(null);
-          return;
-        }
-        setTicketError(
-          err instanceof Error ? err.message : "No se pudo obtener el ticket",
+        setPublicFallback(
+          Boolean(result.fallback && !result.dashboard.accessTicket?.trim()),
         );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTicketBoard({
+          ...activeMeta,
+          accessTicket: activeMeta.accessTicket || "",
+        });
+        setPublicFallback(!activeMeta.accessTicket?.trim());
+        setTicketError(null);
       })
       .finally(() => {
         if (!cancelled) setLoadingTicket(false);
@@ -227,6 +227,15 @@ export function QuickBIPanel({ theme }: Props) {
                 )}
               </div>
             </section>
+          )}
+
+          {publicFallback && (
+            <p className="rounded-xl border border-amber-300/40 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+              El workspace SNI aún no emite ticket para este tablero, así que se
+              embebe la vista pública. Si Alibaba pide login, hay que habilitar
+              embed y compartir el tablero en el mismo workspace QuickBI de
+              Manejo (como carrotanques).
+            </p>
           )}
 
           <section className="min-w-0 overflow-hidden rounded-2xl border border-ungrd-border bg-ungrd-surface shadow-[0_12px_40px_rgba(0,45,90,0.06)]">

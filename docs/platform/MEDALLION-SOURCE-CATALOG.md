@@ -192,26 +192,43 @@ FROM subsidios_arriendos.consolidado;
 
 ### FIC (plantilla v3 — una hoja, todos los campos)
 
-Igual que Agua: **una tabla = la hoja Excel**. Conectar Alibaba a:
+Hay **387 transferencias vivas** en `public.records` (`theme_id=fic`). Conectar Alibaba a **`fic.fic`** (no a un JOIN por `no_cdp`).
 
-| Tabla Postgres | Hoja / uso | Llave |
-|----------------|------------|-------|
-| **`fic.fic`** | Plantilla `FIC` (todos los campos) | **`no_cdp`** / `clave_seguimiento` |
-| `fic.transferencia` | Alta (mismos 387 registros, columnas de captura) | `no_cdp` |
-| `fic.legalizacion` | Seguimiento legalización | `clave_seguimiento` |
-| `fic.modificacion` | Prórroga | `clave_seguimiento` |
+La vista calcula el plazo como en el dashboard: **fecha inicial + plazo ejecución + prórroga**. No usar `fecha_inicial` como vencimiento. Columnas para QuickBI:
+
+| Columna | Qué es |
+|---------|--------|
+| `fecha_final_para_legalizacion` / `fecha_vencimiento` | Fecha de vencimiento calculada |
+| `dias_para_vencer` | Días que faltan (negativo = ya venció) |
+| `dias_vencidos` | Días de mora si está vencido y abierto |
+| `vencido` | `true` si estado VENCIDO o la fecha ya pasó y no está legalizado/anulado |
+
+`no_cdp` **no es único**: 379 números FIC y 8 FIC con 2 filas. Clave BI = **`record_id`**. Tras cambiar el dataset, **refrescar** la conexión.
+
+| Tabla Postgres | Uso | Clave en QuickBI |
+|----------------|-----|------------------|
+| **`fic.fic`** | Todas las transferencias (2014–2026) | **`record_id`** |
+| `fic.transferencia` | Mismas 387 filas, columnas de alta | `record_id` |
+| `fic.legalizacion` | Seguimiento legalización (misma fila) | `record_id` |
+| `fic.modificacion` | Prórroga (misma fila) | `record_id` |
+
+`no_cdp` **no es único**: 379 números FIC y 8 FIC con 2 filas. Si QuickBI marca `no_cdp` como único, el dataset se queda en 379. Tras cambiar el dataset, **refrescar** la conexión.
+
+Plazo de legalización (igual que el dashboard): **fecha inicial + plazo ejecución + prórroga**. No usar la fecha inicial como vencimiento. En `fic.fic`:
+
+| Columna | Qué es |
+|---------|--------|
+| `fecha_final_para_legalizacion` / `fecha_vencimiento` | Fecha de vencimiento calculada |
+| `dias_para_vencer` | Días que faltan (negativo = ya venció) |
+| `dias_vencidos` | Días de mora si está vencido y abierto |
+| `vencido` | `true` si estado VENCIDO o la fecha ya pasó y no está cerrado |
 
 Alias: `medallion.v_fic_all` → `fic.fic`.
 
 ```sql
+SELECT count(*) FROM fic.fic;           -- 387
+SELECT vigencia, count(*) FROM fic.fic GROUP BY 1 ORDER BY 1;
 SELECT * FROM medallion.v_connections WHERE schema_name = 'fic';
-SELECT count(*) FROM fic.fic;
-SELECT no_cdp, vigencia, formato_de_aprobacion_de_la_atencion,
-       acto_administrativo_otorgamiento_del_recurso,
-       acto_administrativo_otorgamiento_del_recurso_2,
-       fecha, valor, estado
-FROM fic.fic
-LIMIT 20;
 ```
 
 **Import maqueta ancha:** en prod, CDP/RC y variables líder llegaron dentro de

@@ -99,6 +99,9 @@ async function fetchTicket(pageId: string): Promise<EmbedUrlResponse> {
     throw new Error(detail || `Error ${res.status} al pedir ticket QuickBI`);
   }
   if (!data.accessTicket) {
+    if (data.fallback) {
+      return { ...data, accessTicket: "" };
+    }
     throw new Error("La API no devolvió accessTicket");
   }
   return data;

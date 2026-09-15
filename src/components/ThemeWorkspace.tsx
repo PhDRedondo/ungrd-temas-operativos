@@ -39,7 +39,14 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-const VISIBLE_TABS = TABS.filter((t) => !("hidden" in t && t.hidden));
+function visibleTabsFor(theme: ThemeConfig) {
+  const allowed = theme.workspaceTabs;
+  return TABS.filter((t) => {
+    if ("hidden" in t && t.hidden) return false;
+    if (!allowed?.length) return true;
+    return allowed.includes(t.id);
+  });
+}
 
 function isTabId(v: string | undefined | null): v is TabId {
   return (
@@ -61,10 +68,13 @@ export function ThemeWorkspace({
   initialTab?: string;
   initialFilters?: Partial<RecordFilterState>;
 }) {
+  const visibleTabs = visibleTabsFor(theme);
   const [tab, setTab] = useState<TabId>(() => {
-    if (!isTabId(initialTab)) return "captura";
+    const allowed = new Set(visibleTabs.map((t) => t.id));
+    const fallback = (visibleTabs[0]?.id || "analitica") as TabId;
+    if (!isTabId(initialTab) || !allowed.has(initialTab)) return fallback;
     const def = TABS.find((t) => t.id === initialTab);
-    if (def && "hidden" in def && def.hidden) return "analitica";
+    if (def && "hidden" in def && def.hidden) return fallback;
     return initialTab;
   });
   const [version, setVersion] = useState(0);
@@ -176,7 +186,7 @@ export function ThemeWorkspace({
         className="flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-ungrd-border bg-ungrd-surface p-1"
         role="tablist"
       >
-        {VISIBLE_TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             type="button"

@@ -42,11 +42,15 @@ export type ValidateBatchResult = {
 };
 
 /** Clave de negocio: seguimiento + capa (permite bitácora y maqueta juntas). */
-export function businessTrackingKey(item: ValidatedRecord): string | null {
+export function businessTrackingKey(
+  item: ValidatedRecord,
+  themeId?: string,
+): string | null {
   const clave = String(item.payload.clave_seguimiento ?? "")
     .trim()
     .toLowerCase();
   if (!clave) return null;
+  if (themeId === "ejecucion-financiera") return `${clave}\u0000smd-cdp`;
   const capa = String(
     item.payload.tipo_registro ?? item.payload.capa ?? "",
   )
@@ -90,16 +94,28 @@ export async function loadExistingTrackingMap(
       id: records.id,
       clave: sql<string>`lower(coalesce(${records.payload}->>'clave_seguimiento',''))`,
       tipo: sql<string>`lower(coalesce(${records.payload}->>'tipo_registro', ${records.payload}->>'capa',''))`,
+      deletedAt: records.deletedAt,
     })
     .from(records)
-    .where(and(eq(records.themeId, themeId), isNull(records.deletedAt)));
+    .where(
+      themeId === "ejecucion-financiera"
+        ? eq(records.themeId, themeId)
+        : and(eq(records.themeId, themeId), isNull(records.deletedAt)),
+    );
 
   const map = new Map<string, string>();
+  const live = new Set<string>();
   for (const r of rows) {
     const clave = String(r.clave || "").trim();
     if (!clave) continue;
-    const key = `${clave}\u0000${String(r.tipo || "").trim()}`;
-    if (!map.has(key)) map.set(key, r.id);
+    const key =
+      themeId === "ejecucion-financiera"
+        ? `${clave}\u0000smd-cdp`
+        : `${clave}\u0000${String(r.tipo || "").trim()}`;
+    if (!map.has(key) || (!r.deletedAt && !live.has(key))) {
+      map.set(key, r.id);
+    }
+    if (!r.deletedAt) live.add(key);
   }
   return map;
 }
@@ -131,7 +147,7 @@ export async function classifyForUpsert(
     }
     seenHash.add(item.contentHash);
 
-    const biz = businessTrackingKey(item);
+    const biz = businessTrackingKey(item, themeId);
     if (!biz) {
       out.push({ item, rowNumber, action: "insert" });
       continue;
@@ -161,7 +177,7 @@ export async function buildValidateBatch(
   const { accepted, errors } = validateExcelRows(theme, rows, opts);
   const classified = await classifyForUpsert(theme.id, accepted, mode);
   const withoutTrackingKey = accepted.filter(
-    (a) => !businessTrackingKey(a),
+    (a) => !businessTrackingKey(a, theme.id),
   ).length;
 
   return {
@@ -218,6 +234,7 @@ export async function upsertValidatedRecords(params: {
           contentHash: c.item.contentHash,
           source: params.source,
           uploadId: params.uploadId,
+          deletedAt: null,
         })
         .where(eq(records.id, c.existingId));
       updated += 1;

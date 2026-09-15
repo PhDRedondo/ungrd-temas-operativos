@@ -1290,7 +1290,7 @@ SELECT
   r.payload->>'fecha_formato_de_aprobacion_de_la_atencion' AS fecha_formato_de_aprobacion_de_la_atencion,
   r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
   r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
-  r.payload->>'plazo_final_dias' AS plazo_final_dias,
+  CASE WHEN ficp.plazo IS NOT NULL THEN (round(ficp.plazo))::text ELSE r.payload->>'plazo_final_dias' END AS plazo_final_dias,
   r.payload->>'clasificacion' AS clasificacion,
   r.payload->>'no_cdp' AS no_cdp,
   r.payload->>'fecha_cdp' AS fecha_cdp,
@@ -1312,7 +1312,7 @@ SELECT
   r.payload->>'fecha_de_radicacion_comunicacion_ente_territorial' AS fecha_de_radicacion_comunicacion_ente_territorial,
   r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
   r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
-  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  to_char(ficv.vencimiento, 'YYYY-MM-DD') AS fecha_final_para_legalizacion,
   r.payload->>'fecha_actual' AS fecha_actual,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
   r.payload->>'valor_legalizado' AS valor_legalizado,
@@ -1328,10 +1328,83 @@ SELECT
   r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
   r.payload->>'fecha_acto_administrativo_modificacion' AS fecha_acto_administrativo_modificacion
 FROM public.records r
+CROSS JOIN LATERAL (
+  SELECT
+    CASE
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END) + GREATEST(0, coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_adicion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_adicion_dias'), '')::numeric
+    ELSE NULL
+  END), 0))
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END)
+      ELSE NULL
+    END AS plazo,
+    COALESCE(
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END),
+      CASE
+        WHEN nullif(trim(r.payload->>'fecha'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        THEN left(nullif(trim(r.payload->>'fecha'), ''), 10)::date
+        ELSE r.fecha
+      END,
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), ''), 10)::date
+    ELSE NULL
+  END)
+    ) AS inicio,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_final_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_final_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END) AS final_stored,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), ''), 10)::date
+    ELSE NULL
+  END) AS prorroga,
+    upper(trim(coalesce(r.payload->>'estado', r.estado, ''))) AS estado_u
+) ficp
+CROSS JOIN LATERAL (
+  SELECT
+    GREATEST(
+      CASE
+        WHEN ficp.inicio IS NOT NULL AND ficp.plazo IS NOT NULL
+        THEN ficp.inicio + (round(ficp.plazo)::integer)
+        ELSE NULL
+      END,
+      ficp.final_stored,
+      CASE
+        WHEN ficp.prorroga IS DISTINCT FROM ficp.inicio THEN ficp.prorroga
+        ELSE NULL
+      END
+    ) AS vencimiento
+) ficv
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
   AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
-  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'));
 
 COMMENT ON VIEW fic.transferencia IS 'FIC — hoja Excel «Transferencia FIC»';
 
@@ -1360,10 +1433,10 @@ SELECT
   r.payload->>'valor_por_legalizar' AS valor_por_legalizar,
   r.payload->>'porcentaje_de_avance_en_el_ejericicio_de_legalizacion' AS porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
   r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
-  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  to_char(ficv.vencimiento, 'YYYY-MM-DD') AS fecha_final_para_legalizacion,
   r.payload->>'plazo_ejecucion_dias' AS plazo_ejecucion_dias,
   r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
-  r.payload->>'plazo_final_dias' AS plazo_final_dias,
+  CASE WHEN ficp.plazo IS NOT NULL THEN (round(ficp.plazo))::text ELSE r.payload->>'plazo_final_dias' END AS plazo_final_dias,
   r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
   r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
   r.payload->>'se_realizaron_visitas_de_seguimiento' AS se_realizaron_visitas_de_seguimiento,
@@ -1376,10 +1449,83 @@ SELECT
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio
 FROM public.records r
+CROSS JOIN LATERAL (
+  SELECT
+    CASE
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END) + GREATEST(0, coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_adicion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_adicion_dias'), '')::numeric
+    ELSE NULL
+  END), 0))
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END)
+      ELSE NULL
+    END AS plazo,
+    COALESCE(
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END),
+      CASE
+        WHEN nullif(trim(r.payload->>'fecha'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        THEN left(nullif(trim(r.payload->>'fecha'), ''), 10)::date
+        ELSE r.fecha
+      END,
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), ''), 10)::date
+    ELSE NULL
+  END)
+    ) AS inicio,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_final_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_final_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END) AS final_stored,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), ''), 10)::date
+    ELSE NULL
+  END) AS prorroga,
+    upper(trim(coalesce(r.payload->>'estado', r.estado, ''))) AS estado_u
+) ficp
+CROSS JOIN LATERAL (
+  SELECT
+    GREATEST(
+      CASE
+        WHEN ficp.inicio IS NOT NULL AND ficp.plazo IS NOT NULL
+        THEN ficp.inicio + (round(ficp.plazo)::integer)
+        ELSE NULL
+      END,
+      ficp.final_stored,
+      CASE
+        WHEN ficp.prorroga IS DISTINCT FROM ficp.inicio THEN ficp.prorroga
+        ELSE NULL
+      END
+    ) AS vencimiento
+) ficv
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
   AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
-  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'));
 
 COMMENT ON VIEW fic.legalizacion IS 'FIC — hoja Excel «Legalización»';
 
@@ -1400,8 +1546,8 @@ SELECT
   r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
   r.payload->>'fecha_acto_administrativo_modificacion' AS fecha_acto_administrativo_modificacion,
   r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
-  r.payload->>'plazo_final_dias' AS plazo_final_dias,
-  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  CASE WHEN ficp.plazo IS NOT NULL THEN (round(ficp.plazo))::text ELSE r.payload->>'plazo_final_dias' END AS plazo_final_dias,
+  to_char(ficv.vencimiento, 'YYYY-MM-DD') AS fecha_final_para_legalizacion,
   r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
   r.payload->>'fecha_actual' AS fecha_actual,
   nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
@@ -1412,10 +1558,83 @@ SELECT
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio
 FROM public.records r
+CROSS JOIN LATERAL (
+  SELECT
+    CASE
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END) + GREATEST(0, coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_adicion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_adicion_dias'), '')::numeric
+    ELSE NULL
+  END), 0))
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END)
+      ELSE NULL
+    END AS plazo,
+    COALESCE(
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END),
+      CASE
+        WHEN nullif(trim(r.payload->>'fecha'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        THEN left(nullif(trim(r.payload->>'fecha'), ''), 10)::date
+        ELSE r.fecha
+      END,
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), ''), 10)::date
+    ELSE NULL
+  END)
+    ) AS inicio,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_final_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_final_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END) AS final_stored,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), ''), 10)::date
+    ELSE NULL
+  END) AS prorroga,
+    upper(trim(coalesce(r.payload->>'estado', r.estado, ''))) AS estado_u
+) ficp
+CROSS JOIN LATERAL (
+  SELECT
+    GREATEST(
+      CASE
+        WHEN ficp.inicio IS NOT NULL AND ficp.plazo IS NOT NULL
+        THEN ficp.inicio + (round(ficp.plazo)::integer)
+        ELSE NULL
+      END,
+      ficp.final_stored,
+      CASE
+        WHEN ficp.prorroga IS DISTINCT FROM ficp.inicio THEN ficp.prorroga
+        ELSE NULL
+      END
+    ) AS vencimiento
+) ficv
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
   AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
-  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'));
 
 COMMENT ON VIEW fic.modificacion IS 'FIC — hoja Excel «Modificación / prórroga»';
 
@@ -1460,7 +1679,7 @@ SELECT
   r.payload->>'fecha_de_radicacion_comunicacion_ente_territorial' AS fecha_de_radicacion_comunicacion_ente_territorial,
   r.payload->>'nombre_del_supervisor_administrativo' AS nombre_del_supervisor_administrativo,
   r.payload->>'fecha_inicial_para_legalizacion' AS fecha_inicial_para_legalizacion,
-  r.payload->>'fecha_final_para_legalizacion' AS fecha_final_para_legalizacion,
+  to_char(ficv.vencimiento, 'YYYY-MM-DD') AS fecha_final_para_legalizacion,
   r.payload->>'fecha_actual' AS fecha_actual,
   r.payload->>'responsabilidades_de_la_supervision_descripcion_de_las_acciones_' AS responsabilidades_de_la_supervision_descripcion_de_las_acciones_,
   r.payload->>'fecha_de_legalizacion_por_prorroga' AS fecha_de_legalizacion_por_prorroga,
@@ -1476,18 +1695,122 @@ SELECT
   r.payload->>'acto_administrativo_prorroga' AS acto_administrativo_prorroga,
   r.payload->>'fecha_acto_administrativo_modificacion' AS fecha_acto_administrativo_modificacion,
   r.payload->>'plazo_adicion_dias' AS plazo_adicion_dias,
-  r.payload->>'plazo_final_dias' AS plazo_final_dias,
+  CASE WHEN ficp.plazo IS NOT NULL THEN (round(ficp.plazo))::text ELSE r.payload->>'plazo_final_dias' END AS plazo_final_dias,
   r.payload->>'valor_legalizado' AS valor_legalizado,
   r.payload->>'id_transferencia' AS id_transferencia,
   r.payload->>'tiene_anticipo' AS tiene_anticipo,
-  r.payload->>'valor_anticipo' AS valor_anticipo
+  r.payload->>'valor_anticipo' AS valor_anticipo,
+  ficv.vencimiento AS fecha_vencimiento,
+  CASE WHEN ficv.vencimiento IS NOT NULL THEN (ficv.vencimiento - CURRENT_DATE) END AS dias_para_vencer,
+  CASE WHEN (
+    ficp.estado_u LIKE '%VENCID%'
+    OR (
+      ficp.estado_u NOT IN (
+        'LEGALIZADO',
+        'LEGALIZADO 100%',
+        'ANULADO',
+        'CIERRE',
+        'REINTEGRO',
+        'NO TRAMITADO'
+      )
+      AND ficv.vencimiento IS NOT NULL
+      AND ficv.vencimiento < CURRENT_DATE
+    )
+  ) THEN GREATEST(0, CURRENT_DATE - ficv.vencimiento) ELSE 0 END AS dias_vencidos,
+  (
+    ficp.estado_u LIKE '%VENCID%'
+    OR (
+      ficp.estado_u NOT IN (
+        'LEGALIZADO',
+        'LEGALIZADO 100%',
+        'ANULADO',
+        'CIERRE',
+        'REINTEGRO',
+        'NO TRAMITADO'
+      )
+      AND ficv.vencimiento IS NOT NULL
+      AND ficv.vencimiento < CURRENT_DATE
+    )
+  ) AS vencido
 FROM public.records r
+CROSS JOIN LATERAL (
+  SELECT
+    CASE
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_ejecucion_dias'), '')::numeric
+    ELSE NULL
+  END) + GREATEST(0, coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_adicion_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_adicion_dias'), '')::numeric
+    ELSE NULL
+  END), 0))
+      WHEN coalesce((CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END), 0) > 0
+      THEN (CASE
+    WHEN nullif(trim(r.payload->>'plazo_final_dias'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>'plazo_final_dias'), '')::numeric
+    ELSE NULL
+  END)
+      ELSE NULL
+    END AS plazo,
+    COALESCE(
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_inicial_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END),
+      CASE
+        WHEN nullif(trim(r.payload->>'fecha'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        THEN left(nullif(trim(r.payload->>'fecha'), ''), 10)::date
+        ELSE r.fecha
+      END,
+      (CASE
+    WHEN nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_acto_administrativo_resolucion'), ''), 10)::date
+    ELSE NULL
+  END)
+    ) AS inicio,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_final_para_legalizacion'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_final_para_legalizacion'), ''), 10)::date
+    ELSE NULL
+  END) AS final_stored,
+    (CASE
+    WHEN nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>'fecha_de_legalizacion_por_prorroga'), ''), 10)::date
+    ELSE NULL
+  END) AS prorroga,
+    upper(trim(coalesce(r.payload->>'estado', r.estado, ''))) AS estado_u
+) ficp
+CROSS JOIN LATERAL (
+  SELECT
+    GREATEST(
+      CASE
+        WHEN ficp.inicio IS NOT NULL AND ficp.plazo IS NOT NULL
+        THEN ficp.inicio + (round(ficp.plazo)::integer)
+        ELSE NULL
+      END,
+      ficp.final_stored,
+      CASE
+        WHEN ficp.prorroga IS DISTINCT FROM ficp.inicio THEN ficp.prorroga
+        ELSE NULL
+      END
+    ) AS vencimiento
+) ficv
 WHERE r.theme_id = 'fic'
   AND r.deleted_at IS NULL
-  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test')
-  AND (lower(trim(coalesce(r.payload->>'capa', r.payload->>'tipo_registro', ''))) IN ('transferencia fic 2014', 'transferencia fic 2015', 'transferencia fic 2016', 'transferencia fic 2017', 'transferencia fic 2018', 'transferencia fic 2019', 'transferencia fic 2020', 'transferencia fic 2021', 'transferencia fic 2022', 'transferencia fic 2023', 'transferencia fic 2024', 'transferencia fic 2025', 'transferencia fic 2026'));
+  AND lower(trim(coalesce(r.source, ''))) NOT IN ('seed', 'demo', 'harness', 'smoke', 'test');
 
-COMMENT ON VIEW fic.fic IS 'FIC — hoja Excel «FIC» (plantilla v3, todos los campos)';
+COMMENT ON VIEW fic.fic IS 'FIC — hoja Excel «FIC» (todas las transferencias vivas; clave BI = record_id)';
 
 
 -- === Convenios → schema convenios ===
@@ -1572,9 +1895,42 @@ SELECT
   r.updated_at,
   nullif(trim(coalesce(r.payload->>'departamento', r.departamento, '')), '') AS departamento,
   nullif(trim(coalesce(r.payload->>'municipio', r.municipio, '')), '') AS municipio,
+  r.payload->>'no_cdp' AS no_cdp,
+  r.payload->>'valor_cdp' AS valor_cdp,
+  r.payload->>'radicado_cdp' AS radicado_cdp,
+  r.payload->>'solicitante' AS solicitante,
+  r.payload->>'area_ejecutora' AS area_ejecutora,
+  r.payload->>'grupo' AS grupo,
+  r.payload->>'descripcion' AS descripcion,
+  r.payload->>'fecha_cdp' AS fecha_cdp,
+  r.payload->>'resolucion' AS resolucion,
+  r.payload->>'alias' AS alias,
+  r.payload->>'fuente' AS fuente,
+  r.payload->>'linea' AS linea,
+  r.payload->>'nota' AS nota,
   r.payload->>'rubro' AS rubro,
-  r.payload->>'comprometido' AS comprometido,
-  r.payload->>'pagado' AS pagado,
+  r.payload->>'nacional_regional' AS nacional_regional,
+  r.payload->>'identificacion' AS identificacion,
+  r.payload->>'nombre' AS nombre,
+  r.payload->>'no_rc' AS no_rc,
+  r.payload->>'fecha_rc' AS fecha_rc,
+  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
+  r.payload->>'tipo' AS tipo,
+  r.payload->>'valor_rc' AS valor_rc,
+  r.payload->>'contrato' AS contrato,
+  r.payload->>'area_solicitante' AS area_solicitante,
+  r.payload->>'radicado_rc' AS radicado_rc,
+  r.payload->>'fecha_inicial' AS fecha_inicial,
+  r.payload->>'fecha_final' AS fecha_final,
+  r.payload->>'valor_pagado' AS valor_pagado,
+  r.payload->>'valor_por_pagar' AS valor_por_pagar,
+  r.payload->>'nombre_firma' AS nombre_firma,
+  r.payload->>'cargo_firma' AS cargo_firma,
+  r.payload->>'usuario' AS usuario,
+  r.payload->>'clave_seguimiento' AS clave_seguimiento,
+  r.payload->>'tipo_registro' AS tipo_registro,
+  r.payload->>'capa' AS capa,
+  coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
   COALESCE(
     CASE
       WHEN nullif(trim(r.payload->>'valor'), '') ~ '^-?[0-9]+(\.[0-9]+)?$'
@@ -1583,8 +1939,6 @@ SELECT
     END,
     r.valor
   ) AS valor,
-  coalesce(nullif(trim(r.payload->>'fecha'), ''), r.fecha::text) AS fecha,
-  nullif(trim(coalesce(r.payload->>'estado', r.estado, '')), '') AS estado,
   r.payload->>'observaciones' AS observaciones
 FROM public.records r
 WHERE r.theme_id = 'ejecucion-financiera'
@@ -1876,9 +2230,9 @@ SELECT * FROM (VALUES
   ('agua', 'agua.variables_lider', 'agua.general', 'orden_de_proveeduria', 'primaria', 'OP une variables líder con General', 'SELECT v.*, g.objeto FROM agua.variables_lider v JOIN agua.general g ON g.orden_de_proveeduria = v.orden_de_proveeduria'),
   ('agua', 'agua.pagos', 'agua.bitacora', 'orden_de_proveeduria', 'secundaria', 'Misma OP entre satélites (historial distinto)', 'SELECT p.orden_de_proveeduria, count(DISTINCT b.record_id) AS eventos FROM agua.pagos p LEFT JOIN agua.bitacora b ON b.orden_de_proveeduria = p.orden_de_proveeduria GROUP BY 1'),
   ('subsidios_arriendos', 'subsidios_arriendos.consolidado', 'subsidios_arriendos.consolidado', 'uuid', 'primaria', 'Identidad del registro (UUID). Capas futuras de seguimiento se unen por uuid', 'SELECT c.uuid, c.numero_envio, c.n_orden, c.municipio FROM subsidios_arriendos.consolidado c'),
-  ('fic', 'fic.legalizacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une legalización con la hoja FIC', 'SELECT l.*, f.no_cdp, f.valor, f.formato_de_aprobacion_de_la_atencion FROM fic.legalizacion l JOIN fic.fic f ON f.clave_seguimiento = l.clave_seguimiento'),
-  ('fic', 'fic.modificacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une modificación/prórroga con la hoja FIC', 'SELECT m.*, f.no_cdp, f.plazo_final_dias FROM fic.modificacion m JOIN fic.fic f ON f.clave_seguimiento = m.clave_seguimiento'),
-  ('fic', 'fic.transferencia', 'fic.fic', 'no_cdp', 'primaria', 'Misma fila de la plantilla v3 (alta = hoja FIC)', 'SELECT t.no_cdp, f.formato_de_aprobacion_de_la_atencion, f.valor FROM fic.transferencia t JOIN fic.fic f ON f.no_cdp = t.no_cdp')
+  ('fic', 'fic.legalizacion', 'fic.fic', 'record_id', 'primaria', 'Misma fila (plantilla v3). Clave BI = record_id; no_cdp no es único.', 'SELECT l.* FROM fic.legalizacion l JOIN fic.fic f ON f.record_id = l.record_id'),
+  ('fic', 'fic.modificacion', 'fic.fic', 'record_id', 'primaria', 'Misma fila (plantilla v3). Clave BI = record_id; no_cdp no es único.', 'SELECT m.* FROM fic.modificacion m JOIN fic.fic f ON f.record_id = m.record_id'),
+  ('fic', 'fic.transferencia', 'fic.fic', 'record_id', 'primaria', 'Misma fila (plantilla v3). Clave BI = record_id; no_cdp no es único.', 'SELECT t.* FROM fic.transferencia t JOIN fic.fic f ON f.record_id = t.record_id')
 ) AS t(schema_name, left_table, right_table, join_key, priority, description, sample_sql);
 
 

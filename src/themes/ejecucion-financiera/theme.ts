@@ -1,27 +1,18 @@
-import { buildTheme, type ThemeModule } from "../shared";
+import { buildThemeFromSource, type ThemeModule } from "../shared";
+import { SOURCE_FIELDS, SCHEMA_VERSION } from "./fields";
 
-/**
- * Módulo autónomo del tema: Ejecución financiera
- * Carpeta: src/themes/ejecucion-financiera/
- * Ruta app: /app/temas/ejecucion-financiera
- *
- * Cada desarrollador puede evolucionar este módulo (campos, textos, reglas)
- * sin tocar otros temas. Registre cambios solo dentro de esta carpeta.
- */
-export const config = buildTheme({
+export const config = buildThemeFromSource({
   id: "ejecucion-financiera",
   name: "Ejecución financiera",
   shortName: "Ejecución",
-  description: "Seguimiento de compromisos, obligaciones y pagos.",
+  description:
+    "CDP de Fidusap: pestaña SMD del reporte (o CDP extendido filtrado a Manejo de Desastres).",
   icon: "line-chart",
-  unit: "COP",
-  valueLabel: "Ejecutado (COP)",
-  extraFields: [
-      { name: "rubro", label: "Rubro", type: "text", required: true },
-      { name: "comprometido", label: "Comprometido (COP)", type: "number", required: true },
-      { name: "pagado", label: "Pagado (COP)", type: "number", required: true },
-      { name: "valor", label: "Obligado (COP)", type: "number", required: true },
-    ],
+  unit: "CDP",
+  valueLabel: "Valor CDP (COP)",
+  schemaVersion: SCHEMA_VERSION,
+  sourceFields: SOURCE_FIELDS,
+  workspaceTabs: ["cargas", "analitica", "quickbi"],
 });
 
 const themeModule: ThemeModule = { config };

@@ -389,6 +389,19 @@ const CAPA_VARIANTS: Record<string, string[]> = {
     "Transferencia FIC 2024",
     "Transferencia FIC 2025",
     "Transferencia FIC 2026",
+    "2014",
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026",
   ],
 };
 
@@ -424,8 +437,99 @@ function sheetFor(formId: string): string {
   return SHEET_ALIAS[formId] || formId.replace(/-/g, "_");
 }
 
+function ficNumSql(key: string): string {
+  return `(CASE
+    WHEN nullif(trim(r.payload->>${sqlStr(key)}), '') ~ '^-?[0-9]+(\\.[0-9]+)?$'
+    THEN nullif(trim(r.payload->>${sqlStr(key)}), '')::numeric
+    ELSE NULL
+  END)`;
+}
+
+function ficDateSql(key: string): string {
+  return `(CASE
+    WHEN nullif(trim(r.payload->>${sqlStr(key)}), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    THEN left(nullif(trim(r.payload->>${sqlStr(key)}), ''), 10)::date
+    ELSE NULL
+  END)`;
+}
+
+/** Plazo/vencimiento FIC (misma regla que src/themes/fic/dashboard.ts). */
+function ficLateralSql(): string {
+  return `
+CROSS JOIN LATERAL (
+  SELECT
+    CASE
+      WHEN coalesce(${ficNumSql("plazo_ejecucion_dias")}, 0) > 0
+      THEN ${ficNumSql("plazo_ejecucion_dias")} + GREATEST(0, coalesce(${ficNumSql("plazo_adicion_dias")}, 0))
+      WHEN coalesce(${ficNumSql("plazo_final_dias")}, 0) > 0
+      THEN ${ficNumSql("plazo_final_dias")}
+      ELSE NULL
+    END AS plazo,
+    COALESCE(
+      ${ficDateSql("fecha_inicial_para_legalizacion")},
+      CASE
+        WHEN nullif(trim(r.payload->>'fecha'), '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        THEN left(nullif(trim(r.payload->>'fecha'), ''), 10)::date
+        ELSE r.fecha
+      END,
+      ${ficDateSql("fecha_acto_administrativo_resolucion")}
+    ) AS inicio,
+    ${ficDateSql("fecha_final_para_legalizacion")} AS final_stored,
+    ${ficDateSql("fecha_de_legalizacion_por_prorroga")} AS prorroga,
+    upper(trim(coalesce(r.payload->>'estado', r.estado, ''))) AS estado_u
+) ficp
+CROSS JOIN LATERAL (
+  SELECT
+    GREATEST(
+      CASE
+        WHEN ficp.inicio IS NOT NULL AND ficp.plazo IS NOT NULL
+        THEN ficp.inicio + (round(ficp.plazo)::integer)
+        ELSE NULL
+      END,
+      ficp.final_stored,
+      CASE
+        WHEN ficp.prorroga IS DISTINCT FROM ficp.inicio THEN ficp.prorroga
+        ELSE NULL
+      END
+    ) AS vencimiento
+) ficv`;
+}
+
+function ficVencidoSql(): string {
+  return `(
+    ficp.estado_u LIKE '%VENCID%'
+    OR (
+      ficp.estado_u NOT IN (
+        'LEGALIZADO',
+        'LEGALIZADO 100%',
+        'ANULADO',
+        'CIERRE',
+        'REINTEGRO',
+        'NO TRAMITADO'
+      )
+      AND ficv.vencimiento IS NOT NULL
+      AND ficv.vencimiento < CURRENT_DATE
+    )
+  )`;
+}
+
+function ficExtraSelect(): string[] {
+  return [
+    "ficv.vencimiento AS fecha_vencimiento",
+    "CASE WHEN ficv.vencimiento IS NOT NULL THEN (ficv.vencimiento - CURRENT_DATE) END AS dias_para_vencer",
+    `CASE WHEN ${ficVencidoSql()} THEN GREATEST(0, CURRENT_DATE - ficv.vencimiento) ELSE 0 END AS dias_vencidos`,
+    `${ficVencidoSql()} AS vencido`,
+  ];
+}
+
 function fieldExpr(name: string, viewFq?: string, themeId?: string): string {
   const q = quoteIdent(name);
+  if (themeId === "fic" && name === "plazo_final_dias") {
+    return `CASE WHEN ficp.plazo IS NOT NULL THEN (round(ficp.plazo))::text ELSE r.payload->>'plazo_final_dias' END AS ${q}`;
+  }
+  if (themeId === "fic" && name === "fecha_final_para_legalizacion") {
+    return `to_char(ficv.vencimiento, 'YYYY-MM-DD') AS ${q}`;
+  }
   if (viewFq && JOIN_KEY_EXPR[viewFq]?.[name]) {
     return `${JOIN_KEY_EXPR[viewFq][name]} AS ${q}`;
   }
@@ -580,6 +684,8 @@ function buildSheetView(opts: {
   fieldNames: string[];
   fields: FormField[];
   capa: string;
+  /** Sin filtro de capa: todas las filas vivas del tema (conexión Alibaba completa). */
+  skipCapaFilter?: boolean;
 }): { sql: string; conn: ConnRow } {
   const name = fq(opts.schema, opts.table);
   const cols = [
@@ -591,17 +697,21 @@ function buildSheetView(opts: {
     ...uniqueFields(opts.themeId, opts.fieldNames, opts.fields).map((n) =>
       fieldExpr(n, name, opts.themeId),
     ),
+    ...(opts.themeId === "fic" && opts.table === "fic" ? ficExtraSelect() : []),
   ];
+  const capaLine = opts.skipCapaFilter
+    ? ""
+    : `\n  AND ${sheetRowPredicate(opts.capa, name)}`;
+  const fromExtra = opts.themeId === "fic" ? ficLateralSql() : "";
   const sql = `
 DROP VIEW IF EXISTS ${name} CASCADE;
 CREATE VIEW ${name} AS
 SELECT
   ${cols.join(",\n  ")}
-FROM public.records r
+FROM public.records r${fromExtra}
 WHERE r.theme_id = ${sqlStr(opts.themeId)}
   AND r.deleted_at IS NULL
-  AND ${operationalSourcePredicate()}
-  AND ${sheetRowPredicate(opts.capa, name)};
+  AND ${operationalSourcePredicate()}${capaLine};
 
 COMMENT ON VIEW ${name} IS ${sqlStr(opts.description)};
 `;
@@ -758,7 +868,7 @@ CREATE SCHEMA IF NOT EXISTS medallion;
           schema,
           table: "fic",
           themeId: theme.id,
-          description: `${theme.name} — hoja Excel «FIC» (plantilla v3, todos los campos)`,
+          description: `${theme.name} — hoja Excel «FIC» (todas las transferencias vivas; clave BI = record_id)`,
           fieldNames: [
             "capa",
             "tipo_registro",
@@ -767,6 +877,7 @@ CREATE SCHEMA IF NOT EXISTS medallion;
           ],
           fields: theme.fields,
           capa: ficCapa,
+          skipCapaFilter: true,
         });
         ficSheet.conn.sheet = "FIC";
         ficSheet.conn.description = `${theme.name} — FIC`;
@@ -894,9 +1005,9 @@ SELECT * FROM (VALUES
   ('agua', 'agua.variables_lider', 'agua.general', 'orden_de_proveeduria', 'primaria', 'OP une variables líder con General', 'SELECT v.*, g.objeto FROM agua.variables_lider v JOIN agua.general g ON g.orden_de_proveeduria = v.orden_de_proveeduria'),
   ('agua', 'agua.pagos', 'agua.bitacora', 'orden_de_proveeduria', 'secundaria', 'Misma OP entre satélites (historial distinto)', 'SELECT p.orden_de_proveeduria, count(DISTINCT b.record_id) AS eventos FROM agua.pagos p LEFT JOIN agua.bitacora b ON b.orden_de_proveeduria = p.orden_de_proveeduria GROUP BY 1'),
   ('subsidios_arriendos', 'subsidios_arriendos.consolidado', 'subsidios_arriendos.consolidado', 'uuid', 'primaria', 'Identidad del registro (UUID). Capas futuras de seguimiento se unen por uuid', 'SELECT c.uuid, c.numero_envio, c.n_orden, c.municipio FROM subsidios_arriendos.consolidado c'),
-  ('fic', 'fic.legalizacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une legalización con la hoja FIC', 'SELECT l.*, f.no_cdp, f.valor, f.formato_de_aprobacion_de_la_atencion FROM fic.legalizacion l JOIN fic.fic f ON f.clave_seguimiento = l.clave_seguimiento'),
-  ('fic', 'fic.modificacion', 'fic.fic', 'clave_seguimiento', 'primaria', 'Número FIC une modificación/prórroga con la hoja FIC', 'SELECT m.*, f.no_cdp, f.plazo_final_dias FROM fic.modificacion m JOIN fic.fic f ON f.clave_seguimiento = m.clave_seguimiento'),
-  ('fic', 'fic.transferencia', 'fic.fic', 'no_cdp', 'primaria', 'Misma fila de la plantilla v3 (alta = hoja FIC)', 'SELECT t.no_cdp, f.formato_de_aprobacion_de_la_atencion, f.valor FROM fic.transferencia t JOIN fic.fic f ON f.no_cdp = t.no_cdp')
+  ('fic', 'fic.legalizacion', 'fic.fic', 'record_id', 'primaria', 'Misma fila (plantilla v3). Clave BI = record_id; no_cdp no es único.', 'SELECT l.* FROM fic.legalizacion l JOIN fic.fic f ON f.record_id = l.record_id'),
+  ('fic', 'fic.modificacion', 'fic.fic', 'record_id', 'primaria', 'Misma fila (plantilla v3). Clave BI = record_id; no_cdp no es único.', 'SELECT m.* FROM fic.modificacion m JOIN fic.fic f ON f.record_id = m.record_id'),
+  ('fic', 'fic.transferencia', 'fic.fic', 'record_id', 'primaria', 'Misma fila (plantilla v3). Clave BI = record_id; no_cdp no es único.', 'SELECT t.* FROM fic.transferencia t JOIN fic.fic f ON f.record_id = t.record_id')
 ) AS t(schema_name, left_table, right_table, join_key, priority, description, sample_sql);
 `);
 
