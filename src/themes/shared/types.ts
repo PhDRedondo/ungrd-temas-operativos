@@ -123,6 +123,13 @@ export type ThemeConfig = {
   schemaVersion?: number;
   /** Formularios por capa (Agua y temas multi-capa). */
   captureForms?: CaptureFormConfig[];
+  /**
+   * Pestañas visibles del workspace. Si falta, se muestran las de siempre
+   * (Excel, Captura, Registros, Dashboard, QuickBI).
+   */
+  workspaceTabs?: Array<
+    "cargas" | "captura" | "seguimiento" | "analitica" | "quickbi" | "avanzado"
+  >;
 };
 
 /** Módulo autónomo de un tema: lo que cada desarrollador mantiene en su carpeta. */

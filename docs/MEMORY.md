@@ -50,7 +50,7 @@ Route Handlers en el mismo repo (v0.1). Platform API v1 (`/api/v1/cases|tasks`) 
 Rate limit + ban IP + path inspection + headers + body limit (`src/lib/security`).
 
 ### ADR-008 · QuickBI embed con CreateTicket (patrón SNI)
-Catálogo por `pageId` en `src/lib/quickbi/catalog.ts`. Panel React → `token-service.ts` → `POST /api/quickbi/embed-url` (BFF) → proxy a `QUICKBI_UPSTREAM_BASE_URL` (prod: `https://apisni.soft180.co`) o CreateTicket local. Embed: `token3rd` + `accessTicket`. Los `pageId` deben estar compartidos en QuickBI del workspace del upstream; si no, el API SNI responde 502.
+Catálogo por `pageId` en `src/lib/quickbi/catalog.ts`. Panel React → `token-service.ts` → `POST /api/quickbi/embed-url` (BFF) → proxy a `QUICKBI_UPSTREAM_BASE_URL` (prod: `https://apisni.soft180.co`) o CreateTicket local. Embed: `token3rd` + `accessTicket`. Si el ticket no sale, el BFF embebe la vista pública `dashboard/view` (FIC y tableros publicados). Los `pageId` privados deben estar compartidos en QuickBI del workspace del upstream.
 
 ### ADR-008 · Clave de seguimiento + capa
 Todo registro lleva `tipo_registro`, `capa`, `clave_seguimiento` para cruces, upsert y mando nacional.
@@ -79,6 +79,13 @@ Bronze/Silver = **solo datos operativos reales** (`form`/`excel`; excluye
 2026-08-06. Docs: `docs/platform/MEDALLION-SILVER.md`. Scripts:
 `medallion:generate-silver` · `medallion:sync-silver` · `medallion:test-silver`.
 Prod sync post-filtro: Bronze=Silver; dim orden=112, general=107.
+
+### ADR-012 · Ejecución financiera = Fidusap pestaña SMD
+No usar plantilla de la plataforma. Cada carga prefiere la pestaña **SMD**
+del reporte Fidusap (~834 CDP, GRUPO del Excel, incluye SDG). Si no existe,
+lee `cdextendido` / `cdpextendido` y filtra Área ejecutora = SMD **o**
+Área solicitante (W) = Manejo de Desastres. Upsert por No. CDP y archivo
+de claves que ya no vienen. Workspace: Excel + Dashboard operativo + QuickBI.
 
 ---
 
@@ -204,3 +211,4 @@ Orden cronológico reciente (commits + trabajo contractual):
 | 2026-08-20 | QuickBI: embed token3rd + API CreateTicket (port SNI) |
 | 2026-08-23 | Docker compose (--profile app): Postgres + migrate + Next standalone |
 | 2026-08-23 | Local recomendado: `DATABASE_URL` = Supabase (misma base que prod / QuickBI) |
+| 2026-09-15 | FIC Alibaba: 387 filas; vencimiento = inicial + plazo + prórroga (`dias_vencidos`, `vencido`) |

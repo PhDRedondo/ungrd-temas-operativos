@@ -27,6 +27,7 @@ type Body = {
  *    (ej. https://apisni.soft180.co) — mismos AccessKey allí.
  * 2. CreateTicket local con `QUICKBI_ACCESS_KEY_*`.
  * 3. Ticket estático del catálogo (fallback).
+ * 4. Vista pública `dashboard/view` (tablero publicado, sin accessTicket).
  *
  * Contrato idéntico a SNI: POST { pageId } → { pageId, accessTicket, expiresAt, host }
  */
@@ -143,16 +144,14 @@ export async function POST(req: Request) {
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         }
+        console.warn("[quickbi] CreateTicket falló; vista pública", err);
+      } else {
+        console.error("[quickbi/embed-url]", err);
         return NextResponse.json(
-          { error: err.message, code: "quickbi_upstream" },
-          { status: 502, headers: { "Cache-Control": "no-store" } },
+          { error: "Error interno QuickBI", code: "quickbi_internal" },
+          { status: 500, headers: { "Cache-Control": "no-store" } },
         );
       }
-      console.error("[quickbi/embed-url]", err);
-      return NextResponse.json(
-        { error: "Error interno QuickBI", code: "quickbi_internal" },
-        { status: 500, headers: { "Cache-Control": "no-store" } },
-      );
     }
   }
 
@@ -162,6 +161,20 @@ export async function POST(req: Request) {
       {
         pageId,
         accessTicket: catalog.accessTicket,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+        host,
+        fallback: true,
+      } satisfies EmbedUrlResponse,
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  // 4) Tablero publicado: embeber /dashboard/view sin ticket.
+  if (catalog || uuidLike) {
+    return NextResponse.json(
+      {
+        pageId,
+        accessTicket: "",
         expiresAt: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
         host,
         fallback: true,

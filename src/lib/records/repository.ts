@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, not, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, records, themes, uploads, users } from "@/db/schema";
 import type { ThemeConfig } from "@/themes/shared/types";
@@ -76,6 +76,40 @@ export async function ensureUser(params: {
     })
     .returning({ id: users.id });
   return row!.id;
+}
+
+/** Baja registros vivos del tema cuya clave no está en el lote (recorte Fidusap). */
+export async function softDeleteThemeRecordsNotInClaves(
+  themeId: string,
+  claves: string[],
+): Promise<number> {
+  const keep = [...new Set(claves.map((c) => c.trim().toLowerCase()).filter(Boolean))];
+  const now = new Date();
+  if (!keep.length) {
+    const res = await db
+      .update(records)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(records.themeId, themeId), isNull(records.deletedAt)))
+      .returning({ id: records.id });
+    return res.length;
+  }
+  const res = await db
+    .update(records)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(records.themeId, themeId),
+        isNull(records.deletedAt),
+        not(
+          inArray(
+            sql<string>`lower(coalesce(${records.payload}->>'clave_seguimiento',''))`,
+            keep,
+          ),
+        ),
+      ),
+    )
+    .returning({ id: records.id });
+  return res.length;
 }
 
 export async function getRecordsForTheme(themeId: string): Promise<RecordRow[]> {

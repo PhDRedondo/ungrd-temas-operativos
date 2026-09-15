@@ -64,6 +64,11 @@ const SOURCE_LABELS: Record<
     count: "Nº FIC",
     unit: "FIC",
   },
+  "ejecucion-financiera": {
+    valor: "Valor CDP (COP)",
+    count: "Nº CDP SMD",
+    unit: "CDP",
+  },
   "agua-y-saneamiento": {
     valor: "Valor órdenes (COP)",
     count: "Nº órdenes de proveeduría",

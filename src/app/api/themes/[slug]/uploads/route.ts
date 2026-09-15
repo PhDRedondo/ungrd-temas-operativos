@@ -60,6 +60,21 @@ async function processRows(params: {
       userId: params.userId,
     });
 
+    let removed = 0;
+    if (params.themeId === "ejecucion-financiera") {
+      const claves = batch.accepted
+        .map((a) =>
+          String(a.payload.clave_seguimiento ?? a.payload.no_cdp ?? "")
+            .trim()
+            .toLowerCase(),
+        )
+        .filter(Boolean);
+      const { softDeleteThemeRecordsNotInClaves } = await import(
+        "@/lib/records/repository"
+      );
+      removed = await softDeleteThemeRecordsNotInClaves(params.themeId, claves);
+    }
+
     const acceptedTotal = inserted.length + updated;
     await finishUpload({
       uploadId: params.uploadId,
@@ -214,6 +229,7 @@ async function processRows(params: {
       inserted,
       updated,
       duplicates,
+      removed,
       errors: batch.errors,
       summary: batch.summary,
     };
@@ -252,7 +268,8 @@ export async function POST(req: Request, ctx: Ctx) {
   const form = await req.formData();
   const file = form.get("file");
   const dryRun = parseDryRun(form.get("dryRun"));
-  const mode = parseMode(form.get("mode"));
+  const mode: UploadMode =
+    theme.id === "ejecucion-financiera" ? "upsert" : parseMode(form.get("mode"));
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
@@ -301,9 +318,49 @@ export async function POST(req: Request, ctx: Ctx) {
     );
   }
 
-  const parsed = await parseExcelUpload(buf);
+  let parsed: Awaited<ReturnType<typeof parseExcelUpload>>;
+  let fidusapMeta: {
+    keptRows: number;
+    droppedNotSmd: number;
+    sheetName: string;
+    fromSmdTab: boolean;
+    byEjecutora: Record<string, number>;
+    tip: string;
+  } | null = null;
+  if (theme.id === "ejecucion-financiera") {
+    try {
+      const { describeFidusapRecorte, parseFidusapCdpExtendido } = await import(
+        "@/themes/ejecucion-financiera/fidusap"
+      );
+      const fidusap = await parseFidusapCdpExtendido(buf);
+      parsed = {
+        rows: fidusap.rows,
+        meta: { sheetName: fidusap.meta.sheetName },
+      };
+      fidusapMeta = {
+        keptRows: fidusap.meta.keptRows,
+        droppedNotSmd: fidusap.meta.droppedNotSmd,
+        sheetName: fidusap.meta.sheetName,
+        fromSmdTab: fidusap.meta.fromSmdTab,
+        byEjecutora: fidusap.meta.byEjecutora,
+        tip: describeFidusapRecorte(fidusap.meta),
+      };
+    } catch (err) {
+      return NextResponse.json(
+        {
+          error:
+            err instanceof Error
+              ? err.message
+              : "No se pudo leer el reporte Fidusap.",
+        },
+        { status: 400 },
+      );
+    }
+  } else {
+    parsed = await parseExcelUpload(buf);
+  }
 
-  if (parsed.meta.themeId && parsed.meta.themeId !== theme.id) {
+  if (!fidusapMeta && parsed.meta.themeId && parsed.meta.themeId !== theme.id) {
     return NextResponse.json(
       {
         error: `La plantilla pertenece al tema "${parsed.meta.themeId}", no a "${theme.id}"`,
@@ -314,6 +371,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const expectedVersion = theme.schemaVersion ?? 1;
   if (
+    !fidusapMeta &&
     parsed.meta.schemaVersion !== undefined &&
     parsed.meta.schemaVersion !== expectedVersion
   ) {
@@ -326,7 +384,11 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const expectedFp = schemaFingerprint(theme);
-  if (parsed.meta.fingerprint && parsed.meta.fingerprint !== expectedFp) {
+  if (
+    !fidusapMeta &&
+    parsed.meta.fingerprint &&
+    parsed.meta.fingerprint !== expectedFp
+  ) {
     return NextResponse.json(
       {
         error:
@@ -338,7 +400,11 @@ export async function POST(req: Request, ctx: Ctx) {
 
   if (!parsed.rows.length) {
     return NextResponse.json(
-      { error: "El archivo no contiene filas de datos" },
+      {
+        error: fidusapMeta
+          ? `El reporte no tiene CDP de Subdirección de Manejo de Desastres (hoja ${fidusapMeta.sheetName}, ${fidusapMeta.droppedNotSmd} filas de otras áreas).`
+          : "El archivo no contiene filas de datos",
+      },
       { status: 400 },
     );
   }
@@ -366,11 +432,13 @@ export async function POST(req: Request, ctx: Ctx) {
         ...r.raw,
         id: "(preview)",
       })),
-      tip:
-        mode === "upsert"
+      tip: fidusapMeta
+        ? fidusapMeta.tip
+        : mode === "upsert"
           ? "Modo actualizar: si el identificador y el tipo de registro ya existen, se corrige esa fila. Si el tipo venía vacío, se tomó del nombre del archivo."
           : "Modo solo nuevos: no se actualizarán registros existentes (solo se omite si el archivo es idéntico).",
       capaHint: capaHint || null,
+      fidusap: fidusapMeta,
     });
   }
 
@@ -398,7 +466,10 @@ export async function POST(req: Request, ctx: Ctx) {
     // Continúa: el procesamiento usa `parsed.rows`, no el archivo en disco.
   }
 
-  const asyncMode = parsed.rows.length >= ASYNC_THRESHOLD;
+  const asyncMode =
+    theme.id === "ejecucion-financiera"
+      ? false
+      : parsed.rows.length >= ASYNC_THRESHOLD;
 
   const upload = await createUpload({
     themeId: theme.id,
@@ -459,12 +530,17 @@ export async function POST(req: Request, ctx: Ctx) {
     accepted: result.inserted.length + result.updated,
     inserted: result.inserted.length,
     updated: result.updated,
+    removed: result.removed ?? 0,
     rejected: result.summary.invalid,
     duplicates: result.duplicates,
     wouldInsert: result.summary.wouldInsert,
     wouldUpdate: result.summary.wouldUpdate,
     errors: result.errors,
     preview: result.inserted.slice(0, 8),
+    fidusap: fidusapMeta,
+    tip: fidusapMeta
+      ? `${fidusapMeta.tip} ${result.removed ?? 0} del corte anterior se archivaron.`
+      : undefined,
   });
 }
 

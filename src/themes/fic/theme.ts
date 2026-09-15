@@ -200,6 +200,14 @@ function withCaptureOnlyFields(fields: FormField[]): FormField[] {
 
 export const config: ThemeModule["config"] = {
   ...base,
+  quickBiDashboards: [
+    {
+      title: "Transferencias FIC",
+      description:
+        "Tablero QuickBI de transferencias FIC: legalización, plazos y vencidos.",
+      url: "https://bi-us-east-1.alibabacloud.com/dashboard/view/pc.htm?pageId=7f0750a2-603a-4e82-922a-0b84fac8b071&dd_orientation=auto",
+    },
+  ],
   fields: withCaptureOnlyFields(base.fields).map((f) => {
     if (f.name === "estado") {
       return {

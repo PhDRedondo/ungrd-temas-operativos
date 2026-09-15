@@ -6,26 +6,25 @@
 | **Ruta** | `/app/temas/ejecucion-financiera` |
 | **Carpeta** | `src/themes/ejecucion-financiera/` |
 
-## Trabajo autónomo
+## Qué hace
 
-1. Cree una rama: `feat/ejecucion-financiera-descripcion`
-2. Edite **solo** archivos dentro de esta carpeta (más el registro si es tema nuevo).
-3. Abra un PR enfocado a este tema.
+Carga el reporte Fidusap **tal como sale**. En cada subida:
+
+1. Prefiere la pestaña **SMD** (~834 CDP, con GRUPO y filas SDG). Si no existe, lee `cdextendido` / CDP extendido.
+2. En CDP extendido filtra Área ejecutora = SMD o **W · Área solicitante** = Manejo de Desastres.
+3. Conserva las columnas SMD y usa **GRUPO** del Excel (si falta, lo infiere: honorarios, maquinaria, FIC, AHE…).
+4. Reemplaza el corte anterior (upsert por No. CDP + archivo de lo que ya no viene).
+
+Pestañas del workspace: **Cargar Excel**, **Dashboard operativo**, **QuickBI**.
 
 ## Archivos
 
-- `theme.ts` — configuración del tema (campos de captura, textos, icono).
-- `index.ts` — reexporta el módulo.
+- `theme.ts` — config, `workspaceTabs`.
+- `fields.ts` — columnas SMD (schema v5).
+- `fidusap.ts` — parseo (pestaña SMD o CDP extendido), grupo, fechas/montos.
+- `dashboard.ts` — KPIs, semáforo y tabla operativa.
 - `README.md` — esta guía.
-
-## Extensiones futuras (opcional en esta carpeta)
-
-- `demo.ts` — generador de datos demo propio.
-- `rules.ts` — validaciones de negocio.
-- `components/` — UI específica del tema (si diverge del shell compartido).
 
 ## No modificar (núcleo compartido)
 
-- `src/components/*` — shell, captura genérica, analítica.
-- `src/themes/shared/*` — tipos y `buildTheme`.
-- Otros directorios bajo `src/themes/<otro-tema>/`.
+El parseo se engancha en `src/app/api/themes/[slug]/uploads/route.ts` y el tablero en `DecisionDashboard` / `AnalyticsPanel` porque la carga Fidusap no cabe en la plantilla genérica.

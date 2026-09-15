@@ -38,6 +38,8 @@ const DESCRIPTIONS: Record<string, string> = {
     "Tablero principal de asistencias técnicas: volumen, cobertura territorial y tipología.",
   "Tablero 2 (KPIS)":
     "KPIs de asistencias técnicas: metas, tiempos y resultados agregados.",
+  "Transferencias FIC":
+    "Transferencias FIC: legalización, plazos y vencidos sobre fic.fic (clave record_id).",
 };
 
 function descFor(title: string): string {
@@ -124,10 +126,7 @@ export const QUICKBI_BY_THEME: Record<string, QuickBiDashboardMeta[]> = {
     board("Tablero principal", "de029acd-7200-4ba5-8334-55230ef98753"),
     board("KPIs", "7d03b538-dc1c-40be-b725-c2e5ea29ea1d"),
   ],
-  fic: [board("Tablero Único", "7f0750a2-603a-4e82-922a-0b84fac8b071")],
-  "gestion-de-servicios": [
-    board("Tablero Único", "7f0750a2-603a-4e82-922a-0b84fac8b071"),
-  ],
+  fic: [board("Transferencias FIC", "7f0750a2-603a-4e82-922a-0b84fac8b071")],
   /**
    * Maquinaria Amarilla (Excel SMD) → Banco de Maquinaria en la app.
    */

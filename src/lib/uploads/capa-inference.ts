@@ -654,6 +654,13 @@ export function feedingGuideForTheme(themeId: string): {
       capas: ["Convenio obra por impuesto"],
       tip: "Primero el convenio. Luego Interventoría o Seguimiento buscando el mismo Nº convenio.",
     },
+    "ejecucion-financiera": {
+      clave: "No. CDP",
+      capas: [
+        "Grupo (honorarios, maquinaria, FIC, AHE, arriendos…)",
+      ],
+      tip: "Suba el reporte Fidusap tal cual sale. Se lee la pestaña SMD (si existe) o, si no, CDP extendido filtrado a Manejo. Cada carga reemplaza el corte anterior.",
+    },
     "subsidios-de-arriendos": {
       clave: "Número de envío + número de orden",
       capas: ["Consolidado de envío"],

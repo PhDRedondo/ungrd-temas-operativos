@@ -9,6 +9,7 @@
 | **Captura** | AppSheet CONTROL FIC (`alimentador.fic_transferencias_Form`) |
 | **schemaVersion** | 4 |
 | **Import** | `npx tsx scripts/import-fic-xlsx.ts [/ruta/plantilla_fic_v3.xlsx]` · parquet: `import-fic-parquet.ts` |
+| **QuickBI** | `pageId` `7f0750a2-603a-4e82-922a-0b84fac8b071` — pestaña QuickBI en `/app/temas/fic` |
 
 ## Capas
 

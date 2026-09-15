@@ -26,6 +26,7 @@ import { RecordFilterBar } from "@/components/RecordFilterBar";
 import type { MapPoint } from "@/components/ColombiaMap";
 import { isSourceTheme } from "@/lib/analytics/decision";
 import { enrichRecordsForDecision } from "@/lib/analytics/enrichRecords";
+import { aggregateSmdDashboard } from "@/themes/ejecucion-financiera/dashboard";
 import {
   applyRecordFilters,
   capaOf,
@@ -114,12 +115,13 @@ export function AnalyticsPanel({
   );
   const [mapMetricOverride, setMapMetricOverride] = useState<
     MapMetric | "auto"
-  >(theme.id === "fic" ? "valor" : "auto");
+  >(theme.id === "fic" || theme.id === "ejecucion-financiera" ? "valor" : "auto");
   const [seriesMetricOverride, setSeriesMetricOverride] = useState<
     MapMetric | "auto"
-  >(theme.id === "fic" ? "valor" : "auto");
+  >(theme.id === "fic" || theme.id === "ejecucion-financiera" ? "valor" : "auto");
   const [seriesWindow, setSeriesWindow] = useState<SeriesWindow>("24");
   const isFic = theme.id === "fic";
+  const isSmd = theme.id === "ejecucion-financiera";
 
   const workingRecords = useMemo(
     () => (sourceTheme ? enrichRecordsForDecision(records) : records),
@@ -207,6 +209,15 @@ export function AnalyticsPanel({
           .map((r) => String(r.clave_seguimiento || "").trim())
           .filter(Boolean),
       ).size;
+      if (theme.id === "ejecucion-financiera") {
+        const smd = aggregateSmdDashboard(filtered);
+        return [
+          { label: "CDP filtrados", value: formatNumber(smd.cdpUnicos) },
+          { label: "Valor CDP", value: formatCop(smd.valorCdp) },
+          { label: "Pagado", value: formatCop(smd.valorPagado) },
+          { label: "Por pagar", value: formatCop(smd.valorPorPagar) },
+        ];
+      }
       return [
         { label: "Registros filtrados", value: formatNumber(total) },
         { label: theme.valueLabel, value: formatCop(valor) },
@@ -459,9 +470,11 @@ export function AnalyticsPanel({
         capaLabel={
           theme.id === "fic"
             ? "Vigencia"
-            : tipoRegistroField?.label ||
-              categoryField?.label ||
-              "Tipo de registro"
+            : theme.id === "ejecucion-financiera"
+              ? "Grupo"
+              : tipoRegistroField?.label ||
+                categoryField?.label ||
+                "Tipo de registro"
         }
         matched={filtered.length}
         total={workingRecords.length}
@@ -473,8 +486,10 @@ export function AnalyticsPanel({
           {hasFilters && filtered.length === 0 && workingRecords.length > 0 ? (
             <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-amber-950">
-                Los filtros no dejan ningún FIC visible ({formatNumber(workingRecords.length)}{" "}
-                hay en la base). Quite filtros para ver la tabla operativa.
+                Los filtros no dejan ningún{" "}
+                {isFic ? "FIC" : isSmd ? "CDP" : "registro"} visible (
+                {formatNumber(workingRecords.length)} hay en la base). Quite
+                filtros para ver el tablero operativo.
               </p>
               <button
                 type="button"
@@ -494,7 +509,7 @@ export function AnalyticsPanel({
         </>
       ) : null}
 
-      {sourceTheme && !isFic ? (
+      {sourceTheme && !isFic && !isSmd ? (
         <ClaveCapasTimeline
           themeName={theme.name}
           themeId={theme.id}
@@ -509,24 +524,22 @@ export function AnalyticsPanel({
             Cómo usar este tablero
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-4 leading-relaxed">
-            {theme.id === "fic" ? (
+            {isSmd ? (
               <>
                 <li>
-                  El{" "}
-                  <strong className="font-bold text-ungrd-heading">mando</strong>{" "}
-                  prioriza FIC con saldo por legalizar y fecha final vencida.
+                  El mando prioriza CDP sin RC o con plazo vencido y saldo por
+                  pagar, sobre el recorte Fidusap de Subdirección de Manejo.
                 </li>
                 <li>
-                  Filtros y mapa usan número FIC, vigencia, estado de
-                  legalización y valor desembolsado por departamento.
+                  Filtros, mapa y gráficos usan grupo, estado, departamento
+                  (nacional / regional) y valor CDP.
                 </li>
                 <li>
-                  La serie temporal sigue la fecha final de legalización (o
-                  desembolso si aún no hay plazo).
+                  La tabla operativa lista grupo, RC, fechas, pagado y por pagar.
                 </li>
                 <li>
-                  La tabla lista plazos inicial / prórroga / final y valores por
-                  legalizar.
+                  Cada carga Excel reemplaza el corte anterior; QuickBI queda en
+                  su pestaña.
                 </li>
               </>
             ) : (
@@ -585,8 +598,9 @@ export function AnalyticsPanel({
 
       {records.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-ungrd-border px-4 py-8 text-center text-sm text-ungrd-muted">
-          Sin registros. Capture en el formulario o cargue la plantilla Excel
-          para ver mapa y gráficos.
+          {isSmd
+            ? "Cargue el reporte Fidusap (pestaña SMD o CDP extendido) para ver mapa, gráficos y el recorte."
+            : "Sin registros. Capture en el formulario o cargue la plantilla Excel para ver mapa y gráficos."}
         </p>
       ) : null}
 
@@ -754,7 +768,9 @@ export function AnalyticsPanel({
             Distribución ·{" "}
             {theme.id === "fic"
               ? "Vigencia"
-              : categoryField?.label || "Estado"}
+              : theme.id === "ejecucion-financiera"
+                ? "Grupo"
+                : categoryField?.label || "Estado"}
           </h3>
           <div className="h-64 min-w-0 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
