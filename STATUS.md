@@ -2,15 +2,13 @@
 
 **Agente:** Cursor  
 **Fecha:** 2026-09-15  
-**Foco:** Migración del código a `UNGRD-FNGRD/manejo-aplicativo-temas`.
+**Foco:** Datos migrados a RDS Alibaba; app local apunta ahí (`sslmode=disable`).
 
-**Remoto:** `origin` → https://github.com/UNGRD-FNGRD/manejo-aplicativo-temas.git  
-**Anterior:** `phdredondo` → https://github.com/PhDRedondo/ungrd-temas-operativos.git
+**RDS:** `pgm-7gotc9vw1p903hrzbo.pg.rds-aliyun-america.rds.aliyuncs.com:5432` / db `d01_p011_aplicativo_temas`.  
+**Verificado:** records 11305, live 5216, fic.fic 387 (igual que Supabase).
 
-**Hecho local (va en este push):** Fidusap SMD, vistas FIC/plazos, QuickBI FIC enganchado.
+**Pendiente:** cambiar `DATABASE_URL` en Vercel al mismo RDS. QuickBI: dataset `fic.fic` clave `record_id`, SSL off.
 
-**Pendiente QuickBI FIC:** SNI CreateTicket 502 hasta compartir el tablero en el workspace de Manejo.
+**Git:** `origin` = `UNGRD-FNGRD/manejo-aplicativo-temas`. No guardar passwords/tokens en git.
 
-**No tocar:** no reaplicar 003 completo. Token de GitHub no se guarda en el repo.
-
-**Prod:** `https://ungrd-manejo-phi.vercel.app`
+**Prod Vercel (aún Supabase hasta cambiar env):** `https://ungrd-manejo-phi.vercel.app`

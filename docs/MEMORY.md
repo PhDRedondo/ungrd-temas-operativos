@@ -12,7 +12,7 @@ Rebuild: `graphify update .` (sin LLM). Commit indexado: `19ccb2c`.
 
 | Dimensión | Antes (prototipo) | Ahora (MVP operable + cloud) |
 |-----------|-------------------|------------------------------|
-| Datos | Memoria / `localStorage` | PostgreSQL + Drizzle (+ Supabase en prod) |
+| Datos | Memoria / `localStorage` | PostgreSQL + Drizzle (RDS Alibaba; Supabase queda como respaldo) |
 | Auth | Demo débil en cliente | Auth.js · demo o Keycloak · cookie HTTPS/Vercel |
 | Excel | Headers SheetJS | ExcelJS + Zod + DIVIPOLA + dry-run + upsert por clave+capa |
 | Analítica | Solo cliente sobre demo | Records DB + SQL + Centro de Mando + decisión + red |
@@ -48,6 +48,9 @@ Route Handlers en el mismo repo (v0.1). Platform API v1 (`/api/v1/cases|tasks`) 
 
 ### ADR-007 · Protocolo de seguridad en middleware
 Rate limit + ban IP + path inspection + headers + body limit (`src/lib/security`).
+
+### ADR-013 · Fuente operativa = RDS Alibaba (sin SSL)
+Postgres 18 en `*.rds.aliyuncs.com`. `sslmode=disable`. App y QuickBI usan la misma instancia. Supabase queda de respaldo. El user de app es también el de BI hasta crear `medallion_reader` (este login no puede CREATE ROLE).
 
 ### ADR-008 · QuickBI embed con CreateTicket (patrón SNI)
 Catálogo por `pageId` en `src/lib/quickbi/catalog.ts`. Panel React → `token-service.ts` → `POST /api/quickbi/embed-url` (BFF) → proxy a `QUICKBI_UPSTREAM_BASE_URL` (prod: `https://apisni.soft180.co`) o CreateTicket local. Embed: `token3rd` + `accessTicket`. Si el ticket no sale, el BFF embebe la vista pública `dashboard/view` (FIC y tableros publicados). Los `pageId` privados deben estar compartidos en QuickBI del workspace del upstream.

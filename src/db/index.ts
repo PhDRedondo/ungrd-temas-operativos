@@ -15,6 +15,21 @@ const connectionString =
     ? ""
     : "postgresql://ungrd:ungrd@127.0.0.1:5432/ungrd_temas");
 
+/** Respeta sslmode de la URL. RDS Alibaba de Manejo no ofrece SSL. */
+function sslFor(url: string): false | "require" {
+  if (/127\.0\.0\.1|localhost/.test(url)) return false;
+  try {
+    const u = new URL(url.replace(/^postgres(ql)?:/i, "http:"));
+    const mode = (u.searchParams.get("sslmode") || "").toLowerCase();
+    if (mode === "disable" || mode === "allow" || mode === "prefer") {
+      return false;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "require";
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __ungrdSql: ReturnType<typeof postgres> | undefined;
@@ -37,7 +52,7 @@ function createClient() {
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
-    ssl: isLocal ? false : "require",
+    ssl: sslFor(connectionString),
     prepare: usePrepare,
   });
 }

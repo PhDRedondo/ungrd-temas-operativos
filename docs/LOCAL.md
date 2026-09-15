@@ -6,13 +6,13 @@
 |-------------|--------|
 | Node.js 20+ | Recomendado LTS |
 | npm 10+ | Viene con Node |
-| Supabase (recomendado) | Misma `DATABASE_URL` que prod / QuickBI medallón |
+| PostgreSQL RDS Alibaba | Misma `DATABASE_URL` que QuickBI (`sslmode=disable`) |
 | PostgreSQL Docker | Solo si necesitas offline aislado |
 | Docker (opcional) | App completa / Keycloak — ver [DOCKER.md](./DOCKER.md) |
 
-## Setup (recomendado: Supabase = local = despliegue)
+## Setup (recomendado: RDS Alibaba = local = QuickBI)
 
-Así el **Dashboard Operativo** y **QuickBI** miran la misma fuente.
+Así el **Dashboard Operativo** y **QuickBI** miran la misma fuente. Guía: [platform/ALIBABA-RDS.md](./platform/ALIBABA-RDS.md).
 
 ```bash
 git clone <repo>
@@ -21,19 +21,11 @@ cp .env.example .env.local
 npm install
 ```
 
-En `.env.local`:
-
-1. Define `MEDALLION_DATABASE_URL` (reader).
-2. Genera la URL de app (escritura, pooler Session `:5432`):
-
-```bash
-npx tsx scripts/print-vercel-database-url.ts
-# Copia la línea postgresql://postgres.<ref>:… en DATABASE_URL
-```
+En `.env.local` (este RDS **no soporta SSL**):
 
 ```env
-DATABASE_URL=postgresql://postgres.<ref>:…@aws-1-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require
-MEDALLION_DATABASE_URL=postgresql://medallion_reader.<ref>:…@…:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME?sslmode=disable
+MEDALLION_DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME?sslmode=disable
 AUTH_MODE=demo
 AUTH_URL=http://localhost:3000
 AUTH_SECRET=ungrd-dev-secret-change-me-in-prod
@@ -41,18 +33,18 @@ ACL_STRICT=false
 QUICKBI_UPSTREAM_BASE_URL=https://apisni.soft180.co
 ```
 
-**No** hace falta `npm run db:setup` contra Supabase (el schema ya está en prod).
+El schema y los datos ya están en RDS. No hace falta `npm run db:setup` salvo base vacía.
 
 ```bash
 npm run dev
 ```
 
 Abrir http://localhost:3000 — demo: `admin@ungrd.gov.co` / `UNGRD2026`.  
-Health debe mostrar host pooler Supabase (`db:"up"`).
+Health debe mostrar host `*.rds.aliyuncs.com` y `db:"up"`.
 
 ## Postgres vía Docker (offline / aislado)
 
-Solo si no puedes usar Supabase. **Los números no coincidirán con QuickBI.**
+Solo si no puedes usar RDS. **Los números no coincidirán con QuickBI.**
 
 ```bash
 docker compose up -d postgres
