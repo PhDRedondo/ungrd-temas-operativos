@@ -38,7 +38,11 @@ Ejemplo: inicial 180 días + prórroga 30 → plazo final 210; la fecha final co
 
 Los filtros de **departamento y municipio** usan DIVIPOLA y la base queda **persistida** con esos nombres (`CORDOBA` → Córdoba, `MONTERIA` → Montería). Entidades que no son territorio (Cruz Roja, SENA) se dejan. Backfill: `npx tsx scripts/backfill-divipola-geo.ts --apply`.
 
-El KPI **Vencidos** del tablero es la columna **estado de legalización** (`VENCIDO`), el mismo filtro que en Excel. No se infiere por `fecha_final_para_legalizacion`.
+El KPI **Vencidos** calcula la fecha de vencimiento con **todos** los campos de plazo:
+
+`fecha inicial para legalización` (si falta: desembolso) + `plazo_ejecucion_dias` + `plazo_adicion_dias` (prórroga / acto de modificación).
+
+Si existe `fecha_final_para_legalizacion` o `fecha_de_legalizacion_por_prorroga` más tarde, se usa esa. Un FIC **LEGALIZADO / ANULADO / REINTEGRO / CIERRE** no cuenta aunque la fecha ya haya pasado. El estado Excel `VENCIDO` sí cuenta aunque no haya plazo grabado.
 
 El **% de avance** = `(desembolso − por legalizar) / desembolso × 100`.
 

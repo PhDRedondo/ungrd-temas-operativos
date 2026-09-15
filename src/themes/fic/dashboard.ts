@@ -22,7 +22,9 @@ export type FicOperativeRow = {
   municipio: string;
   vigencia: string;
   plazoEjecucion: string;
+  plazoAdicion: string;
   plazoFinal: string;
+  fechaVencimiento: string;
   valor: number;
   porLegalizar: number;
   critico: boolean;
@@ -78,8 +80,117 @@ export function isFicEstadoVencido(estado: unknown): boolean {
   return canonicalEstadoLegalizacion(estado) === "VENCIDO";
 }
 
+function parseIsoDate(raw: string): Date | null {
+  const m = String(raw || "")
+    .trim()
+    .match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!m) return null;
+  const d = new Date(`${m[1]}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysIso(iso: string, days: number): string {
+  const d = parseIsoDate(iso);
+  if (!d || !Number.isFinite(days)) return "";
+  d.setDate(d.getDate() + Math.round(days));
+  return toIsoDate(d);
+}
+
+function firstIsoDate(r: RecordRow, ...keys: string[]): string {
+  for (const k of keys) {
+    const d = parseIsoDate(str(r, k));
+    if (d) return toIsoDate(d);
+  }
+  return "";
+}
+
+function laterIso(a: string, b: string): string {
+  if (!a) return b;
+  if (!b) return a;
+  return a >= b ? a : b;
+}
+
+/** Cerrado: ya no hay plazo de legalización que vencer. */
+export function isFicCerradoLegalizacion(estado: unknown): boolean {
+  const c = canonicalEstadoLegalizacion(estado);
+  if (c === "LEGALIZADO PARCIALMENTE") return false;
+  if (c === "LEGALIZADO" || c === "LEGALIZADO 100%") return true;
+  if (c === "ANULADO" || c === "CIERRE" || c === "REINTEGRO") return true;
+  const raw = String(estado ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+  return raw === "NO TRAMITADO";
+}
+
+/**
+ * Plazo en días: ejecución + adición (prórroga). Si falta el inicial, usa
+ * `plazo_final_dias` ya grabado.
+ */
+export function resolveFicPlazoDias(r: RecordRow): number | null {
+  const ejecucion = num(r, "plazo_ejecucion_dias");
+  const adicion = Math.max(0, num(r, "plazo_adicion_dias"));
+  if (ejecucion > 0) return ejecucion + adicion;
+  const final = num(r, "plazo_final_dias");
+  return final > 0 ? final : null;
+}
+
+/** Alcance: fecha inicial de legalización; si no hay, desembolso o acto. */
+export function resolveFicFechaInicio(r: RecordRow): string {
+  return firstIsoDate(
+    r,
+    "fecha_inicial_para_legalizacion",
+    "fecha",
+    "fecha_acto_administrativo_resolucion",
+  );
+}
+
+/**
+ * Fecha de vencimiento = fecha inicial + (plazo ejecución + plazo adicional).
+ * Si hay fecha final / legalización por prórroga posterior, se toma la más tarde.
+ */
+export function resolveFicFechaVencimiento(r: RecordRow): string {
+  const inicio = resolveFicFechaInicio(r);
+  const plazo = resolveFicPlazoDias(r);
+  const computed = inicio && plazo != null ? addDaysIso(inicio, plazo) : "";
+  const storedFinal = firstIsoDate(r, "fecha_final_para_legalizacion");
+  const storedProrroga = firstIsoDate(r, "fecha_de_legalizacion_por_prorroga");
+  const prorroga =
+    storedProrroga && storedProrroga !== inicio ? storedProrroga : "";
+  return laterIso(laterIso(computed, storedFinal), prorroga);
+}
+
+function isDateBeforeToday(iso: string, today: Date): boolean {
+  const due = parseIsoDate(iso);
+  if (!due) return false;
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const d = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  return d.getTime() < t.getTime();
+}
+
+/**
+ * Vencido si el estado es VENCIDO, o si la fecha calculada ya pasó y el FIC
+ * sigue abierto (no legalizado / anulado / reintegro).
+ */
+export function isFicVencido(r: RecordRow, today: Date = new Date()): boolean {
+  const estado = str(r, "estado");
+  if (isFicEstadoVencido(estado)) return true;
+  if (isFicCerradoLegalizacion(estado)) return false;
+  const vencimiento = resolveFicFechaVencimiento(r);
+  if (!vencimiento) return false;
+  return isDateBeforeToday(vencimiento, today);
+}
+
 function isCritico(r: RecordRow): boolean {
-  return isFicEstadoVencido(str(r, "estado"));
+  return isFicVencido(r);
 }
 
 /** Tabla operativa: toda la base filtrada, vencidos y saldo primero. */
@@ -116,7 +227,9 @@ export function buildFicOperativeRows(rows: RecordRow[]): FicOperativeRow[] {
         ),
         vigencia: str(r, "vigencia") || "—",
         plazoEjecucion: formatDays(num(r, "plazo_ejecucion_dias")),
-        plazoFinal: formatDays(num(r, "plazo_final_dias")),
+        plazoAdicion: formatDays(num(r, "plazo_adicion_dias")),
+        plazoFinal: formatDays(resolveFicPlazoDias(r) ?? 0),
+        fechaVencimiento: dash(resolveFicFechaVencimiento(r)),
         valor: num(r, "valor"),
         porLegalizar: num(r, "valor_por_legalizar"),
         critico: isCritico(r),
@@ -148,7 +261,9 @@ export function matchFicOperativeRow(
     row.municipio,
     row.vigencia,
     row.plazoEjecucion,
+    row.plazoAdicion,
     row.plazoFinal,
+    row.fechaVencimiento,
   ]
     .join(" ")
     .toLowerCase()
