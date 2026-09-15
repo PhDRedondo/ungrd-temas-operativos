@@ -72,9 +72,9 @@ const GUIDE_DEFAULT = [
 const GUIDE_FIC = [
   {
     icon: Search,
-    title: "Buscar FIC",
+    title: "Resolución",
     detail:
-      "Número FIC (No. CDP), municipio, vigencia o ID AppSheet. Actualiza mando, mapa y tabla.",
+      "Número del acto administrativo (otorgamiento o prórroga). El FIC va en Nº CDP.",
   },
   {
     icon: MapPinned,
@@ -121,14 +121,14 @@ export function RecordFilterBar({
     total > 0 ? Math.min(100, Math.round((matched / total) * 100)) : 0;
   const isFic = themeId === "fic";
   const guide = isFic ? GUIDE_FIC : GUIDE_DEFAULT;
-  const searchLabel = isFic ? "Buscar número FIC" : "Buscar clave u OP";
+  const searchLabel = isFic ? "Número de resolución" : "Buscar clave u OP";
   const searchPlaceholder = isFic
-    ? "Ej. 25-0516, municipio, vigencia…"
+    ? "Ej. 0453 de 2025, acto de otorgamiento…"
     : "Ej. SMD-12, placa, CDP, municipio…";
   const estadoLabel = isFic ? "Estado legalización" : "Estado";
   const resolvedCapaLabel = isFic ? "Vigencia" : capaLabel;
   const blurb = isFic
-    ? "Filtre por CDP, RC, acto administrativo, territorio, vigencia y estado. Mapa y tabla se actualizan al instante."
+    ? "Filtre por resolución, CDP, RC, territorio, vigencia y estado. Mapa y tabla se actualizan al instante."
     : "Busque por clave o recorte por territorio, estado, capa y fechas. El resto del panel (mando, mapa, red y tabla) se actualiza al instante.";
 
   function capaText(raw: string) {
@@ -406,7 +406,7 @@ export function RecordFilterBar({
                 onClick={() => patch({ q: "" })}
                 className="max-w-full truncate rounded-full bg-ungrd-navy px-3 py-1 text-xs font-bold text-white"
               >
-                Buscar: {filters.q.trim()} ×
+                {isFic ? "Resolución" : "Buscar"}: {filters.q.trim()} ×
               </button>
             ) : null}
             {filters.no_cdp?.trim() ? (

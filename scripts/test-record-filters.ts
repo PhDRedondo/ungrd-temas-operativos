@@ -116,4 +116,20 @@ const fromUrl = parseFiltersFromParams(
 assert.equal(fromUrl.departamento, "Córdoba");
 assert.equal(fromUrl.municipio, "Montería");
 
+const ficRow = row({
+  no_cdp: "25-0516",
+  municipio: "Montería",
+  acto_administrativo_otorgamiento_del_recurso: "Resolución 0453 de 2025",
+});
+assert.equal(matchRecordQuery(ficRow, "0453", "fic"), true);
+assert.equal(matchRecordQuery(ficRow, "Montería", "fic"), false);
+assert.equal(matchRecordQuery(ficRow, "25-0516", "fic"), false);
+const ficHits = applyRecordFilters(
+  [ficRow, row({ no_cdp: "25-0999", acto_administrativo_otorgamiento_del_recurso: "Otra" })],
+  { ...EMPTY_RECORD_FILTERS, q: "0453" },
+  { themeId: "fic" },
+);
+assert.equal(ficHits.length, 1);
+assert.equal(ficHits[0]!.no_cdp, "25-0516");
+
 console.log("test-record-filters: OK");

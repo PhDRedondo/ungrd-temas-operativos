@@ -489,7 +489,7 @@ export function AnalyticsPanel({
             themeId={theme.id}
             themeName={theme.name}
             records={filtered}
-            filterSummary={summarizeFilters(filters)}
+            filterSummary={summarizeFilters(filters, theme.id)}
           />
         </>
       ) : null}

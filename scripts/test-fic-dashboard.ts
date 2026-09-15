@@ -3,7 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { buildDecisionBrief } from "../src/lib/analytics/decision";
-import { isFicEstadoVencido } from "../src/themes/fic/dashboard";
+import { buildFicOperativeRows, isFicEstadoVencido } from "../src/themes/fic/dashboard";
 import type { RecordRow } from "../src/lib/records/types";
 
 function row(partial: Partial<RecordRow>): RecordRow {
@@ -50,5 +50,18 @@ const brief = buildDecisionBrief("fic", [
 const kpi = brief.kpis.find((k) => k.id === "riesgo");
 assert.equal(kpi?.value, "2");
 assert.equal(brief.alerts.some((a) => a.id === "fic-vencidos" && a.count === 2), true);
+
+const ops = buildFicOperativeRows([
+  row({
+    plazo_ejecucion_dias: 180,
+    plazo_final_dias: 210,
+    acto_administrativo_otorgamiento_del_recurso: "RESOLUCIÓN N° 0453 DE 2025",
+  }),
+]);
+assert.equal(ops[0]!.departamento, "Córdoba");
+assert.equal(ops[0]!.municipio, "Montería");
+assert.equal(ops[0]!.plazoEjecucion, "180 días");
+assert.equal(ops[0]!.plazoFinal, "210 días");
+assert.match(ops[0]!.acto, /0453/);
 
 console.log("test-fic-dashboard: OK");
