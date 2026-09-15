@@ -258,8 +258,9 @@ export function DecisionDashboard({
                 Tabla operativa
               </h3>
               <p className="mt-1 text-xs text-ungrd-muted">
-                Base FIC cargada: formato de aprobación, actos 1 y 2, desembolso,
-                fecha de modificación y % de avance.
+                Departamento, municipio, plazos, formato, actos y desembolso.
+                Desplace la tabla para ver todas las columnas; el texto largo
+                queda completo.
               </p>
             </div>
             <span className="text-xs font-bold text-ungrd-muted">
@@ -277,7 +278,7 @@ export function DecisionDashboard({
                 type="search"
                 value={ficQuery}
                 onChange={(e) => setFicQuery(e.target.value)}
-                placeholder="Buscar CDP, RC, formato, acto, vigencia…"
+                placeholder="Buscar FIC, depto, municipio, resolución, plazo…"
                 className="w-full bg-transparent text-ungrd-heading outline-none placeholder:text-ungrd-muted"
               />
             </label>
@@ -289,12 +290,18 @@ export function DecisionDashboard({
                 : "Ningún FIC coincide con esa búsqueda."}
             </p>
           ) : (
-            <div className="scroll-thin max-h-[28rem] overflow-auto rounded-lg border border-ungrd-border">
-              <table className="min-w-[72rem] w-full border-collapse text-left text-sm">
+            <div className="scroll-thin max-h-[min(70vh,44rem)] overflow-auto rounded-lg border border-ungrd-border">
+              <table className="min-w-[118rem] w-full border-collapse text-left text-sm">
                 <thead className="sticky top-0 z-[1] bg-ungrd-bg text-[11px] tracking-wide text-ungrd-muted uppercase">
                   <tr>
                     <th className="px-3 py-2.5 font-bold">#</th>
-                    <th className="px-3 py-2.5 font-bold">Nº CDP</th>
+                    <th className="px-3 py-2.5 font-bold">Nº FIC</th>
+                    <th className="px-3 py-2.5 font-bold">Departamento</th>
+                    <th className="px-3 py-2.5 font-bold">Municipio</th>
+                    <th className="px-3 py-2.5 font-bold">Vigencia</th>
+                    <th className="px-3 py-2.5 font-bold">Estado</th>
+                    <th className="px-3 py-2.5 font-bold">Plazo ejecución</th>
+                    <th className="px-3 py-2.5 font-bold">Plazo final</th>
                     <th className="px-3 py-2.5 font-bold">Nº RC</th>
                     <th className="px-3 py-2.5 font-bold">Formato</th>
                     <th className="px-3 py-2.5 font-bold">Acto admin.</th>
@@ -321,24 +328,37 @@ export function DecisionDashboard({
                       <td className="px-3 py-2.5 text-xs font-extrabold text-ungrd-navy">
                         {idx + 1}
                       </td>
-                      <td className="px-3 py-2.5 font-bold text-ungrd-heading">
+                      <td className="whitespace-nowrap px-3 py-2.5 font-bold text-ungrd-heading">
                         {item.noCdp}
-                        <span className="mt-0.5 block text-[11px] font-medium text-ungrd-muted">
-                          {[item.estado, item.lugar, item.vigencia !== "—" ? `Vig. ${item.vigencia}` : ""]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
+                      </td>
+                      <td className="min-w-[9rem] px-3 py-2.5 leading-snug text-ungrd-text">
+                        {item.departamento}
+                      </td>
+                      <td className="min-w-[9rem] px-3 py-2.5 leading-snug text-ungrd-text">
+                        {item.municipio}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.vigencia}
+                      </td>
+                      <td className="min-w-[8rem] px-3 py-2.5 leading-snug text-ungrd-text">
+                        {item.estado}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.plazoEjecucion}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">
+                        {item.plazoFinal}
                       </td>
                       <td className="px-3 py-2.5 text-ungrd-text">
                         {item.noRc}
                       </td>
-                      <td className="max-w-[10rem] truncate px-3 py-2.5 text-ungrd-text" title={item.formatoAprobacion}>
+                      <td className="min-w-[14rem] max-w-[22rem] px-3 py-2.5 leading-snug text-ungrd-text">
                         {item.formatoAprobacion}
                       </td>
-                      <td className="max-w-[10rem] truncate px-3 py-2.5 text-ungrd-text" title={item.acto}>
+                      <td className="min-w-[16rem] max-w-[28rem] px-3 py-2.5 leading-snug text-ungrd-text">
                         {item.acto}
                       </td>
-                      <td className="max-w-[8rem] truncate px-3 py-2.5 text-ungrd-text" title={item.acto2}>
+                      <td className="min-w-[12rem] max-w-[22rem] px-3 py-2.5 leading-snug text-ungrd-text">
                         {item.acto2}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-ungrd-text">

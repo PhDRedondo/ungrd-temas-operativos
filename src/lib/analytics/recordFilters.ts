@@ -77,10 +77,17 @@ export function hasActiveFilters(f: RecordFilterState): boolean {
 }
 
 /** Resumen legible de filtros para encabezados de PDF / UI. */
-export function summarizeFilters(f: RecordFilterState): string {
+export function summarizeFilters(
+  f: RecordFilterState,
+  themeId?: string,
+): string {
   if (!hasActiveFilters(f)) return "Sin filtros · base completa";
   const parts: string[] = [];
-  if (f.q.trim()) parts.push(`Búsqueda: ${f.q.trim()}`);
+  if (f.q.trim()) {
+    parts.push(
+      `${themeId === "fic" ? "Resolución" : "Búsqueda"}: ${f.q.trim()}`,
+    );
+  }
   if (f.no_cdp?.trim()) parts.push(`CDP: ${f.no_cdp.trim()}`);
   if (f.no_rc?.trim()) parts.push(`RC: ${f.no_rc.trim()}`);
   if (f.departamento) parts.push(`Depto: ${f.departamento}`);
@@ -113,10 +120,25 @@ function trackingCandidates(r: RecordRow): string[] {
 }
 
 /** Coincide clave de seguimiento o texto libre en campos operativos. */
-export function matchRecordQuery(r: RecordRow, rawQ: string): boolean {
+export function matchRecordQuery(
+  r: RecordRow,
+  rawQ: string,
+  themeId?: string,
+): boolean {
   const q = String(rawQ || "").trim();
   if (!q) return true;
   const nq = normalizeTrackingKey(q);
+  if (themeId === "fic") {
+    const actos = [
+      r.acto_administrativo_otorgamiento_del_recurso,
+      r.acto_administrativo_otorgamiento_del_recurso_2,
+      r.acto_administrativo_prorroga,
+    ]
+      .map((v) => normalizeTrackingKey(v))
+      .filter(Boolean);
+    if (!nq) return true;
+    return actos.some((a) => a.includes(nq) || nq.includes(a));
+  }
   if (nq.length >= 2) {
     for (const key of trackingCandidates(r)) {
       if (key.includes(nq) || nq.includes(key)) return true;
@@ -181,7 +203,7 @@ export function applyRecordFilters(
 ): RecordRow[] {
   const thirdKey = opts.thirdKey || "municipio";
   return rows.filter((r) => {
-    if (!matchRecordQuery(r, f.q)) return false;
+    if (!matchRecordQuery(r, f.q, opts.themeId)) return false;
     if (f.no_cdp?.trim() && !containsLoose(r.no_cdp || r.clave_seguimiento, f.no_cdp)) {
       return false;
     }

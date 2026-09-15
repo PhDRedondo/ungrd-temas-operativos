@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       themeId,
       themeName: theme.name,
       brief,
-      filterSummary: summarizeFilters(filters),
+      filterSummary: summarizeFilters(filters, themeId),
       recordCount: filtered.length,
     });
 
@@ -122,7 +122,7 @@ export async function GET(req: Request) {
       themeId,
       themeName: theme.name,
       brief,
-      filterSummary: summarizeFilters(filters),
+      filterSummary: summarizeFilters(filters, themeId),
       recordCount: filtered.length,
     });
     const stamp = new Date().toISOString().slice(0, 10);

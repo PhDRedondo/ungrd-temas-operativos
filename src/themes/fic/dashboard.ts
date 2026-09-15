@@ -18,8 +18,11 @@ export type FicOperativeRow = {
   fechaModificacion: string;
   avancePct: string;
   estado: string;
-  lugar: string;
+  departamento: string;
+  municipio: string;
   vigencia: string;
+  plazoEjecucion: string;
+  plazoFinal: string;
   valor: number;
   porLegalizar: number;
   critico: boolean;
@@ -58,6 +61,11 @@ function dash(v: string): string {
   return v.trim() ? v.trim() : "—";
 }
 
+function formatDays(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  return `${n % 1 === 0 ? String(n) : n.toFixed(1)} días`;
+}
+
 function formatAvancePct(raw: string | number | undefined | null): string {
   if (raw === undefined || raw === null || String(raw).trim() === "") return "—";
   const n = typeof raw === "number" ? raw : Number(String(raw).replace(",", "."));
@@ -80,9 +88,6 @@ export function buildFicOperativeRows(rows: RecordRow[]): FicOperativeRow[] {
     .map((r) => {
       const muni = str(r, "municipio");
       const depto = str(r, "departamento");
-      const lugar = [muni, depto]
-        .filter((x) => x && !/^sin (departamento|municipio)$/i.test(x))
-        .join(" · ");
       const noCdp = str(r, "no_cdp", "clave_seguimiento") || "Sin FIC";
       return {
         key: String(r.id || noCdp),
@@ -103,8 +108,15 @@ export function buildFicOperativeRows(rows: RecordRow[]): FicOperativeRow[] {
           r.porcentaje_de_avance_en_el_ejericicio_de_legalizacion,
         ),
         estado: str(r, "estado") || "—",
-        lugar,
+        departamento: dash(
+          depto && !/^sin departamento$/i.test(depto) ? depto : "",
+        ),
+        municipio: dash(
+          muni && !/^sin municipio$/i.test(muni) ? muni : "",
+        ),
         vigencia: str(r, "vigencia") || "—",
+        plazoEjecucion: formatDays(num(r, "plazo_ejecucion_dias")),
+        plazoFinal: formatDays(num(r, "plazo_final_dias")),
         valor: num(r, "valor"),
         porLegalizar: num(r, "valor_por_legalizar"),
         critico: isCritico(r),
@@ -132,8 +144,11 @@ export function matchFicOperativeRow(
     row.acto,
     row.acto2,
     row.estado,
-    row.lugar,
+    row.departamento,
+    row.municipio,
     row.vigencia,
+    row.plazoEjecucion,
+    row.plazoFinal,
   ]
     .join(" ")
     .toLowerCase()
