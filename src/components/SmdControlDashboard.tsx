@@ -440,7 +440,10 @@ export function SmdControlDashboard({ records }: Props) {
                       <Cell key={entry.name} fill={LINE_COLORS[i % LINE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => formatCop(v)} contentStyle={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(v) => formatCop(Number(v ?? 0))}
+                    contentStyle={{ fontSize: 12 }}
+                  />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -464,9 +467,9 @@ export function SmdControlDashboard({ records }: Props) {
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-18} textAnchor="end" height={48} />
                   <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}`} width={36} />
                   <Tooltip
-                    formatter={(v: number, name: string) => [
-                      `${Number(v).toLocaleString("es-CO", { maximumFractionDigits: 1 })} mil M`,
-                      name,
+                    formatter={(v, name) => [
+                      `${Number(v ?? 0).toLocaleString("es-CO", { maximumFractionDigits: 1 })} mil M`,
+                      String(name),
                     ]}
                     contentStyle={{ fontSize: 12 }}
                   />
