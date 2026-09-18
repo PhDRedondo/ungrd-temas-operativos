@@ -2,11 +2,9 @@ import type { FormField } from "../shared";
 
 export const SCHEMA_VERSION = 5;
 
-/** Campos de la pestaña SMD del reporte Fidusap (más GRUPO inferido). */
+/** Columnas de la pestaña SMD (orden de la hoja) + geo interno para el mapa. */
 export const SOURCE_FIELDS: FormField[] = [
-  { name: "departamento", label: "Departamento", type: "text", excelWidth: 18 },
-  { name: "municipio", label: "Municipio", type: "text", excelWidth: 18 },
-  { name: "no_cdp", label: "No. CDP", type: "text", required: true, excelWidth: 14 },
+  { name: "no_cdp", label: "No CDP", type: "text", required: true, excelWidth: 14 },
   { name: "valor_cdp", label: "Valor CDP", type: "number", excelWidth: 16 },
   { name: "radicado_cdp", label: "Radicado CDP", type: "text", excelWidth: 14 },
   { name: "solicitante", label: "Solicitante", type: "text", excelWidth: 28 },
@@ -20,10 +18,10 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "linea", label: "Línea", type: "text", excelWidth: 18 },
   { name: "nota", label: "Nota", type: "textarea", excelWidth: 22 },
   { name: "rubro", label: "Rubro", type: "text", excelWidth: 28 },
-  { name: "nacional_regional", label: "Nacional / regional", type: "text", excelWidth: 18 },
+  { name: "nacional_regional", label: "Nacional/Regional", type: "text", excelWidth: 18 },
   { name: "identificacion", label: "Identificación", type: "text", excelWidth: 16 },
   { name: "nombre", label: "Nombre", type: "text", excelWidth: 22 },
-  { name: "no_rc", label: "No. RC", type: "text", excelWidth: 14 },
+  { name: "no_rc", label: "No RC", type: "text", excelWidth: 14 },
   { name: "fecha_rc", label: "Fecha RC", type: "date", excelWidth: 14 },
   { name: "estado", label: "Estado", type: "text", excelWidth: 14 },
   { name: "tipo", label: "Tipo", type: "text", excelWidth: 22 },
@@ -38,9 +36,13 @@ export const SOURCE_FIELDS: FormField[] = [
   { name: "nombre_firma", label: "Nombre firma", type: "text", excelWidth: 20 },
   { name: "cargo_firma", label: "Cargo firma", type: "text", excelWidth: 18 },
   { name: "usuario", label: "Usuario", type: "text", excelWidth: 14 },
+  { name: "corte", label: "Corte", type: "text", excelWidth: 22 },
+  { name: "_archivo_fuente", label: "Archivo fuente", type: "text", excelWidth: 28 },
   { name: "clave_seguimiento", label: "Clave de seguimiento", type: "text", excelWidth: 16 },
   { name: "tipo_registro", label: "Grupo", type: "text", excelWidth: 18 },
   { name: "capa", label: "Capa", type: "text", excelWidth: 18 },
+  { name: "departamento", label: "Departamento", type: "text", excelWidth: 18 },
+  { name: "municipio", label: "Municipio", type: "text", excelWidth: 18 },
   { name: "fecha", label: "Fecha", type: "date", excelWidth: 14 },
   { name: "valor", label: "Valor CDP", type: "number", excelWidth: 16 },
   { name: "observaciones", label: "Observaciones", type: "textarea", excelWidth: 24 },

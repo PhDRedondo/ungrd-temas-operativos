@@ -85,11 +85,21 @@ export async function softDeleteThemeRecordsNotInClaves(
 ): Promise<number> {
   const keep = [...new Set(claves.map((c) => c.trim().toLowerCase()).filter(Boolean))];
   const now = new Date();
+  const notCorteCupo = sql`(
+    coalesce(${records.payload}->>'_kind','') <> 'corte-cupo'
+    and lower(coalesce(${records.payload}->>'clave_seguimiento', ${records.payload}->>'no_cdp', '')) not like 'corte-cupo%'
+  )`;
   if (!keep.length) {
     const res = await db
       .update(records)
       .set({ deletedAt: now, updatedAt: now })
-      .where(and(eq(records.themeId, themeId), isNull(records.deletedAt)))
+      .where(
+        and(
+          eq(records.themeId, themeId),
+          isNull(records.deletedAt),
+          notCorteCupo,
+        ),
+      )
       .returning({ id: records.id });
     return res.length;
   }
@@ -100,6 +110,7 @@ export async function softDeleteThemeRecordsNotInClaves(
       and(
         eq(records.themeId, themeId),
         isNull(records.deletedAt),
+        notCorteCupo,
         not(
           inArray(
             sql<string>`lower(coalesce(${records.payload}->>'clave_seguimiento',''))`,

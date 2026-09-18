@@ -2935,10 +2935,10 @@ export function CapturePanel({
                 </li>
                 {isFidusapSmd ? (
                   <li>
-                    Use el reporte Fidusap tal como sale. Se lee la pestaña{" "}
-                    <strong className="text-ungrd-heading">SMD</strong> (incluye
-                    GRUPO y CDP de SDG). Si no existe, se usa CDP extendido
-                    filtrado a Área ejecutora SMD o Área solicitante = Manejo.
+                    Use el reporte Fidusap tal como sale (cdextendido o pestaña
+                    SMD). Se ignoran las filas de título y se transforma a la
+                    hoja SMD. El tablero de Control y seguimiento se actualiza
+                    con ese corte.
                   </li>
                 ) : (
                   <li>

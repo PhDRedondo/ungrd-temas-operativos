@@ -7,7 +7,7 @@ import { MaquetaExcelView } from "@/components/MaquetaExcelView";
 import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { AdvancedAnalysisPanel } from "@/components/AdvancedAnalysisPanel";
 import { QuickBIPanel } from "@/components/QuickBIPanel";
-import { UploadsInbox } from "@/components/UploadsInbox";
+import { SmdCorteCupoForm } from "@/components/SmdCorteCupoForm";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import type { RecordRow } from "@/lib/records/types";
 import type { ThemeConfig } from "@/lib/themes";
@@ -238,6 +238,9 @@ export function ThemeWorkspace({
             onSaved={bump}
             variant="excel"
           />
+          {theme.id === "ejecucion-financiera" ? (
+            <SmdCorteCupoForm records={records} onSaved={bump} />
+          ) : null}
           <UploadsInbox key={`inbox-${version}`} themeId={theme.id} compact />
         </div>
       )}
@@ -284,7 +287,21 @@ export function ThemeWorkspace({
           )}
         </div>
       ) : null}
-      {!loading && tab === "seguimiento" && !theme.captureForms?.length ? (
+      {!loading &&
+      tab === "seguimiento" &&
+      !theme.captureForms?.length &&
+      theme.id === "ejecucion-financiera" ? (
+        <MaquetaExcelView
+          key={`excel-${version}`}
+          theme={theme}
+          records={records}
+          onChanged={bump}
+        />
+      ) : null}
+      {!loading &&
+      tab === "seguimiento" &&
+      !theme.captureForms?.length &&
+      theme.id !== "ejecucion-financiera" ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           La vista Excel de seguimiento está disponible en temas con
           formularios por capa (p. ej. Agua y Saneamiento).

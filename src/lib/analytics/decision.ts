@@ -1299,7 +1299,7 @@ function buildEjecucionFinanciera(rows: RecordRow[]): DecisionBrief {
     themeId: "ejecucion-financiera",
     title: "Ejecución financiera SMD",
     subtitle:
-      "Corte Fidusap · pestaña SMD (Subdirección de Manejo de Desastres).",
+      "Corte Fidusap SMD · Control y seguimiento por subcuenta (línea).",
     kpis: [
       {
         id: "cdp",

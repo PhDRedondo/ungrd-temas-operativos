@@ -1,14 +1,11 @@
 # STATUS
 
 **Agente:** Cursor  
-**Fecha:** 2026-09-15  
-**Foco:** Datos migrados a RDS Alibaba; app local apunta ahí (`sslmode=disable`).
+**Fecha:** 2026-09-18  
+**Foco:** Deploy a Vercel de ejecución financiera SMD (tablero por línea + formulario de cupo).
 
-**RDS:** `pgm-7gotc9vw1p903hrzbo.pg.rds-aliyun-america.rds.aliyuncs.com:5432` / db `d01_p011_aplicativo_temas`.  
-**Verificado:** records 11305, live 5216, fic.fic 387 (igual que Supabase).
+**Hecho:** commit + push de Control por línea y cupo por corte. RDS Alibaba es la fuente operativa.
 
-**Pendiente:** cambiar `DATABASE_URL` en Vercel al mismo RDS. QuickBI: dataset `fic.fic` clave `record_id`, SSL off.
+**No tocar:** no force-push; no reintroducir catálogo SIIF ni variables Supabase.
 
-**Git:** `origin` = `UNGRD-FNGRD/manejo-aplicativo-temas`. No guardar passwords/tokens en git.
-
-**Prod Vercel (aún Supabase hasta cambiar env):** `https://ungrd-manejo-phi.vercel.app`
+**Prod Vercel:** `https://ungrd-manejo-phi.vercel.app`
