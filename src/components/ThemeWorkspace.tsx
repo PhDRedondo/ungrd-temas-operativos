@@ -9,6 +9,7 @@ import { AdvancedAnalysisPanel } from "@/components/AdvancedAnalysisPanel";
 import { QuickBIPanel } from "@/components/QuickBIPanel";
 import { SmdCorteCupoForm } from "@/components/SmdCorteCupoForm";
 import { ThemeIcon } from "@/components/ThemeIcon";
+import { UploadsInbox } from "@/components/UploadsInbox";
 import type { RecordRow } from "@/lib/records/types";
 import type { ThemeConfig } from "@/lib/themes";
 import {
