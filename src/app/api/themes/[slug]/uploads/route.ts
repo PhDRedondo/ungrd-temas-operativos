@@ -332,9 +332,12 @@ export async function POST(req: Request, ctx: Ctx) {
       const { describeFidusapRecorte, parseFidusapCdpExtendido } = await import(
         "@/themes/ejecucion-financiera/fidusap"
       );
+      const { stampFidusapCorte } = await import(
+        "@/themes/ejecucion-financiera/dashboard"
+      );
       const fidusap = await parseFidusapCdpExtendido(buf);
       parsed = {
-        rows: fidusap.rows,
+        rows: stampFidusapCorte(fidusap.rows, file.name),
         meta: { sheetName: fidusap.meta.sheetName },
       };
       fidusapMeta = {

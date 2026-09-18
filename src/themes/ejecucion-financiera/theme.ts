@@ -6,13 +6,13 @@ export const config = buildThemeFromSource({
   name: "Ejecución financiera",
   shortName: "Ejecución",
   description:
-    "CDP de Fidusap: pestaña SMD del reporte (o CDP extendido filtrado a Manejo de Desastres).",
+    "CDP de Fidusap: se sube cdextendido o la pestaña SMD; el tablero y Registros muestran el corte SMD.",
   icon: "line-chart",
   unit: "CDP",
   valueLabel: "Valor CDP (COP)",
   schemaVersion: SCHEMA_VERSION,
   sourceFields: SOURCE_FIELDS,
-  workspaceTabs: ["cargas", "analitica", "quickbi"],
+  workspaceTabs: ["cargas", "seguimiento", "analitica", "quickbi"],
 });
 
 const themeModule: ThemeModule = { config };

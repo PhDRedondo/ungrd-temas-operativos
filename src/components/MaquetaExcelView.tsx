@@ -41,6 +41,8 @@ import {
   FIC_CAPAS,
   normalizeFicCapa,
 } from "@/themes/fic/capture-forms";
+import { SMD_FIELD_ORDER } from "@/themes/ejecucion-financiera/fidusap";
+import { isCorteCupoRecord } from "@/themes/ejecucion-financiera/corte-cupo";
 
 type ChangeMark = {
   versionCount: number;
@@ -197,6 +199,9 @@ type ThemeExcelProfile = {
   capas: readonly string[];
   defaultCapa: string;
   pinLeft: string[];
+  hiddenFields?: readonly string[];
+  hideCapaFilter?: boolean;
+  capaColumnLabel?: string;
   searchLabel: string;
   searchPlaceholder: string;
   helpText: string;
@@ -284,6 +289,33 @@ function profileFor(themeId: string): ThemeExcelProfile {
         (SUBSIDIOS_CAPAS as readonly string[]).includes(capa),
       keyOf: (r) =>
         String(r.uuid || r.clave_seguimiento || r.numero_envio || "").trim(),
+    };
+  }
+  if (themeId === "ejecucion-financiera") {
+    return {
+      capas: [],
+      defaultCapa: "__todas__",
+      pinLeft: [...SMD_FIELD_ORDER],
+      hiddenFields: [
+        "departamento",
+        "municipio",
+        "fecha",
+        "valor",
+        "observaciones",
+        "corte",
+        "_archivo_fuente",
+      ],
+      hideCapaFilter: true,
+      capaColumnLabel: "Grupo",
+      searchLabel: "Buscar No. CDP",
+      searchPlaceholder: "25-0025…",
+      helpText:
+        "Vista de la hoja SMD ya preparada. Cada carga Excel reemplaza el corte.",
+      filterHint: " · filtro por No. CDP",
+      emptyHint: " o quite el filtro de CDP.",
+      normalizeCapa: (raw) => raw.trim() || "Sin capa",
+      isOfficial: () => true,
+      keyOf: (r) => String(r.no_cdp || r.clave_seguimiento || "").trim(),
     };
   }
   if (themeId === "fic") {
@@ -385,9 +417,10 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
   const pinLeft = profile.pinLeft;
 
   const columns = useMemo(() => {
+    const extraHidden = new Set(profile.hiddenFields || []);
     const names = theme.fields
       .map((f) => f.name)
-      .filter((n) => !HIDDEN.has(n));
+      .filter((n) => !HIDDEN.has(n) && !extraHidden.has(n));
     const formForCapa =
       capaFilter !== "__todas__"
         ? theme.captureForms?.find((f) => f.capa === capaFilter)
@@ -409,7 +442,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
     const prefer = formCols.length ? formCols : base;
     const rest = names.filter((n) => !prefer.includes(n));
     return [...prefer, ...rest];
-  }, [theme.fields, theme.captureForms, showAllColumns, pinLeft, capaFilter]);
+  }, [theme.fields, theme.captureForms, showAllColumns, pinLeft, capaFilter, profile.hiddenFields]);
 
   const capas = useMemo(() => [...profile.capas], [profile]);
 
@@ -456,10 +489,12 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
 
   const rows = useMemo(() => {
     return records.filter((r) => {
+      if (theme.id === "ejecucion-financiera" && isCorteCupoRecord(r)) return false;
       const capa = capaOf(theme.id, r);
-      if (!isOfficialCapa(theme.id, capa) && capa !== "Sin capa") return false;
-      if (capa === "Sin capa") return false;
-      // Con búsqueda por placa/OP: todas las capas de esa clave.
+      if (profile.capas.length) {
+        if (!isOfficialCapa(theme.id, capa) && capa !== "Sin capa") return false;
+        if (capa === "Sin capa") return false;
+      }
       if (keyQuery) {
         if (!keyOf(theme.id, r).toLowerCase().includes(keyQuery)) return false;
       } else if (capaFilter !== "__todas__" && capa !== capaFilter) {
@@ -470,7 +505,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
       }
       return true;
     });
-  }, [records, capaFilter, keyQuery, onlyChanged, marks, marksReady, theme.id]);
+  }, [records, capaFilter, keyQuery, onlyChanged, marks, marksReady, theme.id, profile.capas.length]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -705,6 +740,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
             className="rounded-lg border border-ungrd-border bg-ungrd-input px-3 py-2 text-sm font-normal"
           />
         </label>
+        {!profile.hideCapaFilter ? (
         <label className="text-sm font-semibold text-ungrd-heading">
           <span className="mb-1 block text-xs text-ungrd-muted">Formulario</span>
           <select
@@ -720,6 +756,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
             ))}
           </select>
         </label>
+        ) : null}
         <label className="flex items-center gap-2 pb-2 text-sm text-ungrd-heading">
           <input
             type="checkbox"
@@ -784,7 +821,7 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
                   #
                 </th>
                 <th className="sticky left-8 z-30 bg-ungrd-navy px-2 py-2 font-bold text-white">
-                  Formulario
+                  {profile.capaColumnLabel || "Formulario"}
                 </th>
                 <th className="sticky left-[7.5rem] z-30 bg-ungrd-navy px-2 py-2 font-bold text-white">
                   Ver.

@@ -1,7 +1,9 @@
 /**
  * Limpieza del reporte Fidusap → recorte SMD.
  * Oro: pestaña SMD (~834 CDP, incluye SDG). Si no existe, CDP extendido
- * filtrado a Área ejecutora = SMD o W = Manejo.
+ * (cdextendido: se ignoran las filas de título FIDUPREVISORA / Informe /
+ * Fecha / Hora) filtrado a Área ejecutora = SMD o W = Manejo.
+ * La grilla de Registros usa SMD_FIELD_ORDER (misma hoja preparada).
  * No persiste; lo usa la carga Excel del tema.
  */
 import ExcelJS from "exceljs";
@@ -200,6 +202,34 @@ const HEADER_TO_FIELD: Record<string, SmdField> = {
   usuario: "usuario",
 };
 
+/** Encabezados recortados del Excel Fidusap (el ancho de columna corta el texto). */
+const HEADER_ALIASES: Record<string, SmdField> = {
+  ...HEADER_TO_FIELD,
+  area_ejecuto: "area_ejecutora",
+  area_ejecutor: "area_ejecutora",
+  radicado_c: "radicado_cdp",
+  radicado_cd: "radicado_cdp",
+  nacional_re: "nacional_regional",
+  nacional_reg: "nacional_regional",
+  identificacio: "identificacion",
+  identificaci: "identificacion",
+  area_solicita: "area_solicitante",
+  area_solicitant: "area_solicitante",
+  valor_cd: "valor_cdp",
+  fecha_cd: "fecha_cdp",
+  nombre_firm: "nombre_firma",
+  cargo_firm: "cargo_firma",
+  valor_paga: "valor_pagado",
+  valor_por_paga: "valor_por_pagar",
+};
+
+/** Mapea un encabezado Fidusap (completo o recortado) a un campo SMD. */
+export function mapFidusapHeader(raw: unknown): SmdField | undefined {
+  const s = snakeHeader(raw);
+  if (!s) return undefined;
+  return HEADER_ALIASES[s] || HEADER_TO_FIELD[s];
+}
+
 function cellText(cell: ExcelJS.Cell): unknown {
   let v: unknown = cell.value;
   if (v && typeof v === "object" && "result" in (v as object)) {
@@ -313,16 +343,20 @@ export async function parseFidusapCdpExtendido(
       `La hoja "${sheet.name}" no tiene la fila de encabezados (No CDP). Suba el reporte tal como sale de Fidusap.`,
     );
   }
+  // cdextendido trae 5 filas de título (FIDUPREVISORA, Informe, Fecha, Hora,
+  // vacío) y el encabezado «No CDP» en la 6. Se descartan solas.
   const header = matrix[headerIdx] || [];
+  const seen = new Set<SmdField>();
   const colMap: { col: number; field: SmdField }[] = [];
   header.forEach((h, col) => {
-    const field = HEADER_TO_FIELD[snakeHeader(h)];
-    if (field) colMap.push({ col, field });
+    const field = mapFidusapHeader(h);
+    if (!field || seen.has(field)) return;
+    seen.add(field);
+    colMap.push({ col, field });
   });
-  const areaCol = colMap.find((c) => c.field === "area_solicitante")?.col;
-  if (areaCol == null) {
+  if (!colMap.some((c) => c.field === "no_cdp")) {
     throw new Error(
-      `La hoja "${sheet.name}" no trae Área solicitante (columna W).`,
+      `La hoja "${sheet.name}" no mapeó la columna No CDP. Suba el reporte tal como sale de Fidusap.`,
     );
   }
 

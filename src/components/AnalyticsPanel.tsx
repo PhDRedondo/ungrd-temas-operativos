@@ -20,6 +20,7 @@ import type { ThemeConfig } from "@/lib/themes";
 import { formatCop, formatNumber, type RecordRow } from "@/lib/records/types";
 import { SankeyFlowDiagram } from "@/components/SankeyFlowDiagram";
 import { DecisionDashboard } from "@/components/DecisionDashboard";
+import { SmdControlDashboard } from "@/components/SmdControlDashboard";
 import { ClaveCapasTimeline } from "@/components/ClaveCapasTimeline";
 import { RecordsDataTable } from "@/components/RecordsDataTable";
 import { RecordFilterBar } from "@/components/RecordFilterBar";
@@ -453,6 +454,17 @@ export function AnalyticsPanel({
 
   const sqlSynced =
     !hasFilters && sqlAgg != null && sqlAgg.totals.count === records.length;
+
+  if (isSmd) {
+    return (
+      <div
+        className="min-w-0 max-w-full space-y-4 sm:space-y-5"
+        id="tour-analitica"
+      >
+        <SmdControlDashboard records={workingRecords} />
+      </div>
+    );
+  }
 
   return (
     <div

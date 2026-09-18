@@ -84,11 +84,14 @@ Bronze/Silver = **solo datos operativos reales** (`form`/`excel`; excluye
 Prod sync post-filtro: Bronze=Silver; dim orden=112, general=107.
 
 ### ADR-012 · Ejecución financiera = Fidusap pestaña SMD
-No usar plantilla de la plataforma. Cada carga prefiere la pestaña **SMD**
+No usar plantilla ni Captura. Cada carga prefiere la pestaña **SMD**
 del reporte Fidusap (~834 CDP, GRUPO del Excel, incluye SDG). Si no existe,
-lee `cdextendido` / `cdpextendido` y filtra Área ejecutora = SMD **o**
-Área solicitante (W) = Manejo de Desastres. Upsert por No. CDP y archivo
-de claves que ya no vienen. Workspace: Excel + Dashboard operativo + QuickBI.
+lee `cdextendido` (descarta las filas 1–5 de título) y filtra Área ejecutora
+= SMD **o** Área solicitante (W) = Manejo. Transforma a columnas SMD.
+El tablero **Control y seguimiento** agrupa la ejecución **por línea**
+(grupo es solo filtro). Apropiación = cupo COP capturado en el formulario
+del corte (no catálogo SIIF). Disponible = cupo − CDP cuando hay formulario.
+Saldo por comprometer = CDP − RC. CDP/RC/pagado salen del Excel.
 
 ---
 
