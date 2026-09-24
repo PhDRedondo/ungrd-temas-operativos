@@ -3,6 +3,7 @@
  */
 import type { RecordRow } from "@/lib/records/types";
 import { extractCorteCupos, isCorteCupoRecord, lookupCorteCupo } from "./corte-cupo";
+import { isTableroEjecucionRow } from "./fidusap";
 
 export type SmdOperativeRow = {
   key: string;
@@ -373,6 +374,7 @@ function collapseSmdUnits(rows: RecordRow[]): SmdCdpUnit[] {
     const noCdp = str(r, "no_cdp", "clave_seguimiento");
     if (!noCdp) continue;
     if (isCorteCupoRecord(r)) continue;
+    if (!isTableroEjecucionRow(r)) continue;
     const subcuenta = parseSmdSubcuenta(str(r, "linea"));
     const next: SmdCdpUnit = {
       noCdp,

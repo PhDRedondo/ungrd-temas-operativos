@@ -10,8 +10,10 @@ import { buildDecisionBrief } from "../src/lib/analytics/decision";
 import {
   describeFidusapRecorte,
   inferGrupo,
+  isResolucionSdgTablero,
   isSmdAreaSolicitante,
   isSmdCdpRow,
+  isTableroEjecucionRow,
   mapFidusapHeader,
   parseFidusapCdpExtendido,
   parseFidusapDate,
@@ -47,6 +49,15 @@ assert.equal(
   isSmdCdpRow({ area_ejecutora: "SDG", area_solicitante: "" }),
   false,
 );
+assert.equal(isResolucionSdgTablero("09002025"), true);
+assert.equal(isResolucionSdgTablero("03842026"), true);
+assert.equal(isResolucionSdgTablero("40262025"), true);
+assert.equal(isResolucionSdgTablero("16212024"), false);
+assert.equal(isTableroEjecucionRow({ area_ejecutora: "SMD", resolucion: "16212024" }), true);
+assert.equal(isTableroEjecucionRow({ area_ejecutora: "SDG", resolucion: "09002025" }), true);
+assert.equal(isTableroEjecucionRow({ area_ejecutora: "SDG", resolucion: "03842026" }), true);
+assert.equal(isTableroEjecucionRow({ area_ejecutora: "SDG", resolucion: "16212024" }), false);
+assert.equal(isTableroEjecucionRow({ area_ejecutora: "SRR", resolucion: "09002025" }), false);
 
 assert.equal(
   inferGrupo({ rubro: "Prestacion de Servicios Profesionales" }),
@@ -168,6 +179,7 @@ const control = aggregateSmdControlBoard([
     valor_rc: 400,
     valor_pagado: 100,
     valor_por_pagar: 300,
+    area_ejecutora: "SMD",
     corte: "Corte Agosto 31 De 2026",
   } as RecordRow,
 ]);
@@ -317,8 +329,9 @@ async function maybeParseXlsx() {
   assert.ok((parsed.meta.byEjecutora.SMD || 0) >= 700);
   assert.ok((parsed.meta.byEjecutora.SDG || 0) >= 30);
   const tip = describeFidusapRecorte(parsed.meta);
-  assert.match(tip, /pestaña SMD tal cual/i);
-  assert.match(tip, /no se vuelve a recortar por columna W/i);
+  assert.match(tip, /área ejecutora SMD/i);
+  assert.match(tip, /0900 de 2025/i);
+  assert.match(tip, /0384 de 2026/i);
   const first = parsed.rows[0];
   assert.ok(first);
   assert.ok(String(first.grupo || "").length > 0);

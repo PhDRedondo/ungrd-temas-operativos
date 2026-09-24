@@ -3031,7 +3031,7 @@ export function CapturePanel({
                 <p className="text-lg font-extrabold">{drySummary.totalRows}</p>
                 {drySummary.fidusap?.fromSmdTab ? (
                   <p className="mt-1 text-[11px] leading-snug text-ungrd-muted">
-                    Recorte SMD del Excel, sin filtro extra por columna W.
+                    Área ejecutora SMD, más SDG de resolución 0900 de 2025 y 0384 de 2026.
                   </p>
                 ) : null}
               </div>

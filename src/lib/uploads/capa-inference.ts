@@ -659,7 +659,7 @@ export function feedingGuideForTheme(themeId: string): {
       capas: [
         "Grupo (honorarios, maquinaria, FIC, AHE, arriendos…)",
       ],
-      tip: "Suba el reporte Fidusap tal cual sale. Se lee la pestaña SMD (si existe) o, si no, CDP extendido filtrado a Manejo. Cada carga reemplaza el corte anterior.",
+      tip: "Suba el reporte Fidusap tal cual sale. Entran área ejecutora SMD y SDG de resolución 0900 de 2025 o 0384 de 2026. Cada carga reemplaza el corte anterior.",
     },
     "subsidios-de-arriendos": {
       clave: "Número de envío + número de orden",
