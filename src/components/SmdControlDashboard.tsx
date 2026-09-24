@@ -149,13 +149,13 @@ export function SmdControlDashboard({ records }: Props) {
   if (filters.subcuentas.includes("__none__")) {
     chips.push({
       id: "sub",
-      label: "Sin subcuentas",
+      label: "Sin líneas",
       clear: () => patch({ subcuentas: [] }),
     });
   } else if (filters.subcuentas.length) {
     chips.push({
       id: "sub",
-      label: `${filters.subcuentas.length} subcuentas`,
+      label: `${filters.subcuentas.length} líneas`,
       clear: () => patch({ subcuentas: [] }),
     });
   }
@@ -295,7 +295,7 @@ export function SmdControlDashboard({ records }: Props) {
               <input
                 value={subQuery}
                 onChange={(e) => setSubQuery(e.target.value)}
-                placeholder="Filtrar lista de subcuentas…"
+                placeholder="Filtrar lista de líneas…"
                 className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
               />
             </label>
@@ -360,8 +360,8 @@ export function SmdControlDashboard({ records }: Props) {
             {formatCompactCop(board.cdp)}
           </p>
           <p className="text-xs leading-snug text-white/75">
-            Suma de CDP SMD por línea. La apropiación se registra en el
-            formulario del corte al cargar el Excel.
+            Área ejecutora SMD, más SDG de las resoluciones 0900 de 2025 y
+            0384 de 2026. La apropiación se registra en el formulario del corte.
           </p>
         </aside>
       </div>
@@ -396,10 +396,12 @@ export function SmdControlDashboard({ records }: Props) {
       </div>
 
       <p className="px-4 pt-3 text-[11px] leading-relaxed text-slate-600">
-        <strong className="text-ungrd-navy">Lectura:</strong> la ejecución se
-        agrupa por <strong>línea</strong> del Excel SMD. Saldo por comprometer =
-        CDP − compromiso · % pagado = pagado / CDP. La apropiación se captura
-        en el formulario del corte (Cargar Excel), no viene del Fidusap.
+        <strong className="text-ungrd-navy">Lectura:</strong> entran los CDP con
+        área ejecutora <strong>SMD</strong> y los <strong>SDG</strong> de
+        resolución 0900 de 2025 (variabilidad) y 0384 de 2026 (frente frío).
+        La ejecución se agrupa por <strong>línea</strong>. Saldo por comprometer
+        = CDP − compromiso · % pagado = pagado / CDP. La apropiación se captura
+        en el formulario del corte (Cargar Excel).
       </p>
 
       <div className="space-y-3 p-3 sm:p-4">

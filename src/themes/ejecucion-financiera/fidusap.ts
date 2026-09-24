@@ -106,6 +106,32 @@ export function isSmdCdpRow(raw: {
   return isSmdAreaSolicitante(raw.area_solicitante);
 }
 
+/**
+ * SDG que entra al tablero. En el corte de agosto la limpieza deja
+ * 0900 de 2025 (variabilidad) y 0384 de 2026 (frente frío).
+ * 4026 de 2025 queda aceptada por si un corte futuro la trae.
+ */
+export function isResolucionSdgTablero(resolucion: unknown): boolean {
+  const digits = String(resolucion ?? "").replace(/\D/g, "");
+  return (
+    digits === "09002025" ||
+    digits === "03842026" ||
+    digits === "40262025" ||
+    digits === "040262025"
+  );
+}
+
+/** Universo del tablero: toda el área SMD, y SDG solo con resolución de la limpieza. */
+export function isTableroEjecucionRow(raw: {
+  area_ejecutora?: unknown;
+  resolucion?: unknown;
+}): boolean {
+  const area = fold(raw.area_ejecutora);
+  if (area === "SMD") return true;
+  if (area === "SDG") return isResolucionSdgTablero(raw.resolucion);
+  return false;
+}
+
 export function inferGrupo(params: {
   rubro?: unknown;
   tipo?: unknown;
@@ -370,7 +396,7 @@ export async function parseFidusapCdpExtendido(
       raw[field] = line[col] ?? "";
     }
     if (!String(raw.no_cdp ?? "").trim()) continue;
-    if (!fromSmdTab && !isSmdCdpRow(raw)) {
+    if (!isTableroEjecucionRow(raw)) {
       droppedNotSmd += 1;
       continue;
     }
@@ -407,7 +433,7 @@ export function describeFidusapRecorte(
     .map(([k, n]) => `${n} ${k}`)
     .join(" + ");
   if (meta.fromSmdTab) {
-    return `Se tomó la pestaña SMD tal cual: ${meta.keptRows} CDP${eje ? ` (${eje})` : ""}. Ese recorte ya viene filtrado en el Excel; no se vuelve a recortar por columna W. Cada carga reemplaza el corte anterior.`;
+    return `Pestaña SMD, filtrada a área ejecutora SMD más SDG de resolución 0900 de 2025 y 0384 de 2026: ${meta.keptRows} CDP${eje ? ` (${eje})` : ""}. Cada carga reemplaza el corte anterior.`;
   }
   const extra = meta.droppedNotSmd
     ? ` Se descartaron ${meta.droppedNotSmd} filas de otras áreas.`
