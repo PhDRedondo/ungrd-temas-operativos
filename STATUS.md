@@ -1,8 +1,8 @@
 # STATUS
 
 **Agente:** Cursor  
-**Fecha:** 2026-09-24  
-**Deploy:** pedido por el usuario. Filtro del tablero (SMD + SDG 0900/2025 y 0384/2026) se sube a `origin` y `phdredondo` para que Vercel publique.  
+**Fecha:** 2026-09-25  
+**Deploy:** pedido por el usuario. Todo Manejo (OP Center + formularios sin duplicar claves) se sube a `origin` y `phdredondo` para que Vercel publique.  
 **Proyecto:** UNGRD Temas Operativos  
 **Ruta:** `/Users/jackstive26/Desktop/Johan/ungrd-temas-operativos`
 
@@ -40,6 +40,7 @@ RDS: `pgm-7gotc9vw1p903hrzbo.pg.rds-aliyun-america.rds.aliyuncs.com:5432` / db y
 - Catálogo SIIF (`apropiaciones.ts`) vacío a propósito.
 - Looker FNGRD (foto `PHOTO-2026-09-15-12-21-25`) es catálogo nacional: Colombia Vital 9677020 y Volcán Galeras 9677005 **no están** en el Excel agosto 31. El visor agrupa las 5 líneas reales del SMD. Carga OK: Excel = RDS (834).
 - Tablero: área ejecutora **SMD** (todas) + **SDG** solo resolución 0900 de 2025 y 0384 de 2026. 4026 de 2025 no está en el corte de agosto.
+- Todo Manejo: OP Center es la base. Formularios y líneas suman solo claves nuevas (0 duplicados). Grilla en Seguimiento, columna Origen.
 
 ## Deploy
 

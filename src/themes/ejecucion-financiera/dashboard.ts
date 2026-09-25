@@ -3,6 +3,7 @@
  */
 import type { RecordRow } from "@/lib/records/types";
 import { extractCorteCupos, isCorteCupoRecord, lookupCorteCupo } from "./corte-cupo";
+import { isSeguimientoHojaRecord } from "./seguimiento-hojas";
 import { isTableroEjecucionRow } from "./fidusap";
 
 export type SmdOperativeRow = {
@@ -91,6 +92,7 @@ export function aggregateSmdDashboard(
   let vencidos = 0;
 
   for (const r of rows) {
+    if (isCorteCupoRecord(r) || isSeguimientoHojaRecord(r) || str(r, "_kind") === "manejo-mqa" || str(r, "_kind") === "op-center") continue;
     const noCdp = str(r, "no_cdp", "clave_seguimiento") || "Sin CDP";
     cdp.add(noCdp);
     const grupo = str(r, "grupo", "tipo_registro", "capa") || "OTROS";
@@ -374,6 +376,7 @@ function collapseSmdUnits(rows: RecordRow[]): SmdCdpUnit[] {
     const noCdp = str(r, "no_cdp", "clave_seguimiento");
     if (!noCdp) continue;
     if (isCorteCupoRecord(r)) continue;
+    if (isSeguimientoHojaRecord(r) || str(r, "_kind") === "manejo-mqa" || str(r, "_kind") === "op-center") continue;
     if (!isTableroEjecucionRow(r)) continue;
     const subcuenta = parseSmdSubcuenta(str(r, "linea"));
     const next: SmdCdpUnit = {

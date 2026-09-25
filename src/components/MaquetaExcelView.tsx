@@ -43,6 +43,7 @@ import {
 } from "@/themes/fic/capture-forms";
 import { SMD_FIELD_ORDER } from "@/themes/ejecucion-financiera/fidusap";
 import { isCorteCupoRecord } from "@/themes/ejecucion-financiera/corte-cupo";
+import { isSeguimientoHojaRecord } from "@/themes/ejecucion-financiera/seguimiento-hojas";
 
 type ChangeMark = {
   versionCount: number;
@@ -489,7 +490,15 @@ export function MaquetaExcelView({ theme, records, onChanged }: Props) {
 
   const rows = useMemo(() => {
     return records.filter((r) => {
-      if (theme.id === "ejecucion-financiera" && isCorteCupoRecord(r)) return false;
+      if (
+        theme.id === "ejecucion-financiera" &&
+        (isCorteCupoRecord(r) ||
+          isSeguimientoHojaRecord(r) ||
+          r._kind === "manejo-mqa" ||
+          r._kind === "op-center")
+      ) {
+        return false;
+      }
       const capa = capaOf(theme.id, r);
       if (profile.capas.length) {
         if (!isOfficialCapa(theme.id, capa) && capa !== "Sin capa") return false;
