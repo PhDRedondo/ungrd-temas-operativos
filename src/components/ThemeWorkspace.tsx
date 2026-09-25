@@ -8,6 +8,8 @@ import { AnalyticsPanel } from "@/components/AnalyticsPanel";
 import { AdvancedAnalysisPanel } from "@/components/AdvancedAnalysisPanel";
 import { QuickBIPanel } from "@/components/QuickBIPanel";
 import { SmdCorteCupoForm } from "@/components/SmdCorteCupoForm";
+import { SmdSeguimientoForm } from "@/components/SmdSeguimientoForm";
+import { SmdManejoConsolidado } from "@/components/SmdManejoConsolidado";
 import { ThemeIcon } from "@/components/ThemeIcon";
 import { UploadsInbox } from "@/components/UploadsInbox";
 import type { RecordRow } from "@/lib/records/types";
@@ -240,7 +242,10 @@ export function ThemeWorkspace({
             variant="excel"
           />
           {theme.id === "ejecucion-financiera" ? (
-            <SmdCorteCupoForm records={records} onSaved={bump} />
+            <>
+              <SmdCorteCupoForm records={records} onSaved={bump} />
+              <SmdSeguimientoForm records={records} onSaved={bump} />
+            </>
           ) : null}
           <UploadsInbox key={`inbox-${version}`} themeId={theme.id} compact />
         </div>
@@ -292,12 +297,15 @@ export function ThemeWorkspace({
       tab === "seguimiento" &&
       !theme.captureForms?.length &&
       theme.id === "ejecucion-financiera" ? (
-        <MaquetaExcelView
-          key={`excel-${version}`}
-          theme={theme}
-          records={records}
-          onChanged={bump}
-        />
+        <div className="space-y-6">
+          <SmdManejoConsolidado />
+          <MaquetaExcelView
+            key={`excel-${version}`}
+            theme={theme}
+            records={records}
+            onChanged={bump}
+          />
+        </div>
       ) : null}
       {!loading &&
       tab === "seguimiento" &&

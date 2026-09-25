@@ -86,8 +86,9 @@ export async function softDeleteThemeRecordsNotInClaves(
   const keep = [...new Set(claves.map((c) => c.trim().toLowerCase()).filter(Boolean))];
   const now = new Date();
   const notCorteCupo = sql`(
-    coalesce(${records.payload}->>'_kind','') <> 'corte-cupo'
+    coalesce(${records.payload}->>'_kind','') not in ('corte-cupo', 'seguimiento-hoja', 'manejo-mqa', 'op-center')
     and lower(coalesce(${records.payload}->>'clave_seguimiento', ${records.payload}->>'no_cdp', '')) not like 'corte-cupo%'
+    and lower(coalesce(${records.payload}->>'clave_seguimiento', ${records.payload}->>'no_cdp', '')) not like 'seguimiento:%'
   )`;
   if (!keep.length) {
     const res = await db
