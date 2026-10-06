@@ -13,6 +13,7 @@ import {
   type RecordFilterState,
 } from "@/lib/analytics/recordFilters";
 import { themeBriefingPdfBytes } from "@/lib/analytics/themeBriefingPdf";
+import { buildFicOperativeRows } from "@/themes/fic/dashboard";
 import { getRecordsForTheme } from "@/lib/records/repository";
 import { getTheme } from "@/lib/themes";
 
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
       brief,
       filterSummary: summarizeFilters(filters, themeId),
       recordCount: filtered.length,
+      ficRows: themeId === "fic" ? buildFicOperativeRows(filtered) : undefined,
     });
 
     const stamp = new Date().toISOString().slice(0, 10);
@@ -124,6 +126,7 @@ export async function GET(req: Request) {
       brief,
       filterSummary: summarizeFilters(filters, themeId),
       recordCount: filtered.length,
+      ficRows: themeId === "fic" ? buildFicOperativeRows(filtered) : undefined,
     });
     const stamp = new Date().toISOString().slice(0, 10);
     return new NextResponse(Buffer.from(bytes), {

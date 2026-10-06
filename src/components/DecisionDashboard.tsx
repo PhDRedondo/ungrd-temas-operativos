@@ -160,6 +160,7 @@ export function DecisionDashboard({
         brief,
         filterSummary,
         recordCount: records.length,
+        ficRows: isFic ? ficRows : undefined,
       });
     } finally {
       setPdfBusy(false);

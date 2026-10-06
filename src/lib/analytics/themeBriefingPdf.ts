@@ -15,10 +15,13 @@ import {
   PDF_MUTED,
   PDF_NAVY,
   PDF_TEXT,
+  pdfSafe,
   pdfToArrayBuffer,
   savePdf,
   stampFooters,
 } from "@/lib/pdf/brand";
+import { buildFicDashboardPdf } from "@/lib/analytics/ficDashboardPdf";
+import type { FicOperativeRow } from "@/themes/fic/dashboard";
 
 export type ThemeBriefingPdfInput = {
   themeId: string;
@@ -26,12 +29,18 @@ export type ThemeBriefingPdfInput = {
   brief: DecisionBrief;
   filterSummary: string;
   recordCount: number;
+  /** Filas de la tabla operativa FIC ya filtradas, el mismo orden del tablero. */
+  ficRows?: FicOperativeRow[];
 };
 
 export async function buildThemeBriefingPdf(
   input: ThemeBriefingPdfInput,
 ): Promise<jsPDF> {
-  const { brief, themeName, filterSummary, recordCount } = input;
+  if (input.themeId === "fic" && input.ficRows) {
+    return buildFicDashboardPdf(input);
+  }
+  const { brief, themeName, recordCount } = input;
+  const filterSummary = pdfSafe(input.filterSummary);
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const margin = PDF_MARGIN;
   const pageW = doc.internal.pageSize.getWidth();

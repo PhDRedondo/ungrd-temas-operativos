@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { buildDecisionBrief } from "../src/lib/analytics/decision";
 import { buildNationalBrief } from "../src/lib/analytics/national";
 import { buildThemeBriefingPdf } from "../src/lib/analytics/themeBriefingPdf";
+import { buildFicOperativeRows } from "../src/themes/fic/dashboard";
 import { buildNationalBriefingPdf } from "../src/lib/analytics/nationalBriefingPdf";
 import { loadUngrdLogoDataUrl } from "../src/lib/pdf/brand";
 import {
@@ -58,6 +59,54 @@ async function main() {
   });
   const natDoc = await buildNationalBriefingPdf(national);
   assert.equal(natDoc.getNumberOfPages() >= 1, true);
+
+  const ficRowsRaw: RecordRow[] = [
+    {
+      id: "a",
+      no_cdp: "25-1446",
+      departamento: "Chocó",
+      municipio: "Istmina",
+      vigencia: "2025",
+      estado: "EN EJECUCIÓN",
+      valor: 1_000_000_000,
+      valor_por_legalizar: 1_000_000_000,
+      plazo_ejecucion_dias: 180,
+      plazo_adicion_dias: 60,
+      fecha_inicial_para_legalizacion: "2025-12-12",
+      fecha: "2025-12-12",
+    } as RecordRow,
+    {
+      id: "b",
+      no_cdp: "240161",
+      departamento: "Chocó",
+      municipio: "Quibdó",
+      vigencia: "2024",
+      estado: "ANULADO",
+      valor: 0,
+      valor_por_legalizar: 0,
+      fecha: "2026-09-13",
+    } as RecordRow,
+  ];
+  const ficBrief = buildDecisionBrief("fic", ficRowsRaw);
+  const ficDoc = await buildThemeBriefingPdf({
+    themeId: "fic",
+    themeName: "FIC",
+    brief: ficBrief,
+    filterSummary: summarizeFilters({
+      ...EMPTY_RECORD_FILTERS,
+      departamento: "Chocó",
+      from: "2022-01-01",
+      to: "2026-10-06",
+    }),
+    recordCount: ficRowsRaw.length,
+    ficRows: buildFicOperativeRows(ficRowsRaw),
+  });
+  const ficText = Buffer.from(ficDoc.output("arraybuffer")).toString("latin1");
+  assert.ok(ficText.includes("25-1446"), "incluye el FIC en ejecución");
+  assert.ok(ficText.includes("240161"), "incluye el FIC anulado del filtro");
+  assert.ok(ficText.includes("Tabla operativa"));
+  assert.ok(ficText.includes("2022-01-01 a 2026-10-06"), "la flecha del filtro se lee en el PDF");
+  assert.equal(ficDoc.internal.pageSize.getWidth() > ficDoc.internal.pageSize.getHeight(), true);
 
   console.log("test-theme-briefing-pdf: OK");
 }

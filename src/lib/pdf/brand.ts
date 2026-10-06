@@ -11,6 +11,17 @@ export const PDF_MUTED: [number, number, number] = [100, 116, 139];
 export const PDF_TEXT: [number, number, number] = [30, 41, 59];
 
 export const PDF_MARGIN = 14;
+
+/** Helvetica del PDF no dibuja flechas ni espacios finos; si no, salen como basura. */
+export function pdfSafe(value: unknown): string {
+  return String(value ?? "")
+    .replace(/[\u00a0\u202f]/g, " ")
+    .replace(/\s*[→⇒]\s*/g, " a ")
+    .replace(/[–—]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'");
+}
 /** Altura del encabezado (mm) incluyendo franja amarilla. */
 export const PDF_HEADER_H = 38;
 

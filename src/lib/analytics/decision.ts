@@ -9,6 +9,9 @@ import { calculateImpuestosIndicadores } from "@/themes/obras-por-impuestos/calc
 import { aggregateImpuestosDashboard } from "@/themes/obras-por-impuestos/dashboard";
 import { isFicVencido } from "@/themes/fic/dashboard";
 import { aggregateSmdDashboard } from "@/themes/ejecucion-financiera/dashboard";
+import { DECISION_THRESHOLDS } from "@/lib/analytics/decisionThresholds";
+
+export { DECISION_THRESHOLDS };
 
 export type SemaphoreLevel = "verde" | "amarillo" | "rojo" | "gris";
 
@@ -85,14 +88,6 @@ const SOURCE_THEMES = new Set<string>(SOURCE_THEME_IDS);
 export function isSourceTheme(themeId: string) {
   return SOURCE_THEMES.has(themeId);
 }
-
-/** Umbrales documentados en UI nacional (versión de criterios). */
-export const DECISION_THRESHOLDS = {
-  version: "2026.07-nacional-v1",
-  aguaDiasCola: 30,
-  carrotanqueDiasEstancado: 45,
-  ficGapCriticoPct: 15,
-} as const;
 
 function num(r: RecordRow, ...keys: string[]): number {
   for (const k of keys) {
