@@ -31,7 +31,7 @@ async function main() {
   assert.ok(brief.kpis.length >= 0);
 
   const logo = await loadUngrdLogoDataUrl();
-  assert.ok(logo === null || logo.startsWith("data:image/png"));
+  assert.ok(logo === null || logo.startsWith("data:image/"));
 
   const themeDoc = await buildThemeBriefingPdf({
     themeId: "agua-y-saneamiento",

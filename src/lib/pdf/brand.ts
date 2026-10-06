@@ -25,7 +25,7 @@ export function pdfSafe(value: unknown): string {
 /** Altura del encabezado (mm) incluyendo franja amarilla. */
 export const PDF_HEADER_H = 38;
 
-const LOGO_PUBLIC_PATH = "/branding/UNGRD-Vertical.png";
+const LOGO_PUBLIC_PATH = "/branding/UNGRD-pdf.jpg";
 
 let cachedLogo: string | null | undefined;
 
@@ -52,10 +52,10 @@ export async function loadUngrdLogoDataUrl(): Promise<string | null> {
 
     const { readFile } = await import("node:fs/promises");
     const { join } = await import("node:path");
-    const buf = await readFile(
-      join(process.cwd(), "public", "branding", "UNGRD-Vertical.png"),
-    );
-    cachedLogo = `data:image/png;base64,${buf.toString("base64")}`;
+      const buf = await readFile(
+        join(process.cwd(), "public", "branding", "UNGRD-pdf.jpg"),
+      );
+    cachedLogo = `data:image/jpeg;base64,${buf.toString("base64")}`;
     return cachedLogo;
   } catch {
     cachedLogo = null;
@@ -95,7 +95,16 @@ export async function drawUngrdHeader(
       // Logo vertical compacto a la derecha del header
       const logoW = 12;
       const logoH = 16;
-      doc.addImage(logo, "PNG", pageW - margin - logoW, 8, logoW, logoH);
+      doc.addImage(
+        logo,
+        "JPEG",
+        pageW - margin - logoW,
+        8,
+        logoW,
+        logoH,
+        "ungrd-logo",
+        "FAST",
+      );
     } catch {
       /* fallback texto */
     }
