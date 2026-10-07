@@ -28,7 +28,15 @@ export async function GET() {
       order by fecha desc nulls last, clave
       limit 8000
     `);
-    const rows = Array.isArray(result) ? result : result.rows;
+    const raw: unknown = result;
+    const rows = Array.isArray(raw)
+      ? raw
+      : raw &&
+          typeof raw === "object" &&
+          "rows" in raw &&
+          Array.isArray(raw.rows)
+        ? raw.rows
+        : [];
     return NextResponse.json({ rows, count: rows.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "No se pudo leer el consolidado";
