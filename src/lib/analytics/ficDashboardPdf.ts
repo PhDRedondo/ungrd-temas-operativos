@@ -40,31 +40,22 @@ type Col = {
   value: (row: FicOperativeRow, index: number) => string;
 };
 
-const COLUMNS: Col[] = [
+const PLACE_COLUMNS: Col[] = [
   { title: "#", weight: 8, value: (_r, i) => String(i + 1) },
   { title: "Nº FIC", weight: 22, value: (r) => r.noCdp },
-  { title: "Departamento", weight: 24, value: (r) => r.departamento },
-  { title: "Municipio", weight: 22, value: (r) => r.municipio },
+  { title: "Departamento", weight: 28, value: (r) => r.departamento },
+  { title: "Municipio", weight: 26, value: (r) => r.municipio },
   { title: "Vigencia", weight: 16, value: (r) => r.vigencia },
   { title: "Estado", weight: 28, value: (r) => r.estado },
-  { title: "Plazo ejecución", weight: 18, value: (r) => r.plazoEjecucion },
-  { title: "Plazo adición", weight: 18, value: (r) => r.plazoAdicion },
-  { title: "Plazo final", weight: 16, value: (r) => r.plazoFinal },
+  { title: "Plazo ejecución", weight: 22, value: (r) => r.plazoEjecucion },
+  { title: "Plazo adición", weight: 20, value: (r) => r.plazoAdicion },
+  { title: "Plazo final", weight: 18, value: (r) => r.plazoFinal },
   {
     title: "Fecha vencimiento",
-    weight: 22,
+    weight: 26,
     danger: true,
     value: (r) => r.fechaVencimiento,
   },
-  { title: "Nº RC", weight: 14, value: (r) => r.noRc },
-  { title: "Formato", weight: 28, value: (r) => r.formatoAprobacion },
-  { title: "Acto admin.", weight: 30, value: (r) => r.acto },
-  { title: "Acto 2", weight: 18, value: (r) => r.acto2 },
-  { title: "Fecha acto", weight: 20, value: (r) => r.fechaActo },
-  { title: "Fecha acto 2", weight: 20, value: (r) => r.fechaActo2 },
-  { title: "Desembolso", weight: 20, value: (r) => r.fechaDesembolso },
-  { title: "Fecha mod.", weight: 18, value: (r) => r.fechaModificacion },
-  { title: "% avance", weight: 14, value: (r) => r.avancePct },
   {
     title: "Valor desembolso",
     weight: 32,
@@ -77,6 +68,19 @@ const COLUMNS: Col[] = [
     align: "right",
     value: (r) => formatCop(r.porLegalizar),
   },
+];
+
+const ACT_COLUMNS: Col[] = [
+  { title: "Nº FIC", weight: 22, value: (r) => r.noCdp },
+  { title: "Nº RC", weight: 16, value: (r) => r.noRc },
+  { title: "Formato", weight: 36, value: (r) => r.formatoAprobacion },
+  { title: "Acto admin.", weight: 40, value: (r) => r.acto },
+  { title: "Acto 2", weight: 22, value: (r) => r.acto2 },
+  { title: "Fecha acto", weight: 22, value: (r) => r.fechaActo },
+  { title: "Fecha acto 2", weight: 22, value: (r) => r.fechaActo2 },
+  { title: "Desembolso", weight: 22, value: (r) => r.fechaDesembolso },
+  { title: "Fecha mod.", weight: 20, value: (r) => r.fechaModificacion },
+  { title: "% avance", weight: 16, value: (r) => r.avancePct },
 ];
 
 function wrap(doc: jsPDF, text: string, width: number): string[] {
@@ -133,11 +137,28 @@ export async function buildFicDashboardPdf(input: {
 
   y = drawKpis(doc, brief, y, margin, contentW);
   y = drawSemaphoreAndAlerts(doc, brief, y, margin, contentW);
-  y = drawVigencia(doc, brief, y, margin);
+  y = drawVigencia(doc, brief, y, margin, contentW);
   if (input.records && input.records.length > 0) {
     y = drawPanelGraphics(doc, input.records, y, margin, contentW);
   }
-  drawOperativeTable(doc, ficRows, y, margin);
+  y = drawOperativeTable(
+    doc,
+    ficRows,
+    y,
+    margin,
+    PLACE_COLUMNS,
+    `Tabla operativa · ${formatNumber(ficRows.length)} FIC`,
+    8,
+  );
+  drawOperativeTable(
+    doc,
+    ficRows,
+    y,
+    margin,
+    ACT_COLUMNS,
+    "Actos, formato y fechas",
+    8,
+  );
 
   stampFooters(
     doc,
@@ -293,34 +314,56 @@ function drawVigencia(
   brief: DecisionBrief,
   y: number,
   margin: number,
+  contentW: number,
 ): number {
   if (brief.byLayer.length === 0) return y;
-  if (y > contentBottom(doc) - 16) {
-    doc.addPage("a3", "landscape");
-    y = PDF_MARGIN;
-  }
+  y = pageBreak(doc, y, 18);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...PDF_NAVY);
-  doc.text(pdfSafe(brief.layerLabel || "Por vigencia"), margin, y);
+  doc.text("Distribución · Vigencia", margin, y);
   y += 5;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...PDF_TEXT);
-  for (const item of brief.byLayer) {
+  const max = Math.max(...brief.byLayer.map((item) => item.valor || item.count), 1);
+  const colors: [number, number, number][] = [
+    PDF_NAVY,
+    [255, 209, 0],
+    [0, 105, 148],
+    [239, 108, 0],
+  ];
+  brief.byLayer.forEach((item, i) => {
+    y = pageBreak(doc, y, 8);
     const label = /^vigencia/i.test(item.label)
       ? item.label
       : `Vigencia ${item.label}`;
-    doc.text(
-      pdfSafe(
-        `${label}: ${formatNumber(item.count)} · ${formatCop(item.valor)}`,
-      ),
-      margin,
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...PDF_TEXT);
+    doc.text(pdfSafe(label), margin, y + 3.2);
+    const trackX = margin + 36;
+    const trackW = contentW - 36 - 62;
+    const amount = item.valor || item.count;
+    doc.setFillColor(232, 238, 244);
+    doc.roundedRect(trackX, y, trackW, 4.4, 0.8, 0.8, "F");
+    doc.setFillColor(...(colors[i % colors.length] ?? PDF_NAVY));
+    doc.roundedRect(
+      trackX,
       y,
+      Math.max(1.2, (trackW * amount) / max),
+      4.4,
+      0.8,
+      0.8,
+      "F",
     );
-    y += 4.2;
-  }
-  return y + 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.text(
+      pdfSafe(`${formatNumber(item.count)} · ${formatCop(item.valor)}`),
+      trackX + trackW + 2,
+      y + 3.2,
+    );
+    y += 7;
+  });
+  return y + 2;
 }
 
 function pageBreak(doc: jsPDF, y: number, need: number): number {
@@ -561,18 +604,21 @@ function drawOperativeTable(
   rows: FicOperativeRow[],
   y: number,
   margin: number,
-): void {
+  columns: Col[],
+  title: string,
+  font: number,
+): number {
   const pageW = doc.internal.pageSize.getWidth();
   const tableW = pageW - margin * 2;
-  const weightSum = COLUMNS.reduce((a, c) => a + c.weight, 0);
-  const widths = COLUMNS.map((c) => (c.weight / weightSum) * tableW);
+  const weightSum = columns.reduce((a, c) => a + c.weight, 0);
+  const widths = columns.map((c) => (c.weight / weightSum) * tableW);
 
   const paintHeader = (): number => {
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(5.6);
-    const headerLines = COLUMNS.map((c, i) => wrap(doc, c.title, widths[i]!));
+    doc.setFontSize(font - 1);
+    const headerLines = columns.map((c, i) => wrap(doc, c.title, widths[i]!));
     const headerH =
-      Math.max(...headerLines.map((l) => l.length)) * 2.5 + 2.2;
+      Math.max(...headerLines.map((l) => l.length)) * (font * 0.45) + 2.4;
     if (y + headerH > contentBottom(doc)) {
       doc.addPage("a3", "landscape");
       y = PDF_MARGIN;
@@ -582,10 +628,9 @@ function drawOperativeTable(
     doc.rect(margin, y, tableW, headerH, "F");
     doc.setTextColor(...PDF_YELLOW);
     headerLines.forEach((lines, i) => {
-      const align = COLUMNS[i]?.align;
-      const tx =
-        align === "right" ? x + widths[i]! - 1 : x + 0.8;
-      doc.text(lines, tx, y + 2.8, {
+      const align = columns[i]?.align;
+      const tx = align === "right" ? x + widths[i]! - 1.2 : x + 1;
+      doc.text(lines, tx, y + 3.2, {
         align: align === "right" ? "right" : "left",
       });
       x += widths[i]!;
@@ -601,7 +646,7 @@ function drawOperativeTable(
     doc.addPage("a3", "landscape");
     y = PDF_MARGIN;
   }
-  doc.text(`Tabla operativa · ${formatNumber(rows.length)} FIC`, margin, y);
+  doc.text(pdfSafe(title), margin, y);
   y += 4;
 
   if (rows.length === 0) {
@@ -609,22 +654,23 @@ function drawOperativeTable(
     doc.setFontSize(8);
     doc.setTextColor(...PDF_MUTED);
     doc.text("No hay FIC en este filtro.", margin, y + 4);
-    return;
+    return y + 8;
   }
 
   y = paintHeader();
-  doc.setFontSize(5.8);
 
   rows.forEach((row, index) => {
     doc.setFont("helvetica", "normal");
-    const cellLines = COLUMNS.map((c, i) =>
+    doc.setFontSize(font);
+    const cellLines = columns.map((c, i) =>
       wrap(doc, c.value(row, index), widths[i]!),
     );
-    const rowH = Math.max(...cellLines.map((l) => l.length)) * 2.6 + 1.8;
+    const rowH = Math.max(...cellLines.map((l) => l.length)) * (font * 0.42) + 2.2;
     if (y + rowH > contentBottom(doc)) {
       doc.addPage("a3", "landscape");
       y = PDF_MARGIN;
       y = paintHeader();
+      doc.setFontSize(font);
     }
     const fill: [number, number, number] = row.critico
       ? [255, 228, 225]
@@ -638,16 +684,18 @@ function drawOperativeTable(
 
     let x = margin;
     cellLines.forEach((lines, i) => {
-      const col = COLUMNS[i]!;
+      const col = columns[i]!;
       const danger = Boolean(col.danger && row.critico);
       doc.setTextColor(...(danger ? [198, 40, 40] : PDF_TEXT));
-      doc.setFont("helvetica", danger || i === 1 ? "bold" : "normal");
-      const tx = col.align === "right" ? x + widths[i]! - 1 : x + 0.8;
-      doc.text(lines, tx, y + 2.6, {
+      doc.setFont("helvetica", danger || col.title === "Nº FIC" ? "bold" : "normal");
+      doc.setFontSize(font);
+      const tx = col.align === "right" ? x + widths[i]! - 1.2 : x + 1;
+      doc.text(lines, tx, y + font * 0.45, {
         align: col.align === "right" ? "right" : "left",
       });
       x += widths[i]!;
     });
     y += rowH;
   });
+  return y + 4;
 }
