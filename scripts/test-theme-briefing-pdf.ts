@@ -100,11 +100,13 @@ async function main() {
     }),
     recordCount: ficRowsRaw.length,
     ficRows: buildFicOperativeRows(ficRowsRaw),
+    records: ficRowsRaw,
   });
   const ficText = Buffer.from(ficDoc.output("arraybuffer")).toString("latin1");
   assert.ok(ficText.includes("25-1446"), "incluye el FIC en ejecución");
   assert.ok(ficText.includes("240161"), "incluye el FIC anulado del filtro");
   assert.ok(ficText.includes("Tabla operativa"));
+  assert.ok(ficText.includes("Calor"), "incluye el mapa de calor del panel");
   assert.ok(ficText.includes("2022-01-01 a 2026-10-06"), "la flecha del filtro se lee en el PDF");
   assert.equal(ficDoc.internal.pageSize.getWidth() > ficDoc.internal.pageSize.getHeight(), true);
 

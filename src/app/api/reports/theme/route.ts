@@ -67,6 +67,7 @@ export async function POST(req: Request) {
       filterSummary: summarizeFilters(filters, themeId),
       recordCount: filtered.length,
       ficRows: themeId === "fic" ? buildFicOperativeRows(filtered) : undefined,
+      records: themeId === "fic" ? filtered : undefined,
     });
 
     const stamp = new Date().toISOString().slice(0, 10);
@@ -127,6 +128,7 @@ export async function GET(req: Request) {
       filterSummary: summarizeFilters(filters, themeId),
       recordCount: filtered.length,
       ficRows: themeId === "fic" ? buildFicOperativeRows(filtered) : undefined,
+      records: themeId === "fic" ? filtered : undefined,
     });
     const stamp = new Date().toISOString().slice(0, 10);
     return new NextResponse(Buffer.from(bytes), {

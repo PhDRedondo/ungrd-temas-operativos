@@ -31,6 +31,8 @@ export type ThemeBriefingPdfInput = {
   recordCount: number;
   /** Filas de la tabla operativa FIC ya filtradas, el mismo orden del tablero. */
   ficRows?: FicOperativeRow[];
+  /** Registros filtrados: alimentan calor, serie y barras del panel. */
+  records?: import("@/lib/records/types").RecordRow[];
 };
 
 export async function buildThemeBriefingPdf(
