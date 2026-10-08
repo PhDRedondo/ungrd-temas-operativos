@@ -6,7 +6,7 @@
 | **Ruta** | `/app/temas/obras-de-emergencia` |
 | **Carpeta** | `src/themes/obras-de-emergencia/` |
 
-## Capas (Postgres / Supabase)
+## Capas (PostgreSQL en RDS Alibaba)
 
 - **Contrato de obra** — convenio, contratista, valor, avances, fechas.
 - **Orden de proveeduría** — O.P. maquinaria / horas máquina.

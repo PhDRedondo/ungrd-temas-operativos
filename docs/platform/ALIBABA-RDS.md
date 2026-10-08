@@ -41,7 +41,7 @@ Clave de negocio FIC: **`record_id`**, no `no_cdp`.
 
 ## App
 
-`DATABASE_URL` y `MEDALLION_DATABASE_URL` en `.env.local` apuntan a este RDS.  
-Vercel/prod hay que cambiar el secret `DATABASE_URL` a la misma URI.
+`DATABASE_URL` y `MEDALLION_DATABASE_URL` apuntan a este RDS en local y en Vercel.  
+El 8-oct-2026, `https://ungrd-manejo-phi.vercel.app/api/health` respondió `db: "up"` contra este host.
 
-Supabase queda como respaldo; no se borra.
+Supabase no es la base operativa.

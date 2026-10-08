@@ -1,6 +1,8 @@
-# Prueba oficial con Supabase
+# Prueba histórica con Supabase
 
-## Qué necesitamos
+**No es la base actual.** La base operativa es RDS de Alibaba Cloud: [ALIBABA-RDS.md](./ALIBABA-RDS.md). Este documento se conserva como referencia de un ensayo anterior.
+
+## Qué se usó en ese ensayo
 
 1. **Connection string directa** (puerto **5432**, no pooler 6543 para migraciones DDL):
    ```text

@@ -74,13 +74,13 @@ Fuente: [`.env.docker.example`](../.env.docker.example)
 |----------|--------|
 | `AUTH_URL` | URL **pública** HTTPS en Alibaba (no localhost) |
 | `AUTH_SECRET` | Secreto fuerte; obligatorio en prod |
-| `DATABASE_URL` | Compose default: Postgres del stack. **En Alibaba/prod y para alinear QuickBI:** URL Supabase pooler Session `:5432` (misma que local recomendado) |
+| `DATABASE_URL` | Compose default: Postgres del stack, solo para una demo offline. **Operación y QuickBI:** RDS Alibaba, `sslmode=disable` |
 | `QUICKBI_UPSTREAM_BASE_URL` | Backend SNI para tickets embed |
-| `MEDALLION_DATABASE_URL` | Reader medallón (misma instancia Supabase) |
+| `MEDALLION_DATABASE_URL` | La misma instancia RDS |
 | `ACL_STRICT` | `true` en producción |
 
-> **Alineación Dashboard ↔ QuickBI:** local y despliegue deben usar la misma
-> `DATABASE_URL` de Supabase. El Postgres del compose es solo para demos offline.
+> **Alineación Dashboard ↔ QuickBI:** local y producción usan la misma
+> `DATABASE_URL` del RDS de Alibaba. El Postgres del compose no es esa base.
 
 ## Imagen Docker
 
@@ -103,7 +103,7 @@ docker run --rm -p 3000:3000 \
 ## Alibaba Cloud (orientación)
 
 1. **Registry**: push de `ungrd-temas:latest` a ACR (Alibaba Container Registry).
-2. **Postgres**: RDS PostgreSQL o contenedor managed; actualizar `DATABASE_URL`.
+2. **Postgres**: la base ya es RDS Alibaba (`docs/platform/ALIBABA-RDS.md`). `DATABASE_URL` debe seguir apuntando ahí.
 3. **App**: ACK (Kubernetes) o ECS con compose; `AUTH_URL` = dominio público + TLS (SLB/ALB).
 4. **Secretos**: Parameter Store / KMS — no commitear `.env.docker`.
 5. **QuickBI**: mantener `QUICKBI_UPSTREAM_BASE_URL` o AccessKey propio.

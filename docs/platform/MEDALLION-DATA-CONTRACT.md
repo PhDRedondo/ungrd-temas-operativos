@@ -1,8 +1,8 @@
 # Contrato de datos — Medallón UNGRD Temas Operativos
 
-Guía para el equipo de datos: cómo **leer** la base operativa hoy, mapearla a
-arquitectura medallón (bronze → silver → gold) y qué cambia (casi nada) cuando
-migremos de Supabase a otro PostgreSQL.
+Guía para el equipo de datos: cómo **leer** la base operativa en RDS de Alibaba
+Cloud, mapearla a arquitectura medallón (bronze → silver → gold). El motor es
+PostgreSQL: el contrato no depende de otro proveedor.
 
 ---
 
@@ -44,7 +44,7 @@ Cuando migren el host: **misma DDL, mismo `theme_id`, mismo JSONB**. Solo cambia
 ## 2. Principio de portabilidad
 
 ```text
-App Next.js  ──►  PostgreSQL (Supabase hoy / RDS / Cloud SQL mañana)
+App Next.js  ──►  PostgreSQL (RDS Alibaba Cloud)
                       │
                       ├── public.themes / records / …   (fuente de verdad operativa)
                       └── medallion.v_bronze_*          (contrato de lectura)

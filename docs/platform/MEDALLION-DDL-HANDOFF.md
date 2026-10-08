@@ -1,12 +1,13 @@
 # Handoff DDL — Medallón reader (Puentes + Agua)
 
-Paquete único para entregar al equipo de datos / Alibaba: **conexión solo-lectura,
-schemas, columnas, JOIN, DDL y pasos para re-aplicar en Supabase**.
+Paquete de esquemas, columnas, JOIN y DDL para el equipo de datos.
+
+**Base vigente:** PostgreSQL en RDS de Alibaba Cloud ([ALIBABA-RDS.md](./ALIBABA-RDS.md)). Las cadenas de Supabase que aparecen más abajo son del ensayo anterior; no son la conexión operativa.
 
 | Meta | Valor |
 |------|--------|
 | Fecha | 2026-08-06 |
-| Proyecto Supabase | `vbxvqctdemtnmkifrxeo` |
+| Ensayo anterior (Supabase) | `vbxvqctdemtnmkifrxeo` — ya no es la base operativa |
 | Estado prod | **001 + 003 + Silver 010/011 + sync** (Bronze + `silver_agua` / `silver_puentes`) |
 | Rol | `medallion_reader` (SELECT only) |
 | DDL Bronze | `sql/medallion/001_bronze_views.sql` + `003_theme_capa_views.sql` |
@@ -1418,7 +1419,7 @@ Silver (tablas físicas PK/FK — usar para JOINs relacionales):
   silver_puentes.base_general_puentes | bitacora | contratos_estructuracion
   medallion.v_silver_catalog | v_silver_join_map
 
-Conexión: medallion_reader @ pooler Supabase (password aparte / MEDALLION_DATABASE_URL)
+Conexión vigente: RDS Alibaba (`docs/platform/ALIBABA-RDS.md`). `MEDALLION_DATABASE_URL` apunta a esa instancia.
 Envelope: record_id, theme_id, source, created_at, updated_at [, synced_at en Silver]
 JOIN solo intra-schema (OP / id_puente / clave_proceso)
 

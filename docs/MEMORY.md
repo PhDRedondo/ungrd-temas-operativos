@@ -9,7 +9,7 @@ Actualizar cuando cambie una decisión o el estado del producto.
 
 | Dimensión | Antes (prototipo) | Ahora (MVP operable + cloud) |
 |-----------|-------------------|------------------------------|
-| Datos | Memoria / `localStorage` | PostgreSQL + Drizzle (RDS Alibaba; Supabase queda como respaldo) |
+| Datos | Memoria / `localStorage` | PostgreSQL 18 en RDS de Alibaba Cloud (app y QuickBI, `sslmode=disable`) |
 | Auth | Demo débil en cliente | Auth.js · demo o Keycloak · cookie HTTPS/Vercel |
 | Excel | Headers SheetJS | ExcelJS + Zod + DIVIPOLA + dry-run + upsert por clave+capa |
 | Analítica | Solo cliente sobre demo | Records DB + SQL + Centro de Mando + decisión + red |
@@ -17,7 +17,7 @@ Actualizar cuando cambie una decisión o el estado del producto.
 | Temas | UI + seed sintético | Temas cableados desde Excel oficiales (schema v3) |
 | Reportes | — | PDF branding UNGRD + cron daily briefing |
 | Calidad | Manual | `harness` + `smoke` + tests unitarios de pipeline |
-| Deploy | Solo local | Vercel `ungrd-manejo-phi.vercel.app` (git `phdredondo`); RDS Alibaba local + espejo Supabase en prod |
+| Deploy | Solo local | App en Vercel `ungrd-manejo-phi.vercel.app` (git `phdredondo`); base en RDS Alibaba |
 
 **Frase de producto:** de demo visual a plataforma operativa con ETL de bases oficiales, mando nacional y evidencias de contrato.
 
@@ -47,7 +47,7 @@ Route Handlers en el mismo repo (v0.1). Platform API v1 (`/api/v1/cases|tasks`) 
 Rate limit + ban IP + path inspection + headers + body limit (`src/lib/security`).
 
 ### ADR-013 · Fuente operativa = RDS Alibaba (sin SSL)
-Postgres 18 en `*.rds.aliyuncs.com`. `sslmode=disable`. App y QuickBI usan la misma instancia. Supabase queda de respaldo **y espejo** mientras Vercel no cambie `DATABASE_URL`: mismo corte SMD en las dos (sync `npm run db:sync-supabase`). El user de app es también el de BI hasta crear `medallion_reader` (este login no puede CREATE ROLE).
+Postgres 18 en `*.rds.aliyuncs.com`. `sslmode=disable`. La app local, la app en Vercel y QuickBI usan la misma instancia. Guía: `docs/platform/ALIBABA-RDS.md`. El usuario de la app es también el de BI hasta crear `medallion_reader` (este login no puede CREATE ROLE). Supabase dejó de ser la base operativa.
 
 ### ADR-008 · QuickBI embed con CreateTicket (patrón SNI)
 Catálogo por `pageId` en `src/lib/quickbi/catalog.ts`. Panel React → `token-service.ts` → `POST /api/quickbi/embed-url` (BFF) → proxy a `QUICKBI_UPSTREAM_BASE_URL` (prod: `https://apisni.soft180.co`) o CreateTicket local. Embed: `token3rd` + `accessTicket`. Si el ticket no sale, el BFF embebe la vista pública `dashboard/view` (FIC y tableros publicados). Los `pageId` privados deben estar compartidos en QuickBI del workspace del upstream.
@@ -166,7 +166,7 @@ Orden cronológico reciente (commits + trabajo contractual):
 18. **Obras de emergencia — tablero ejecutivo SMD (ago 2026)** — `dashboard.ts` agrega KPIs del zip (en ejecución, urgentes ≤40d, IRP elevado, SPI medio, avance ponderado); `byLayer` = obras por estado (`layerLabel`); captura/Excel sin cambios.
 19. **Obras por impuestos — captura + tablero (ago 2026)** — `captureForms` (convenio / interventoría / seguimiento), estados canónicos, IRP vía fechas de convenio; decisión con KPIs vencidos/urgentes; Excel ArcGIS intacto.
 20. **FIC — captura AppSheet CONTROL FIC (sep 2026)** — `captureForms` (transferencia / legalización / prórroga), capa derivada de vigencia, lookup por No. CDP; plazos inicial+adición→final. KPI **Vencidos** = fecha inicial + plazo ejecución + prórroga (`plazo_adicion_dias` / acto de modificación); no solo el estado Excel `VENCIDO`. Cerrados (LEGALIZADO, ANULADO, REINTEGRO) no cuentan. Geo persistida en DIVIPOLA (`normalizeRecordGeo` + `scripts/backfill-divipola-geo.ts`); filtros y bases cruzan el mismo catálogo. Excel `fields-from-source` intacto.
-21. **RDS Alibaba = fuente operativa (sep 2026)** — Postgres 18 `sslmode=disable`; app local y QuickBI misma instancia. Vercel **sigue en Supabase** hasta pegar env. Espejo SMD 834 en ambas (`npm run db:sync-supabase`). Deploy Vercel = push `phdredondo`, no `origin` UNGRD-FNGRD.
+21. **RDS Alibaba = fuente operativa** — Postgres 18 `sslmode=disable`. App local, Vercel y QuickBI leen la misma instancia. El health de producción (`/api/health`) responde `db: "up"` contra `*.rds.aliyuncs.com` (8-oct-2026). El despliegue de Vercel se dispara con el remoto `phdredondo`.
 22. **Ejecución financiera Control por línea (sep 2026)** — `SmdControlDashboard` + `SmdCorteCupoForm` en Cargar Excel. Cupo manual por línea; disponible = cupo − CDP. En prod el UI está (`70c8930`); cupos aún no llenados.
 23. **Fidusap SMD oro ~834 (sep 2026)** — pestaña SMD (no solo W); fallback `cdextendido` salta título FIDUPREVISORA hasta “No CDP”. Corte en nombre de archivo (`34.REPORTE AGOSTO 31 DE 2026.xlsx`).
 
@@ -215,4 +215,5 @@ Orden cronológico reciente (commits + trabajo contractual):
 | 2026-08-23 | Docker compose (--profile app): Postgres + migrate + Next standalone |
 | 2026-08-23 | Local (entonces): `DATABASE_URL` = Supabase. **Obsoleto:** local = RDS Alibaba desde 2026-09-15. |
 | 2026-09-15 | FIC Alibaba: 387 filas; vencimiento = inicial + plazo + prórroga (`dias_vencidos`, `vencido`). RDS operativa. |
-| 2026-09-18 | Prod SMD `70c8930`; espejo 834 CDP RDS→Supabase; formulario cupo en Cargar Excel (valores aún vacíos). |
+| 2026-09-18 | Formulario de cupo en Cargar Excel (valores del corte de agosto aún vacíos). |
+| 2026-10-08 | Producción confirmada en RDS Alibaba: `/api/health` con `db: "up"`. |

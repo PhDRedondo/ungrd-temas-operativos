@@ -256,7 +256,7 @@ CODEOWNERS / PRs acotados por área misional; el núcleo (`components`, `lib`, `
 |---|---|---|
 | App | Next.js 16 | Ya era el prototipo; App Router + API |
 | ORM | Drizzle | SQL-first, liviano, Apache-2.0 |
-| DB | PostgreSQL | Estándar institucional / RDS futuro |
+| DB | PostgreSQL 18 en RDS Alibaba | Misma instancia para la app y QuickBI |
 | Auth | Auth.js + Keycloak | OIDC open source, sin SaaS de pago |
 | Excel | ExcelJS + Zod | Plantillas con reglas + validación fuerte |
 | UI charts | Recharts / Leaflet | Ya en el prototipo |
@@ -268,7 +268,7 @@ CODEOWNERS / PRs acotados por área misional; el núcleo (`components`, `lib`, `
 
 | Variable | Local | Vercel después |
 |---|---|---|
-| `DATABASE_URL` | Postgres brew/Docker | Neon / Supabase / RDS |
+| `DATABASE_URL` | RDS Alibaba, o Docker solo offline | La misma instancia RDS |
 | `AUTH_MODE` | `demo` | `keycloak` |
 | `NEXT_PUBLIC_AUTH_MODE` | `demo` | `keycloak` |
 | `AUTH_SECRET` | dev | secreto fuerte |

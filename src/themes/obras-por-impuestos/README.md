@@ -6,7 +6,7 @@
 | **Ruta** | `/app/temas/obras-por-impuestos` |
 | **Carpeta** | `src/themes/obras-por-impuestos/` |
 
-## Capas (Postgres / Supabase)
+## Capas (PostgreSQL en RDS Alibaba)
 
 - **Convenio obra por impuesto** — una sola capa (BPIN / Nº convenio).
 

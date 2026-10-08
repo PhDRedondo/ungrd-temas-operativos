@@ -8,7 +8,7 @@
 
 ## 1. Qué es el producto
 
-Plataforma operativa UNGRD para **captura, Excel DIVIPOLA, analítica y mapa** sobre **PostgreSQL (Supabase)**. Temas misionales aislados en `src/themes/<slug>/`. Auth open source (Auth.js / demo o Keycloak). Despliegue piloto en **Vercel**; empaquetado **Docker** listo para migrar (p. ej. Alibaba / VM).
+Plataforma operativa UNGRD para **captura, Excel DIVIPOLA, analítica y mapa** sobre **PostgreSQL en RDS de Alibaba Cloud**. Temas misionales aislados en `src/themes/<slug>/`. Auth open source (Auth.js / demo o Keycloak). La aplicación web está en **Vercel**; la base y QuickBI están en **Alibaba**.
 
 | Acceso | Detalle |
 |--------|---------|
@@ -30,8 +30,8 @@ Plataforma operativa UNGRD para **captura, Excel DIVIPOLA, analítica y mapa** s
 
 ### 2.2 Base de datos — local = producción
 
-- **Una sola base de negocio:** PostgreSQL en **Supabase** (pooler Session `:5432`).
-- Local y prod apuntan a la **misma** `DATABASE_URL` (recomendado en `docs/LOCAL.md`).
+- **Una sola base de negocio:** PostgreSQL 18 en **RDS de Alibaba Cloud** (`sslmode=disable`).
+- Local, Vercel y QuickBI apuntan a la **misma** instancia (`docs/platform/ALIBABA-RDS.md`).
 - Los registros viven en la tabla de negocio por `theme_id` (no hay DB aparte por tema).
 - Conteos de referencia al cerrar el ciclo (no borrados):  
   **Obras de emergencia ≈ 76** · **Obras por impuestos ≈ 71** · (otros temas ya poblados: Agua, Carrotanques, Banco, etc.).
@@ -72,7 +72,7 @@ En Git y documentado (`docs/DOCKER.md`):
 
 Arranque típico: `cp .env.docker.example .env.docker` → `docker compose --profile app up -d --build` → http://localhost:3000
 
-En prod/Alibaba: fijar `AUTH_URL` pública, `AUTH_SECRET` fuerte y, si se desea la misma base, `DATABASE_URL` de Supabase.
+En producción: `AUTH_URL` pública, `AUTH_SECRET` fuerte y `DATABASE_URL` del RDS de Alibaba (`sslmode=disable`).
 
 ### 2.6 Calidad y despliegue
 
@@ -90,7 +90,7 @@ Excel oficiales / captura UI
         ↓
   Next.js API + validación DIVIPOLA
         ↓
-  PostgreSQL Supabase (records + capas/clave_seguimiento)
+  PostgreSQL RDS Alibaba (records + capas/clave_seguimiento)
         ↓
   Decisión / analítica / mapa  ·  QuickBI (origen de tableros SNI, separado)
 ```
@@ -109,7 +109,7 @@ Excel oficiales / captura UI
 4. Health: https://ungrd-manejo-phi.vercel.app/api/health → `ok` y `db: "up"`.
 5. (Opcional) Clonar repo y `docker compose --profile app up -d --build`.
 
-Si Registros se ve vacío con usuario no admin: revisar **ACL / permisos del tema**. Si QuickBI falla: el `pageId` puede no estar en el workspace SNI (no implica ausencia de datos en Supabase).
+Si Registros se ve vacío con usuario no admin: revisar **ACL / permisos del tema**. Si QuickBI falla: el `pageId` puede no estar en el workspace (no implica ausencia de datos en el RDS).
 
 ---
 
@@ -118,7 +118,7 @@ Si Registros se ve vacío con usuario no admin: revisar **ACL / permisos del tem
 | Documento | Uso |
 |-----------|-----|
 | `docs/MEMORY.md` | Decisiones y estado del MVP |
-| `docs/LOCAL.md` | Local = Supabase |
+| `docs/LOCAL.md` | Local = RDS Alibaba |
 | `docs/DOCKER.md` | Stack Docker / migración |
 | `docs/DEPLOY.md` | Checklist despliegue |
 | `src/themes/obras-de-emergencia/README.md` | Captura e IRP emergencia |
@@ -132,7 +132,7 @@ Si Registros se ve vacío con usuario no admin: revisar **ACL / permisos del tem
 |------|--------|
 | App en producción (Vercel) | Listo |
 | Código en GitHub `main` | Listo |
-| Supabase con datos de obras | Listo (≈76 / ≈71) |
+| RDS Alibaba con datos de obras | Listo |
 | Captura + decisión emergencia | Listo |
 | Captura + decisión impuestos | Listo |
 | QuickBI embed + API tickets | Listo |

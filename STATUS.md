@@ -11,9 +11,9 @@
 | Salud | `/api/health` |
 | Repositorio canónico | `UNGRD-FNGRD/manejo-aplicativo-temas` |
 | Remoto que despliega en Vercel | `PhDRedondo/ungrd-temas-operativos` |
-| Base local | RDS Alibaba (`DATABASE_URL`, `sslmode=disable`) |
-| Base de producción | Supabase, hasta cambiar `DATABASE_URL` en Vercel |
-| Espejo | `npm run db:sync-supabase` copia RDS hacia Supabase |
+| Base de datos | PostgreSQL en RDS de Alibaba Cloud. La misma instancia sirve a la app (local y Vercel) y a QuickBI |
+| Comprobación | `GET /api/health` → `db: "up"` y host `*.rds.aliyuncs.com` (verificado el 8-oct-2026) |
+| Conexión | `sslmode=disable`. Detalle en `docs/platform/ALIBABA-RDS.md` |
 
 La contraseña de la base vive en `.env.local`. No se commitea.
 
@@ -28,10 +28,9 @@ La contraseña de la base vive en `.env.local`. No se commitea.
 ## Despliegue
 
 - Publicar en los dos remotos. Vercel solo se dispara con `phdredondo`.
-- Cuando la base de producción pase a RDS: `DATABASE_URL` y `MEDALLION_DATABASE_URL` con `sslmode=disable`, `AUTH_URL=https://ungrd-manejo-phi.vercel.app`, `ACL_STRICT=true` y `SECURITY_ALLOW_LOCALHOST=false`.
+- `DATABASE_URL` y `MEDALLION_DATABASE_URL` de producción apuntan al RDS de Alibaba, con `sslmode=disable`. `AUTH_URL=https://ungrd-manejo-phi.vercel.app`, `ACL_STRICT=true` y `SECURITY_ALLOW_LOCALHOST=false`.
 
 ## Pendiente
 
 - Llenar los cupos del corte de agosto 2026 en producción.
-- Pasar el entorno de Vercel a RDS cuando el grupo de seguridad lo permita. No borrar el espejo Supabase.
 - El embed QuickBI de FIC responde 502 cuando la página es privada.

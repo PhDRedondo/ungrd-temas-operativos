@@ -26,9 +26,9 @@
 
 ## Visión cloud (referencia histórica)
 
-El prototipo documentaba despliegue en Alibaba Cloud (ACK, RDS, OSS, KMS). Esa visión sigue válida como **objetivo de infraestructura**, no como requisito del MVP local. Cuando se retome:
+La base de datos ya está en Alibaba Cloud: PostgreSQL RDS, la misma instancia para la app y QuickBI (`docs/platform/ALIBABA-RDS.md`). Sigue pendiente como infraestructura, no como base de datos:
 
-- RDS PostgreSQL ↔ `DATABASE_URL`
+- RDS PostgreSQL ↔ `DATABASE_URL` ya está hecho. No volver a tratarlo como futuro.
 - OSS ↔ archivos de carga
 - IdP (Keycloak o IdP institucional) ↔ `AUTH_MODE=keycloak`
 - Secretos en KMS / secret manager

@@ -21,30 +21,24 @@ npm run harness          # requiere npm run dev
 npm run harness:security
 ```
 
-### 2. Base de datos (Supabase)
+### 2. Base de datos (RDS Alibaba)
 
-```bash
-npm run db:setup           # schema legacy + seed temas
-# migraciones plataforma (si aplica):
-node -e "require('dotenv').config({path:'.env.local'}); require('child_process').spawnSync('psql',[process.env.DATABASE_URL,'-f','drizzle/migrations/0001_platform_schemas.sql'],{stdio:'inherit'})"
-npm run db:platform-seed
-node scripts/generate-theme-fields.cjs
-npx tsx scripts/prep-reimport-all.ts   # capas maqueta/bitácora
-```
+La base operativa es PostgreSQL 18 en RDS de Alibaba Cloud. La app y QuickBI usan la misma instancia, con `sslmode=disable`. Guía: [platform/ALIBABA-RDS.md](./platform/ALIBABA-RDS.md).
+
+El schema y los datos ya están en ese RDS. `npm run db:setup` solo hace falta en una base vacía (Docker offline). No correr el seed demo contra el RDS.
 
 ### 3. Variables de entorno en el host
 
-| Variable | Local | Producción |
-|----------|-------|------------|
-| `DATABASE_URL` | Supabase session :5432 | Mismo o pooler |
+| Variable | Local | Producción (Vercel) |
+|----------|-------|---------------------|
+| `DATABASE_URL` | RDS Alibaba, `sslmode=disable` | La misma instancia |
+| `MEDALLION_DATABASE_URL` | La misma instancia | La misma instancia |
 | `AUTH_SECRET` | dev | **secreto fuerte nuevo** |
-| `AUTH_URL` | http://localhost:3000 | URL pública HTTPS |
+| `AUTH_URL` | http://localhost:3000 | `https://ungrd-manejo-phi.vercel.app` |
 | `AUTH_MODE` | demo | `keycloak` (recomendado) |
 | `ACL_STRICT` | false | **true** |
 | `SECURITY_ENABLED` | true | true |
 | `SECURITY_ALLOW_LOCALHOST` | true | **false** |
-| `NEXT_PUBLIC_SUPABASE_URL` | opcional | si usas client |
-| `SUPABASE_SERVICE_ROLE_KEY` | solo server | solo server, nunca `NEXT_PUBLIC_` |
 
 ### 4. Seguridad
 

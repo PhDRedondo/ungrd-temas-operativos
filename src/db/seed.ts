@@ -34,7 +34,7 @@ async function main() {
   const forceSeed = process.env.ALLOW_PROD_SEED === "1";
   if (
     !forceSeed &&
-    /supabase|pooler\.supabase|amazonaws\.com/i.test(dbUrl) &&
+    /supabase|pooler\.supabase|amazonaws\.com|aliyuncs\.com/i.test(dbUrl) &&
     !/127\.0\.0\.1|localhost/i.test(dbUrl)
   ) {
     console.error(

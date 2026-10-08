@@ -82,7 +82,7 @@ export async function GET() {
     let likely = "revisar password y que el env sea Production + Redeploy";
     if (lower.includes("password") || lower.includes("auth")) {
       likely =
-        "Password incorrecto: use el Database password de Supabase (Settings → Database), no el de medallion_reader";
+        "Password incorrecto del RDS de Alibaba. Use el de DATABASE_URL, no un rol de solo lectura.";
     } else if (lower.includes("enotfound") || lower.includes("econnrefused")) {
       likely = "Host inalcanzable desde Vercel";
     } else if (lower.includes("timeout") || lower.includes("connect")) {
@@ -98,9 +98,9 @@ export async function GET() {
         database: probe,
         error: full,
         likely,
-        fix: "Vercel → Settings → Environment Variables → DATABASE_URL (Production) → pooler Session :5432 → Redeploy",
+        fix: "Vercel → Settings → Environment Variables → DATABASE_URL (Production) → RDS Alibaba, puerto 5432, sslmode=disable → Redeploy",
         example:
-          "postgresql://postgres.vbxvqctdemtnmkifrxeo:PASSWORD@aws-1-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require",
+          "postgresql://USER:PASSWORD@HOST.rds.aliyuncs.com:5432/DBNAME?sslmode=disable",
         ts: new Date().toISOString(),
       },
       { status: 503 },
