@@ -8,7 +8,7 @@ Abre esto si la raíz se ve “llena”. En proyectos Next.js **muchas configs d
 |-------------------|----------|
 | [`README.md`](./README.md) | Arranque en 30 segundos |
 | [`REQUIREMENTS.md`](./REQUIREMENTS.md) | Requisitos del producto |
-| [`MEMORY.md`](./MEMORY.md) | Memoria: antes→ahora y decisiones |
+| [`docs/MEMORY.md`](./docs/MEMORY.md) | Decisiones y estado del producto |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Cómo aportar (temas autónomos) |
 | [`docs/`](./docs/) | Documentación técnica completa |
 | [`Makefile`](./Makefile) | Atajos: `make harness`, `make smoke` |
@@ -39,20 +39,11 @@ No los muevas: Next/npm los buscan aquí.
 | `drizzle.config.ts` | ORM / DB |
 | `docker-compose.yml` | Postgres + Keycloak |
 
-## Agentes de IA
-
-| Archivo | Nota |
-|---------|------|
-| `AGENTS.md` | Reglas para Cursor / agentes |
-| `CLAUDE.md` | Puntero corto → AGENTS |
-
-Detalle: [`docs/ai/`](./docs/ai/).
-
 ## Orden de lectura recomendado
 
 1. `README.md`  
 2. `REQUIREMENTS.md`  
-3. `MEMORY.md`  
+3. `docs/MEMORY.md`  
 4. `docs/ARCHITECTURE.md`  
 5. `docs/LOCAL.md` → levantar  
 6. `docs/HARNESS.md` / `docs/SECURITY.md`  

@@ -16,7 +16,7 @@ Plataforma institucional para **captura**, **carga masiva Excel** y **analítica
 |---|---------|-----------|
 | 1 | [`STRUCTURE.md`](./STRUCTURE.md) | Qué es cada carpeta/archivo en Finder |
 | 2 | [`REQUIREMENTS.md`](./REQUIREMENTS.md) | Requisitos |
-| 3 | [`MEMORY.md`](./MEMORY.md) | Antes → ahora |
+| 3 | [`docs/MEMORY.md`](./docs/MEMORY.md) | Decisiones y estado |
 | 4 | [`docs/`](./docs/) | Arquitectura, API, seguridad, local |
 
 ---
@@ -55,8 +55,8 @@ Guía: [`docs/DOCKER.md`](docs/DOCKER.md) · Alibaba / producción.
 
 ```text
 ungrd-temas-operativos/
-├── README.md STRUCTURE.md REQUIREMENTS.md MEMORY.md
-├── CONTRIBUTING.md AGENTS.md Makefile
+├── README.md STRUCTURE.md REQUIREMENTS.md STATUS.md
+├── CONTRIBUTING.md Makefile
 ├── docs/                 ← documentación técnica
 ├── scripts/              ← arnés + smoke
 ├── src/                  ← código (app, api, temas, security)

@@ -720,7 +720,6 @@ async function build(): Promise<jsPDF> {
       ["npm run harness", "Suite de pruebas de API/dominio"],
       ["npm run smoke", "Humos con servidor local"],
       ["npm run test:unit", "Pruebas unitarias de pipeline/filtros"],
-      ["graphify update .", "Grafo de dependencias del código"],
     ],
     [1.3, 2.7],
   );

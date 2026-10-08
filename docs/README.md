@@ -7,7 +7,7 @@
 | Arranque | [`../README.md`](../README.md) |
 | Mapa del Finder | [`../STRUCTURE.md`](../STRUCTURE.md) |
 | Requisitos | [`../REQUIREMENTS.md`](../REQUIREMENTS.md) → detalle aquí abajo |
-| Memoria | [`../MEMORY.md`](../MEMORY.md) → detalle aquí abajo |
+| Estado operativo | [`../STATUS.md`](../STATUS.md) |
 
 ## Producto
 
@@ -27,7 +27,6 @@
 8. [LOCAL.md](./LOCAL.md) — setup máquina  
 9. [HARNESS.md](./HARNESS.md) · [SMOKE.md](./SMOKE.md)  
 10. [DEPLOY.md](./DEPLOY.md) — checklist pre-despliegue  
-11. [ai/README.md](./ai/README.md) — agentes  
 
 ## Plataforma multidependencia (workflows + casos)
 

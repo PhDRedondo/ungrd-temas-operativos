@@ -22,6 +22,7 @@
     "db:platform-seed": "tsx src/db/seed-platform.ts",
     "db:platform": "npm run db:platform-migrate && npm run db:platform-seed",
     "db:official-setup": "tsx scripts/db/setup-official.ts",
+    "db:sync-supabase": "tsx scripts/sync-rds-to-supabase.ts",
     "db:reimport": "tsx scripts/prep-reimport-all.ts",
     "medallion:generate": "tsx scripts/generate-medallion-theme-views.ts",
     "medallion:generate-silver": "tsx scripts/generate-medallion-silver.ts",

@@ -1,10 +1,7 @@
 # Memoria del proyecto
 
-Documento vivo para socios, desarrolladores y agentes de IA.  
-Actualizar cuando cambie una decisión de arquitectura o el estado del MVP.
-
-**Grafo de arquitectura (Graphify):** `graphify-out/graph.html` · `GRAPH_REPORT.md` · `graph.json`  
-Rebuild: `graphify update .` (sin LLM). Commit indexado: `19ccb2c`.
+Decisiones de arquitectura y estado del MVP.  
+Actualizar cuando cambie una decisión o el estado del producto.
 
 ---
 
@@ -20,7 +17,7 @@ Rebuild: `graphify update .` (sin LLM). Commit indexado: `19ccb2c`.
 | Temas | UI + seed sintético | Temas cableados desde Excel oficiales (schema v3) |
 | Reportes | — | PDF branding UNGRD + cron daily briefing |
 | Calidad | Manual | `harness` + `smoke` + tests unitarios de pipeline |
-| Deploy | Solo local | Vercel prod piloto Agua: `ungrd-manejo-phi.vercel.app` |
+| Deploy | Solo local | Vercel `ungrd-manejo-phi.vercel.app` (git `phdredondo`); RDS Alibaba local + espejo Supabase en prod |
 
 **Frase de producto:** de demo visual a plataforma operativa con ETL de bases oficiales, mando nacional y evidencias de contrato.
 
@@ -50,7 +47,7 @@ Route Handlers en el mismo repo (v0.1). Platform API v1 (`/api/v1/cases|tasks`) 
 Rate limit + ban IP + path inspection + headers + body limit (`src/lib/security`).
 
 ### ADR-013 · Fuente operativa = RDS Alibaba (sin SSL)
-Postgres 18 en `*.rds.aliyuncs.com`. `sslmode=disable`. App y QuickBI usan la misma instancia. Supabase queda de respaldo. El user de app es también el de BI hasta crear `medallion_reader` (este login no puede CREATE ROLE).
+Postgres 18 en `*.rds.aliyuncs.com`. `sslmode=disable`. App y QuickBI usan la misma instancia. Supabase queda de respaldo **y espejo** mientras Vercel no cambie `DATABASE_URL`: mismo corte SMD en las dos (sync `npm run db:sync-supabase`). El user de app es también el de BI hasta crear `medallion_reader` (este login no puede CREATE ROLE).
 
 ### ADR-008 · QuickBI embed con CreateTicket (patrón SNI)
 Catálogo por `pageId` en `src/lib/quickbi/catalog.ts`. Panel React → `token-service.ts` → `POST /api/quickbi/embed-url` (BFF) → proxy a `QUICKBI_UPSTREAM_BASE_URL` (prod: `https://apisni.soft180.co`) o CreateTicket local. Embed: `token3rd` + `accessTicket`. Si el ticket no sale, el BFF embebe la vista pública `dashboard/view` (FIC y tableros publicados). Los `pageId` privados deben estar compartidos en QuickBI del workspace del upstream.
@@ -158,20 +155,22 @@ Orden cronológico reciente (commits + trabajo contractual):
 7. **Filtros** — barra compartida, búsqueda por clave, URL compartible, deep-links, guía
 8. **Reportes PDF** — branding UNGRD, API theme/national, cron daily briefing
 9. **Evidencia contrato 9677** — comparación bases↔formularios, modelo alimentación maqueta, informe + figuras
-10. **Graphify** — grafo del repo (1501 nodos / 3066 aristas / 128 comunidades) en `graphify-out/`
-11. **Puentes multi-capa (ago 2026)** — `schemaVersion` 4: inventario (`id_puente`) + bitácora append + estructuración por `clave_proceso`; `PuenteLookup`/`ProcesoLookup`; reimport `scripts/reimport-puentes.ts`; sync inventario vía `puente-sync.ts`.
-12. **Orden de alimentación Puentes (ago 2026)** — el proceso es la raíz: **Estructuración → Inventario → Bitácora**. Estructuración origina el proceso (`lookupOptional` en `CaptureFormConfig` + creación desde `ProcesoLookup`); el inventario exige proceso y hereda `contrato_convenio`/`clave_proceso`/`tipo_vinculo`/`descripcion_proceso`. `searchThemeProcesos` lee la capa Estructuración (inventario solo como legacy, marcado *sin etapas*). Reimport reordenado + `--seed-procesos`; `scripts/seed-procesos-estructuracion.ts` y `scripts/demo-puentes-orden.ts`.
-13. **Contrato con punto de entrada único (ago 2026)** — `contrato_convenio` solo se escribe en Estructuración (`lookupCanCreate`); en Inventario y Bitácora llega heredado y actúa como filtro raíz. `proceso-chain.ts` aplica la regla en `POST`/`PATCH` de records; `capa-inference.ts` descarta el contrato de las hojas de bitácora. Facetas jerárquicas por `FACET_LEVEL` en `puente-lookup.ts`: contrato → origen → territorio → atributos.
-14. **Banco de Maquinaria multi-capa (ago 2026)** — `schemaVersion` 6: **convenio raíz** (como Puentes); F–I editables; detalle por `serial` cuelga del convenio; sync bitácora/entrega; lookup `serial`/`convenio`.
-15. **Carrotanques multi-capa (ago 2026)** — maqueta por `placa`; bitácora→M–P/T–Z; suministro→suma Q–R–S; formularios B–J / K–L.
-16. **Subsidios de Arriendos (ago 2026)** — consolidado de envíos: identidad `uuid`; `numero_envio` + `n_orden` del archivo; ingesta Excel + formulario opcional; medallón `subsidios_arriendos.consolidado`.
-17. **Reader = 1 tabla por formulario (ago 2026)** — cada `captureForms` de Agua/Puentes/Carrotanques/Banco/Subsidios tiene vista homónima en la URL `medallion_reader` con los mismos `fieldNames`. Incluye `carrotanques.actualizar_categorias` (K–L). Banco: columnas canónicas del form (`cantidad_maquinaria_expectativa`, `valor_total`, `estado_maquina`, `fecha_de_estado`) con coalesce a alias Excel. Catálogo: `medallion.v_connections`.
-18. **Obras de emergencia — captura + IRP (ago 2026)** — `captureForms` (contrato / O.P. / seguimiento), estados canónicos, `calculations.ts` (SPI/CPI/IRP). Excel `fields-from-source` intacto. Lookup por `clave_seguimiento`/`contrato_de_obra`; decisión enriquece alertas IRP/plazo sin quitar riesgo de pago.
-19. **Obras de emergencia — tablero ejecutivo SMD (ago 2026)** — `dashboard.ts` agrega KPIs del zip (en ejecución, urgentes ≤40d, IRP elevado, SPI medio, avance ponderado); `byLayer` = obras por estado (`layerLabel`); captura/Excel sin cambios.
-20. **Obras por impuestos — captura + tablero (ago 2026)** — `captureForms` (convenio / interventoría / seguimiento), estados canónicos, IRP vía fechas de convenio; decisión con KPIs vencidos/urgentes; Excel ArcGIS intacto.
-21. **FIC — captura AppSheet CONTROL FIC (sep 2026)** — `captureForms` (transferencia / legalización / prórroga), capa derivada de vigencia, lookup por No. CDP; plazos inicial+adición→final. KPI **Vencidos** = fecha inicial + plazo ejecución + prórroga (`plazo_adicion_dias` / acto de modificación); no solo el estado Excel `VENCIDO`. Cerrados (LEGALIZADO, ANULADO, REINTEGRO) no cuentan. Geo persistida en DIVIPOLA (`normalizeRecordGeo` + `scripts/backfill-divipola-geo.ts`); filtros y bases cruzan el mismo catálogo. Excel `fields-from-source` intacto.
+10. **Puentes multi-capa (ago 2026)** — `schemaVersion` 4: inventario (`id_puente`) + bitácora append + estructuración por `clave_proceso`; `PuenteLookup`/`ProcesoLookup`; reimport `scripts/reimport-puentes.ts`; sync inventario vía `puente-sync.ts`.
+11. **Orden de alimentación Puentes (ago 2026)** — el proceso es la raíz: **Estructuración → Inventario → Bitácora**. Estructuración origina el proceso (`lookupOptional` en `CaptureFormConfig` + creación desde `ProcesoLookup`); el inventario exige proceso y hereda `contrato_convenio`/`clave_proceso`/`tipo_vinculo`/`descripcion_proceso`. `searchThemeProcesos` lee la capa Estructuración (inventario solo como legacy, marcado *sin etapas*). Reimport reordenado + `--seed-procesos`; `scripts/seed-procesos-estructuracion.ts` y `scripts/demo-puentes-orden.ts`.
+12. **Contrato con punto de entrada único (ago 2026)** — `contrato_convenio` solo se escribe en Estructuración (`lookupCanCreate`); en Inventario y Bitácora llega heredado y actúa como filtro raíz. `proceso-chain.ts` aplica la regla en `POST`/`PATCH` de records; `capa-inference.ts` descarta el contrato de las hojas de bitácora. Facetas jerárquicas por `FACET_LEVEL` en `puente-lookup.ts`: contrato → origen → territorio → atributos.
+13. **Banco de Maquinaria multi-capa (ago 2026)** — `schemaVersion` 6: **convenio raíz** (como Puentes); F–I editables; detalle por `serial` cuelga del convenio; sync bitácora/entrega; lookup `serial`/`convenio`.
+14. **Carrotanques multi-capa (ago 2026)** — maqueta por `placa`; bitácora→M–P/T–Z; suministro→suma Q–R–S; formularios B–J / K–L.
+15. **Subsidios de Arriendos (ago 2026)** — consolidado de envíos: identidad `uuid`; `numero_envio` + `n_orden` del archivo; ingesta Excel + formulario opcional; medallón `subsidios_arriendos.consolidado`.
+16. **Reader = 1 tabla por formulario (ago 2026)** — cada `captureForms` de Agua/Puentes/Carrotanques/Banco/Subsidios tiene vista homónima en la URL `medallion_reader` con los mismos `fieldNames`. Incluye `carrotanques.actualizar_categorias` (K–L). Banco: columnas canónicas del form (`cantidad_maquinaria_expectativa`, `valor_total`, `estado_maquina`, `fecha_de_estado`) con coalesce a alias Excel. Catálogo: `medallion.v_connections`.
+17. **Obras de emergencia — captura + IRP (ago 2026)** — `captureForms` (contrato / O.P. / seguimiento), estados canónicos, `calculations.ts` (SPI/CPI/IRP). Excel `fields-from-source` intacto. Lookup por `clave_seguimiento`/`contrato_de_obra`; decisión enriquece alertas IRP/plazo sin quitar riesgo de pago.
+18. **Obras de emergencia — tablero ejecutivo SMD (ago 2026)** — `dashboard.ts` agrega KPIs del zip (en ejecución, urgentes ≤40d, IRP elevado, SPI medio, avance ponderado); `byLayer` = obras por estado (`layerLabel`); captura/Excel sin cambios.
+19. **Obras por impuestos — captura + tablero (ago 2026)** — `captureForms` (convenio / interventoría / seguimiento), estados canónicos, IRP vía fechas de convenio; decisión con KPIs vencidos/urgentes; Excel ArcGIS intacto.
+20. **FIC — captura AppSheet CONTROL FIC (sep 2026)** — `captureForms` (transferencia / legalización / prórroga), capa derivada de vigencia, lookup por No. CDP; plazos inicial+adición→final. KPI **Vencidos** = fecha inicial + plazo ejecución + prórroga (`plazo_adicion_dias` / acto de modificación); no solo el estado Excel `VENCIDO`. Cerrados (LEGALIZADO, ANULADO, REINTEGRO) no cuentan. Geo persistida en DIVIPOLA (`normalizeRecordGeo` + `scripts/backfill-divipola-geo.ts`); filtros y bases cruzan el mismo catálogo. Excel `fields-from-source` intacto.
+21. **RDS Alibaba = fuente operativa (sep 2026)** — Postgres 18 `sslmode=disable`; app local y QuickBI misma instancia. Vercel **sigue en Supabase** hasta pegar env. Espejo SMD 834 en ambas (`npm run db:sync-supabase`). Deploy Vercel = push `phdredondo`, no `origin` UNGRD-FNGRD.
+22. **Ejecución financiera Control por línea (sep 2026)** — `SmdControlDashboard` + `SmdCorteCupoForm` en Cargar Excel. Cupo manual por línea; disponible = cupo − CDP. En prod el UI está (`70c8930`); cupos aún no llenados.
+23. **Fidusap SMD oro ~834 (sep 2026)** — pestaña SMD (no solo W); fallback `cdextendido` salta título FIDUPREVISORA hasta “No CDP”. Corte en nombre de archivo (`34.REPORTE AGOSTO 31 DE 2026.xlsx`).
 
-### Hubs del grafo (core abstractions)
+### Puntos de entrada del código
 `requireSession` · `getTheme` · `ThemeConfig`/`ThemeModule` · `RecordRow` · `process-excel` · `buildDecisionBrief` · `enrichRecordsForDecision` · `NationalCommandCenter` · `guard` (security)
 
 ---
@@ -183,7 +182,6 @@ Orden cronológico reciente (commits + trabajo contractual):
 3. Polígonos municipales completos no embebidos (peso).
 4. Seed histórico puede tener municipios no DIVIPOLA.
 5. Platform schemas (`iam/config/staging/workflow`) parcialmente documentados vs legacy `public`.
-6. Memoria Claude-mem MCP puede fallar (dependencia `httpcore`); usar este `docs/MEMORY.md` + Graphify.
 
 ---
 
@@ -199,7 +197,6 @@ Orden cronológico reciente (commits + trabajo contractual):
 | ACL | Access Control List por tema |
 | Harness / Smoke | Checks locales / E2E corto |
 | Mando nacional | Vista agregada multi-tema con alertas y briefing |
-| Graphify | Knowledge graph del código (`graphify-out/`) |
 
 ---
 
@@ -213,8 +210,9 @@ Orden cronológico reciente (commits + trabajo contractual):
 | 2026-07-23 | Mando nacional, mapa, ETL, filtros, PDF/cron |
 | 2026-07-28 | Comparación bases vs formularios + modelo maqueta Agua |
 | 2026-07-30 | Evidencias contrato 9677 (informe + figuras) |
-| 2026-07-31 | Init memoria agent + Graphify arquitectura |
+| 2026-07-31 | Documentación de arquitectura del MVP |
 | 2026-08-20 | QuickBI: embed token3rd + API CreateTicket (port SNI) |
 | 2026-08-23 | Docker compose (--profile app): Postgres + migrate + Next standalone |
-| 2026-08-23 | Local recomendado: `DATABASE_URL` = Supabase (misma base que prod / QuickBI) |
-| 2026-09-15 | FIC Alibaba: 387 filas; vencimiento = inicial + plazo + prórroga (`dias_vencidos`, `vencido`) |
+| 2026-08-23 | Local (entonces): `DATABASE_URL` = Supabase. **Obsoleto:** local = RDS Alibaba desde 2026-09-15. |
+| 2026-09-15 | FIC Alibaba: 387 filas; vencimiento = inicial + plazo + prórroga (`dias_vencidos`, `vencido`). RDS operativa. |
+| 2026-09-18 | Prod SMD `70c8930`; espejo 834 CDP RDS→Supabase; formulario cupo en Cargar Excel (valores aún vacíos). |

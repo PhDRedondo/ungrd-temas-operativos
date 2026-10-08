@@ -65,8 +65,8 @@ Documentación detallada: [`src/themes/README.md`](src/themes/README.md).
 - Extender `scripts/harness` o `smoke-local.ts` si el camino es crítico
 - No romper DIVIPOLA (geo oficial)
 
-## Reglas de Cursor / agentes
+## Alcance de un tema
 
-- `.cursor/rules/theme-autonomy.mdc` — no tocar núcleo ni otros temas sin pedirlo
-- `.cursor/rules/theme-module.mdc` — al editar un slug, permanecer en su carpeta
-- Leer [`AGENTS.md`](AGENTS.md) y [`docs/MEMORY.md`](docs/MEMORY.md)
+- Al trabajar un tema, editar solo `src/themes/<slug>/`.
+- No cambiar el núcleo (`src/app`, `src/components`, `src/lib`, `src/themes/shared`) ni otro tema, salvo un cambio de arquitectura pedido de forma explícita.
+- Decisiones de producto: [`docs/MEMORY.md`](docs/MEMORY.md).
