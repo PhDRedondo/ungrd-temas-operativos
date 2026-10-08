@@ -31,7 +31,7 @@ OUT = ROOT / "docs" / "M-1101-GTI-17-Manual-tecnico-temas-operativos.pdf"
 LOGO = ROOT / "public" / "branding" / "UNGRD-Vertical.png"
 
 CODIGO = "M-1101-GTI-17"
-VERSION = "02"
+VERSION = "03"
 FECHA = "08/10/2026"
 TITULO_L1 = "MANUAL TÉCNICO – SNIGRD – TEMAS"
 TITULO_L2 = "OPERATIVOS"
@@ -888,7 +888,8 @@ def build():
         ["VERSIÓN", "DESCRIPCIÓN DEL CAMBIO", "FECHA"],
         [
             ["01", "Emisión inicial. Modelo de datos, conexiones en Alibaba Cloud y las diez bases conectadas.", "08/10/2026"],
-            ["02", "Revisión técnica: banner, control de cambios, pie de firmas y precisión de capas, llaves y tablas.", "08/10/2026"],
+            ["02", "Revisión técnica: banner, control de cambios y precisión de capas, llaves y tablas.", "08/10/2026"],
+            ["03", "Pie de firmas: elaboran Steven Ricardo Mora González y Camila Andrea Guevara Mejía; revisa Carolina Jiménez Zapata.", "08/10/2026"],
         ],
         [2.4 * cm, 12.2 * cm, 3.2 * cm],
     ))
@@ -896,14 +897,9 @@ def build():
     firma = [
         [cell("ELABORÓ", True), cell("REVISÓ", True), cell("APROBÓ", True)],
         [
-            cell("<b>Nombre:</b> Carlos Fernando Mejia San Juan"),
-            cell("<b>Nombre:</b> Johan Manuel Redondo"),
-            cell("<b>Nombre:</b> Isabel Cristina Arboleda López"),
-        ],
-        [
-            cell("<b>Cargo:</b> Contratista Fondo Nacional De Gestión Del Riesgo De Desastres - FNGRD"),
-            cell("<b>Cargo:</b> Contratista Fondo Nacional De Gestión Del Riesgo De Desastres - FNGRD"),
-            cell("<b>Cargo:</b> Coordinadora - Grupo de Tecnologías de la Información (E)."),
+            cell("<b>Nombre:</b> Steven Ricardo Mora González<br/>Camila Andrea Guevara Mejía"),
+            cell("<b>Nombre:</b> Carolina Jiménez Zapata"),
+            cell(""),
         ],
     ]
     pie = Table(firma, colWidths=[5.6 * cm, 5.6 * cm, 5.6 * cm])
