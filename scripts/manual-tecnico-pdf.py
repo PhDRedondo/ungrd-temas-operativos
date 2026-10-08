@@ -4,13 +4,15 @@
 from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.pdfgen import canvas as pdfcanvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
+    Flowable,
     Frame,
     ListFlowable,
     ListItem,
@@ -21,6 +23,9 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+pdfmetrics.registerFont(TTFont("Arial", "/System/Library/Fonts/Supplemental/Arial.ttf"))
+pdfmetrics.registerFont(TTFont("Arial-Bold", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"))
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "M-1101-GTI-17-Manual-tecnico-temas-operativos.pdf"
 LOGO = ROOT / "public" / "branding" / "UNGRD-Vertical.png"
@@ -28,90 +33,57 @@ LOGO = ROOT / "public" / "branding" / "UNGRD-Vertical.png"
 CODIGO = "M-1101-GTI-17"
 VERSION = "01"
 FECHA = "08/10/2026"
-TITULO = "MANUAL TÉCNICO – SNIGRD – TEMAS OPERATIVOS"
-VERDE = colors.HexColor("#0B6B3A")
-VERDE_SUAVE = colors.HexColor("#E7F2EB")
-LINEA = colors.HexColor("#1F4D32")
-GRIS = colors.HexColor("#4A4A4A")
-
-PAGE_W, PAGE_H = A4
+TITULO_L1 = "MANUAL TÉCNICO – SNIGRD – TEMAS"
+TITULO_L2 = "OPERATIVOS"
+AZUL = colors.HexColor("#002060")
+AZUL_TOC = colors.HexColor("#486E9A")
+PAGE_W, PAGE_H = letter
+PAGE_TOTAL = 0
+MARKS = {}
 
 
 def styles():
-    base = getSampleStyleSheet()
-    s = {
-        "h1": ParagraphStyle(
-            "h1",
-            parent=base["Heading1"],
-            fontName="Times-Bold",
-            fontSize=13,
-            leading=16,
-            textColor=VERDE,
-            spaceBefore=12,
-            spaceAfter=6,
-        ),
+    return {
         "h2": ParagraphStyle(
-            "h2",
-            parent=base["Heading2"],
-            fontName="Times-Bold",
-            fontSize=11.5,
-            leading=14,
-            textColor=LINEA,
-            spaceBefore=10,
-            spaceAfter=4,
+            "h2", fontName="Arial-Bold", fontSize=11, leading=14,
+            textColor=colors.black, spaceBefore=10, spaceAfter=4,
         ),
         "h3": ParagraphStyle(
-            "h3",
-            parent=base["Heading3"],
-            fontName="Times-Bold",
-            fontSize=10.5,
-            leading=13,
-            textColor=colors.HexColor("#163326"),
-            spaceBefore=8,
-            spaceAfter=3,
+            "h3", fontName="Arial-Bold", fontSize=11, leading=14,
+            textColor=colors.black, spaceBefore=8, spaceAfter=3,
         ),
         "body": ParagraphStyle(
-            "body",
-            parent=base["Normal"],
-            fontName="Times-Roman",
-            fontSize=10,
-            leading=13,
-            alignment=TA_JUSTIFY,
-            textColor=colors.black,
-            spaceAfter=6,
+            "body", fontName="Arial", fontSize=11, leading=14,
+            alignment=TA_JUSTIFY, textColor=colors.black, spaceAfter=8,
         ),
-        "toc": ParagraphStyle(
-            "toc",
-            fontName="Times-Roman",
-            fontSize=10,
-            leading=14,
-            leftIndent=0,
+        "toc_title": ParagraphStyle(
+            "toc_title", fontName="Arial", fontSize=12, leading=15,
+            alignment=TA_CENTER, textColor=AZUL_TOC, spaceBefore=4, spaceAfter=8,
+        ),
+        "toc_l": ParagraphStyle(
+            "toc_l", fontName="Arial", fontSize=11, leading=15, textColor=colors.black,
+        ),
+        "toc_r": ParagraphStyle(
+            "toc_r", fontName="Arial", fontSize=11, leading=15,
+            alignment=TA_LEFT, textColor=colors.black,
+        ),
+        "bar": ParagraphStyle(
+            "bar", fontName="Arial-Bold", fontSize=12, leading=15,
+            alignment=TA_CENTER, textColor=colors.white,
         ),
         "th": ParagraphStyle(
-            "th",
-            fontName="Times-Bold",
-            fontSize=7.5,
-            leading=9,
-            textColor=colors.white,
-            alignment=TA_LEFT,
+            "th", fontName="Arial-Bold", fontSize=8, leading=10,
+            textColor=colors.white, alignment=TA_CENTER,
         ),
         "td": ParagraphStyle(
-            "td",
-            fontName="Times-Roman",
-            fontSize=7.5,
-            leading=9,
-            textColor=colors.black,
+            "td", fontName="Arial", fontSize=8, leading=10,
+            textColor=colors.black, alignment=TA_CENTER,
         ),
         "small": ParagraphStyle(
-            "small",
-            fontName="Times-Italic",
-            fontSize=8.5,
-            leading=11,
-            textColor=GRIS,
-            spaceAfter=6,
+            "small", fontName="Arial", fontSize=9, leading=12,
+            textColor=colors.black, spaceBefore=8,
         ),
     }
-    return s
 
 
 S = styles()
@@ -133,12 +105,12 @@ def tabla(headers, rows, widths):
     t.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), VERDE),
+                ("BACKGROUND", (0, 0), (-1, 0), AZUL),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.white),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, VERDE_SUAVE]),
-                ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#8AA894")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("GRID", (0, 0), (-1, -1), 0.6, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 3),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 3),
                 ("TOPPADDING", (0, 0), (-1, -1), 2),
@@ -159,87 +131,150 @@ def dict_rows(rows):
 def bullets(items):
     flow = []
     for item in items:
-        flow.append(ListItem(P(item), leftIndent=12, bulletColor=VERDE))
-    return ListFlowable(flow, bulletType="bullet", start="•", leftIndent=14, bulletFontName="Times-Roman", bulletFontSize=10)
+        flow.append(ListItem(P(item), leftIndent=12, bulletColor=colors.black))
+    return ListFlowable(
+        flow, bulletType="bullet", start="•", leftIndent=16,
+        bulletFontName="Arial", bulletFontSize=11,
+    )
+
+
+def barra(texto):
+    usable = 518
+    data = [[Paragraph(texto, S["bar"])]]
+    t = Table(data, colWidths=[usable])
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), AZUL),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    t.spaceBefore = 8
+    t.spaceAfter = 8
+    return t
+
+
+class Marca(Flowable):
+    def __init__(self, clave):
+        super().__init__()
+        self.clave = clave
+
+    def wrap(self, aw, ah):
+        return (0, 0)
+
+    def draw(self):
+        MARKS[self.clave] = self.canv.getPageNumber()
+
+
+def toc_linea(etiqueta, pagina, indent=0):
+    estilo = ParagraphStyle(
+        "toc_item", fontName="Arial", fontSize=10, leading=13,
+        textColor=colors.black, leftIndent=indent,
+    )
+    puntos = ParagraphStyle(
+        "toc_pts", fontName="Arial", fontSize=8, leading=13, textColor=colors.HexColor("#666666"),
+    )
+    fila = Table(
+        [[Paragraph(etiqueta, estilo), Paragraph("." * 28, puntos), Paragraph(str(pagina), S["toc_r"])]],
+        colWidths=[13.6 * cm, 3.2 * cm, 1.2 * cm],
+    )
+    fila.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+    ]))
+    return fila
+
+
+def _centro(c, texto, x0, x1, y, fuente, tam):
+    c.setFont(fuente, tam)
+    ancho = c.stringWidth(texto, fuente, tam)
+    c.drawString((x0 + x1 - ancho) / 2, y, texto)
+
+
+def dibujar_banner(c, pagina):
+    total = PAGE_TOTAL or pagina
+    x = [47, 159, 375, 480, 565]
+    y_top = PAGE_H - 35
+    y_mid = PAGE_H - 62.2
+    y_bot = PAGE_H - 91.5
+    c.saveState()
+    c.setStrokeColor(colors.black)
+    c.setFillColor(colors.black)
+    c.setLineWidth(0.8)
+    c.rect(x[0], y_bot, x[4] - x[0], y_top - y_bot, stroke=1, fill=0)
+    c.line(x[1], y_bot, x[1], y_top)
+    c.line(x[2], y_bot, x[2], y_top)
+    c.line(x[3], y_bot, x[3], y_top)
+    c.line(x[1], y_mid, x[4], y_mid)
+    if LOGO.exists():
+        c.drawImage(
+            str(LOGO), x[0] + 8, y_bot + 6,
+            width=x[1] - x[0] - 16, height=y_top - y_bot - 12,
+            preserveAspectRatio=True, mask="auto", anchor="c",
+        )
+    c.setFillColor(colors.black)
+    _centro(c, TITULO_L1, x[1], x[2], y_mid + 16, "Arial-Bold", 8)
+    _centro(c, TITULO_L2, x[1], x[2], y_mid + 6, "Arial-Bold", 8)
+    _centro(c, "GESTIÓN DE TECNOLOGÍAS DE LA", x[1], x[2], y_bot + 16, "Arial-Bold", 7.5)
+    _centro(c, "INFORMACIÓN", x[1], x[2], y_bot + 6, "Arial-Bold", 7.5)
+    _centro(c, "CÓDIGO:", x[2], x[3], y_mid + 16, "Arial-Bold", 8)
+    _centro(c, CODIGO, x[2], x[3], y_mid + 6, "Arial", 8)
+    _centro(c, f"F.A: {FECHA}", x[2], x[3], y_bot + 10, "Arial", 8)
+    _centro(c, f"Versión {VERSION}", x[3], x[4], y_mid + 10, "Arial", 8)
+    _centro(c, f"Página {pagina} de", x[3], x[4], y_bot + 16, "Arial", 8)
+    _centro(c, str(total), x[3], x[4], y_bot + 6, "Arial", 8)
+    c.restoreState()
 
 
 class ManualDoc(BaseDocTemplate):
     def __init__(self, path):
         super().__init__(
-            str(path),
-            pagesize=A4,
-            title=TITULO,
+            path,
+            pagesize=letter,
+            title="M-1101-GTI-17  MT TEMAS OPERATIVOS",
             author="Gestión de Tecnologías de la Información — UNGRD",
             subject="Manual técnico de la plataforma Temas Operativos sobre Alibaba Cloud",
         )
-        frame = Frame(
-            1.5 * cm,
-            1.6 * cm,
-            PAGE_W - 3.0 * cm,
-            PAGE_H - 4.15 * cm,
-            id="body",
-            showBoundary=0,
-        )
+        frame = Frame(47, 46, 518, 640, id="body", showBoundary=0)
         self.addPageTemplates([PageTemplate(id="main", frames=[frame], onPage=self._decor)])
 
     def _decor(self, canv, doc):
-        canv.saveState()
-        y = PAGE_H - 1.15 * cm
-        if LOGO.exists():
-            canv.drawImage(str(LOGO), 1.5 * cm, PAGE_H - 1.85 * cm, width=1.15 * cm, height=1.35 * cm, mask="auto", preserveAspectRatio=True, anchor="c")
-            text_x = 2.9 * cm
-        else:
-            text_x = 1.5 * cm
-        canv.setFillColor(LINEA)
-        canv.setFont("Times-Bold", 9)
-        canv.drawString(text_x, y, TITULO)
-        canv.setFont("Times-Roman", 8)
-        canv.setFillColor(GRIS)
-        canv.drawRightString(PAGE_W - 1.5 * cm, y, f"CÓDIGO: {CODIGO}  Versión {VERSION}")
-        canv.setStrokeColor(VERDE)
-        canv.setLineWidth(1.4)
-        canv.line(1.5 * cm, PAGE_H - 2.05 * cm, PAGE_W - 1.5 * cm, PAGE_H - 2.05 * cm)
-        canv.setFillColor(LINEA)
-        canv.setFont("Times-Bold", 7.5)
-        canv.drawString(1.5 * cm, PAGE_H - 2.38 * cm, "GESTIÓN DE TECNOLOGÍAS DE LA INFORMACIÓN")
-        canv.setFont("Times-Roman", 7.5)
-        canv.drawRightString(PAGE_W - 4.6 * cm, PAGE_H - 2.38 * cm, f"F.A: {FECHA}")
-        canv.setStrokeColor(colors.HexColor("#C5D5CB"))
-        canv.setLineWidth(0.4)
-        canv.line(1.5 * cm, 1.15 * cm, PAGE_W - 1.5 * cm, 1.15 * cm)
-        canv.setFillColor(GRIS)
-        canv.setFont("Times-Roman", 7.5)
-        canv.drawString(1.5 * cm, 0.72 * cm, "UNGRD  ·  SNIGRD  ·  Uso interno")
-        canv.drawRightString(PAGE_W - 1.5 * cm, 0.72 * cm, CODIGO)
-        canv.restoreState()
+        dibujar_banner(canv, doc.page)
 
 
 def build():
     story = []
-    story.append(P("Tabla de contenido", "h1"))
-    toc = [
-        "1. Introducción",
-        "2. Objetivo",
-        "3. Alcance",
-        "4. Definiciones",
-        "5. Requerimientos legales y otros requisitos",
-        "6. Desarrollo",
-        "6.1 Gobernanza de datos",
-        "6.1.1 Fuentes de datos y caracterización de la información",
-        "6.1.2 Diccionario de datos y modelo de información",
-        "6.1.3 Calidad de datos en las capas Bronce, Silver y Gold",
-        "6.1.4 Procesos de transformación, trazabilidad y control del dato",
-        "6.2 Arquitectura de la solución",
-        "6.2.1 Arquitectura general",
-        "6.2.2 Componentes tecnológicos e infraestructura",
-        "6.3 Lineamientos técnicos de seguridad, operación y escalabilidad",
-        "7. Control de cambios del documento",
+    story.append(P("Tabla de contenido", "toc_title"))
+    entradas = [
+        ("1. INTRODUCCIÓN", "s1", 0),
+        ("2. OBJETIVO", "s2", 0),
+        ("3. ALCANCE", "s3", 0),
+        ("4. DEFINICIONES", "s4", 0),
+        ("5. REQUERIMIENTOS LEGALES Y OTROS REQUISITOS", "s5", 0),
+        ("6. DESARROLLO", "s6", 0),
+        ("5.1 Gobernanza de Datos", "s61", 12),
+        ("5.1.1    Fuentes de datos y caracterización de la información", "s611", 24),
+        ("5.1.2    Diccionario de datos y modelo de información", "s612", 24),
+        ("5.1.3    Calidad de datos aplicada en las capas Bronce, Silver y Gold", "s613", 24),
+        ("5.1.4    Procesos de transformación, trazabilidad y control del dato", "s614", 24),
+        ("5.2 ARQUITECTURA DE LA SOLUCIÓN", "s62", 12),
+        ("5.2.1    Arquitectura general de la solución", "s621", 24),
+        ("5.2.2    Componentes tecnológicos e infraestructura", "s622", 24),
+        ("5.3 Lineamientos técnicos de seguridad, operación y escabilidad", "s63", 12),
+        ("7. CONTROL DE CAMBIOS DEL DOCUMENTO", "s7", 0),
     ]
-    for line in toc:
-        story.append(P(line, "toc"))
-    story.append(Spacer(1, 8))
+    for etiqueta, clave, indent in entradas:
+        story.append(toc_linea(etiqueta, MARKS.get(clave, ""), indent))
+    story.append(Spacer(1, 10))
 
-    story.append(P("1. Introducción", "h1"))
+    story.append(Marca("s1"))
+    story.append(barra("1. INTRODUCCIÓN"))
     story.append(P(
         "El presente manual técnico documenta la plataforma <b>Temas Operativos</b> del Sistema "
         "Nacional de Información para la Gestión del Riesgo de Desastres (SNIGRD), operada por la "
@@ -270,7 +305,8 @@ def build():
         "línea misional ni los procedimientos administrativos del área."
     ))
 
-    story.append(P("2. Objetivo", "h1"))
+    story.append(Marca("s2"))
+    story.append(barra("2. OBJETIVO"))
     story.append(P(
         "Documentar la solución técnica de Temas Operativos sobre Alibaba Cloud, de modo que el "
         "personal de la Gestión de Tecnologías de la Información pueda administrar, soportar, "
@@ -279,7 +315,8 @@ def build():
         "seguridad y continuidad."
     ))
 
-    story.append(P("3. Alcance", "h1"))
+    story.append(Marca("s3"))
+    story.append(barra("3. ALCANCE"))
     story.append(P("Este manual cubre:"))
     story.append(bullets([
         "La instancia PostgreSQL de RDS Alibaba: motor, host, puerto, base, usuario de aplicación y modo SSL.",
@@ -296,7 +333,8 @@ def build():
         "seguridad de la UNGRD distintas de las que aplica esta plataforma."
     ))
 
-    story.append(P("4. Definiciones", "h1"))
+    story.append(Marca("s4"))
+    story.append(barra("4. DEFINICIONES"))
     defs = [
         ("Activo de información", "Recursos tecnológicos, infraestructura y datos de la plataforma. La instancia RDS, los esquemas, las cargas Excel y las cuentas de acceso son activos de la UNGRD."),
         ("ACL", "Lista de control de acceso por tema (<font face='Courier'>public.user_theme_access</font>). En producción, <font face='Courier'>ACL_STRICT=true</font>: quien no tiene fila de acceso no entra al tema."),
@@ -321,7 +359,8 @@ def build():
     for name, text in defs:
         story.append(P(f"<b>{name}.</b> {text}"))
 
-    story.append(P("5. Requerimientos legales y otros requisitos", "h1"))
+    story.append(Marca("s5"))
+    story.append(barra("5. REQUERIMIENTOS LEGALES Y OTROS REQUISITOS"))
     story.append(P(
         "La plataforma custodia información de la gestión del riesgo de desastres y datos de "
         "terceros asociados a contratos, órdenes y territorio. Su operación se ajusta, en lo "
@@ -341,9 +380,12 @@ def build():
     ))
     story.append(Spacer(1, 8))
 
-    story.append(P("6. Desarrollo", "h1"))
-    story.append(P("6.1 Gobernanza de datos", "h2"))
-    story.append(P("6.1.1 Fuentes de datos y caracterización de la información", "h3"))
+    story.append(Marca("s6"))
+    story.append(barra("6. DESARROLLO"))
+    story.append(Marca("s61"))
+    story.append(P("5.1 GOBERNANZA DE DATOS", "h2"))
+    story.append(Marca("s611"))
+    story.append(P("FUENTES DE DATOS Y CARACTERIZACIÓN DE LA INFORMACIÓN", "h3"))
     story.append(P(
         "Hay dos puertas de entrada y una sola tabla de destino. El formulario de captura escribe "
         "un registro con <font face='Courier'>source = form</font>. La carga Excel valida el archivo, "
@@ -384,7 +426,8 @@ def build():
     ))
     story.append(Spacer(1, 8))
 
-    story.append(P("6.1.2 Diccionario de datos y modelo de información", "h3"))
+    story.append(Marca("s612"))
+    story.append(P("DICCIONARIO DE DATOS Y MODELO DE INFORMACIÓN", "h3"))
     story.append(P(
         "La instancia se llama <font face='Courier'>d01_p011_aplicativo_temas</font>. El diccionario "
         "de abajo es el de la estructura común. Los campos de cada hoja Excel no se listan aquí: "
@@ -493,7 +536,8 @@ def build():
         "<font face='Courier'>public.records</font>, que sigue siendo la fuente de las bases misionales."
     ))
 
-    story.append(P("6.1.3 Calidad de datos en las capas Bronce, Silver y Gold", "h3"))
+    story.append(Marca("s613"))
+    story.append(P("CALIDAD DE DATOS APLICADA EN LAS CAPAS BRONCE, SILVER Y GOLD", "h3"))
     story.append(P(
         "La calidad no se aplica igual en cada capa. Bronce no reescribe el hecho: lo filtra. "
         "Silver tipa y relaciona. Gold, entendido como la lectura de Quick BI, solo ve lo que "
@@ -524,7 +568,8 @@ def build():
     ))
     story.append(Spacer(1, 8))
 
-    story.append(P("6.1.4 Procesos de transformación, trazabilidad y control del dato", "h3"))
+    story.append(Marca("s614"))
+    story.append(P("PROCESOS DE TRANSFORMACIÓN, TRAZABILIDAD Y CONTROL DEL DATO", "h3"))
     story.append(P(
         "El flujo es lineal. No hay un motor de orquestación distinto de la aplicación y de los "
         "scripts de sincronización que corren contra el RDS."
@@ -545,8 +590,10 @@ def build():
         "duplicada no crea un segundo <font face='Courier'>id</font>."
     ))
 
-    story.append(P("6.2 Arquitectura de la solución", "h2"))
-    story.append(P("6.2.1 Arquitectura general", "h3"))
+    story.append(Marca("s62"))
+    story.append(P("5.2 ARQUITECTURA DE LA SOLUCIÓN", "h2"))
+    story.append(Marca("s621"))
+    story.append(P("ARQUITECTURA GENERAL DE LA SOLUCIÓN", "h3"))
     story.append(P(
         "La solución tiene tres planos sobre Alibaba Cloud. El plano de aplicación atiende a los "
         "usuarios y es el único que escribe negocio. El plano de datos es el RDS. El plano analítico "
@@ -581,7 +628,8 @@ def build():
         "aplica, el Silver sincronizado— incluye las filas nuevas."
     ))
 
-    story.append(P("6.2.2 Componentes tecnológicos e infraestructura", "h3"))
+    story.append(Marca("s622"))
+    story.append(P("COMPONENTES TECNOLÓGICOS E INFRAESTRUCTURA", "h3"))
     story.append(P("<b>Conexión a la base.</b> Password en el almacén de secretos de la instancia o de KMS. No está en el repositorio.", "body"))
     story.append(tabla(
         ["Parámetro", "Valor"],
@@ -635,7 +683,8 @@ def build():
         "Un tablero vacío con la base poblada indica un pageId de otro workspace, no una base vacía."
     ))
 
-    story.append(P("6.3 Lineamientos técnicos de seguridad, operación y escalabilidad", "h2"))
+    story.append(Marca("s63"))
+    story.append(P("5.3 LINEAMIENTOS TÉCNICOS DE SEGURIDAD, OPERACIÓN Y ESCABILIDAD", "h2"))
     story.append(tabla(
         ["Lineamiento", "Qué contempla", "Detalle"],
         [
@@ -652,13 +701,14 @@ def build():
     story.append(Spacer(1, 8))
     story.append(P(
         "El personal técnico que reciba este manual debe poder: conectar un cliente SQL al RDS con "
-        "los parámetros de la sección 6.2.2, distinguir un registro vivo de uno borrado, leer el "
+        "los parámetros de la sección 5.2.2, distinguir un registro vivo de uno borrado, leer el "
         "resultado de una carga, explicar por qué Quick BI y la aplicación muestran el mismo corte, "
         "y saber que un campo nuevo de un tema entra por field_schema y por la vista de la hoja, "
         "no por una columna nueva en public.records."
     ))
 
-    story.append(P("7. Control de cambios del documento", "h1"))
+    story.append(Marca("s7"))
+    story.append(barra("7. CONTROL DE CAMBIOS DEL DOCUMENTO"))
     story.append(tabla(
         ["Versión", "Fecha", "Descripción", "Elaboró"],
         [
@@ -675,30 +725,17 @@ def build():
     return story
 
 
-class CanvasConTotal(pdfcanvas.Canvas):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._saved = []
-
-    def showPage(self):
-        self._saved.append(dict(self.__dict__))
-        self._startPage()
-
-    def save(self):
-        total = len(self._saved)
-        for index, state in enumerate(self._saved, start=1):
-            self.__dict__.update(state)
-            self.setFillColor(LINEA)
-            self.setFont("Times-Roman", 7.5)
-            self.drawRightString(PAGE_W - 1.5 * cm, PAGE_H - 2.38 * cm, f"Página {index} de {total}")
-            super().showPage()
-        super().save()
-
-
 def main():
+    global PAGE_TOTAL
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    doc = ManualDoc(OUT)
-    doc.build(build(), canvasmaker=CanvasConTotal)
+    borrador = BytesIO()
+    ManualDoc(borrador).build(build())
+    PAGE_TOTAL = len(PdfReader(borrador).pages)
+    ManualDoc(str(OUT)).build(build())
     print(OUT)
 
 
