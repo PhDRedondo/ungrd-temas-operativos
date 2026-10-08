@@ -31,7 +31,7 @@ OUT = ROOT / "docs" / "M-1101-GTI-17-Manual-tecnico-temas-operativos.pdf"
 LOGO = ROOT / "public" / "branding" / "UNGRD-Vertical.png"
 
 CODIGO = "M-1101-GTI-17"
-VERSION = "01"
+VERSION = "02"
 FECHA = "08/10/2026"
 TITULO_L1 = "MANUAL TÉCNICO – SNIGRD – TEMAS"
 TITULO_L2 = "OPERATIVOS"
@@ -263,6 +263,7 @@ def build():
         ("5.1.2    Diccionario de datos y modelo de información", "s612", 24),
         ("5.1.3    Calidad de datos aplicada en las capas Bronce, Silver y Gold", "s613", 24),
         ("5.1.4    Procesos de transformación, trazabilidad y control del dato", "s614", 24),
+        ("5.1.5    Bases misionales conectadas", "s615", 24),
         ("5.2 ARQUITECTURA DE LA SOLUCIÓN", "s62", 12),
         ("5.2.1    Arquitectura general de la solución", "s621", 24),
         ("5.2.2    Componentes tecnológicos e infraestructura", "s622", 24),
@@ -420,9 +421,15 @@ def build():
             ["carrotanques", "placa", "Maqueta, bitácora, suministro"],
             ["banco-de-maquinaria", "convenio y serial", "Convenio raíz y detalle por serial"],
             ["subsidios-de-arriendos", "uuid de envío", "Consolidado de envíos"],
-            ["asistencia-humanitaria, asistencia-tecnica, alertas-tempranas, compra-de-materiales, materiales, convenios, declaratoria-de-emergencia, equipo-de-respuesta, gestion-de-servicios, presupuesto", "clave_seguimiento del tema", "Misma tabla public.records; campos en payload"],
+            ["presupuesto", "rubro + vigencia", "Asignación por rubro. Sin capas adicionales."],
         ],
         [5.2 * cm, 4.2 * cm, 7.4 * cm],
+    ))
+    story.append(P(
+        "Las diez bases de esta tabla ya están conectadas a <font face='Courier'>public.records</font> "
+        "y, donde existe contrato de lectura, a una vista o esquema Medallón. El detalle de capas, "
+        "llaves y tablas está en el numeral 5.1.5. Los demás temas del catálogo comparten la misma "
+        "tabla madre, pero este manual no los desarrolla."
     ))
     story.append(Spacer(1, 8))
 
@@ -590,6 +597,174 @@ def build():
         "duplicada no crea un segundo <font face='Courier'>id</font>."
     ))
 
+    story.append(Marca("s615"))
+    story.append(P("BASES MISIONALES CONECTADAS", "h3"))
+    story.append(P(
+        "Cada base es un <font face='Courier'>theme_id</font>. Todas escriben en "
+        "<font face='Courier'>public.records</font>. La capa va en el payload y la vista Medallón "
+        "la convierte en columnas. La llave de negocio no sustituye a <font face='Courier'>record_id</font>: "
+        "es el cruce entre hojas del mismo tema."
+    ))
+
+    def base(titulo, texto, filas):
+        story.append(P(titulo, "h3"))
+        story.append(P(texto))
+        story.append(tabla(
+            ["Capa o formulario", "Modo", "Llave", "Lectura en RDS"],
+            filas,
+            [4.6 * cm, 2.6 * cm, 4.2 * cm, 5.4 * cm],
+        ))
+        story.append(Spacer(1, 4))
+
+    base(
+        "Agua y saneamiento",
+        "Identificador <font face='Courier'>agua-y-saneamiento</font>, versión de esquema 7, ruta "
+        "<font face='Courier'>/app/temas/agua-y-saneamiento</font>. Todas las hojas se unen por "
+        "<font face='Courier'>orden_de_proveeduria</font>. El hub es <font face='Courier'>agua.general</font>. "
+        "No se cruza con el esquema <font face='Courier'>puentes</font>. El mapa de uniones está en "
+        "<font face='Courier'>medallion.v_join_map</font> con <font face='Courier'>schema_name = agua</font>. "
+        "Bitácora, pagos, modificaciones y estructuración son historial: cada evento nuevo actualiza "
+        "la fila de alta con el último estado y deja el detalle en su tabla. Los días de la maqueta "
+        "(columnas de permanencia por dependencia) se calculan; no se digitan.",
+        [
+            ["Alta / registro inicial", "Alta única", "orden_de_proveeduria", "agua.general"],
+            ["Variables del líder", "Actualización", "orden_de_proveeduria", "agua.variables_lider"],
+            ["Modificaciones", "Historial", "orden_de_proveeduria", "agua.modificaciones"],
+            ["Bitácora", "Historial", "orden_de_proveeduria", "agua.bitacora"],
+            ["Pagos", "Historial", "orden_de_proveeduria", "agua.pagos"],
+            ["CDP y RC", "Historial", "orden_de_proveeduria", "agua.cdps_y_rc"],
+            ["Bitácora estructuración", "Historial", "orden_de_proveeduria", "agua.bitacora_estructuracion"],
+            ["Control ejecución física", "Actualización", "orden_de_proveeduria", "agua.control_y_seguimiento_detalle_m"],
+            ["Silver relacional", "Sincronización", "orden_de_proveeduria", "silver_agua.orden y una tabla por hoja"],
+        ],
+    )
+    base(
+        "Carrotanques",
+        "Identificador <font face='Courier'>carrotanques</font>, versión 5. La llave es "
+        "<font face='Courier'>placa</font>, guardada también como <font face='Courier'>clave_seguimiento</font>. "
+        "Las columnas B a J de la maqueta (placa, clase, marca, serial, año, capacidad) no cambian después del alta. "
+        "K y L (categorías y propiedad) sí se editan sobre la misma fila. La bitácora actualiza ubicación y estado. "
+        "El suministro suma litros, personas y comunidades de todos los viajes de esa placa.",
+        [
+            ["Alta maqueta", "Alta única", "placa", "Fila de inventario en public.records"],
+            ["Actualizar categorías", "Actualización versionada", "placa", "Misma fila de la maqueta, columnas K–L"],
+            ["Bitácora estado", "Historial", "placa", "Último evento copia geo y estado a la maqueta"],
+            ["Suministro / viajes", "Historial", "placa", "Suma de litros, personas y comunidades"],
+        ],
+    )
+    base(
+        "Obras de emergencia",
+        "Identificador <font face='Courier'>obras-de-emergencia</font>. Dos hechos de negocio conviven en el tema: "
+        "el contrato de obra y la orden de proveeduría de maquinaria. La clave de seguimiento es "
+        "<font face='Courier'>contrato_de_obra</font> o <font face='Courier'>orden_de_proveeduria</font>. "
+        "El Excel oficial no se recorta: los formularios muestran el subconjunto operativo. "
+        "SPI, CPI e IRP se calculan por contrato en <font face='Courier'>calculations.ts</font> y alimentan el tablero.",
+        [
+            ["Contrato de obra", "Actualización", "contrato_de_obra", "public.records, capa de contrato"],
+            ["Orden de proveeduría", "Actualización", "orden_de_proveeduria", "public.records, capa de O.P."],
+            ["Seguimiento de avances", "Actualización con búsqueda", "contrato existente", "Estado y avances del contrato"],
+        ],
+    )
+    base(
+        "Obras por impuestos",
+        "Identificador <font face='Courier'>obras-por-impuestos</font>. La llave es "
+        "<font face='Courier'>no_convenio</font>, guardada como <font face='Courier'>clave_seguimiento</font>. "
+        "Interventoría y seguimiento buscan un convenio ya creado. Los indicadores reutilizan SPI, CPI e IRP "
+        "con las fechas del convenio.",
+        [
+            ["Convenio", "Actualización", "no_convenio", "public.records, capa de convenio"],
+            ["Interventoría", "Actualización con búsqueda", "no_convenio", "Datos de interventoría del mismo convenio"],
+            ["Seguimiento", "Actualización con búsqueda", "no_convenio", "Estado y fechas del convenio"],
+        ],
+    )
+    base(
+        "Puentes",
+        "Identificador <font face='Courier'>puentes</font>, versión 5. El orden de alimentación es obligatorio: "
+        "primero nace el proceso, después el puente y después sus eventos. "
+        "<font face='Courier'>contrato_convenio</font> solo se escribe en estructuración. En inventario y bitácora "
+        "llega heredado; la API rechaza un inventario con contrato inexistente y no deja cambiar el contrato fuera "
+        "de la primera capa. No se cruza con el esquema <font face='Courier'>agua</font>.",
+        [
+            ["Contrato estructuración", "Historial por etapa", "clave_proceso", "puentes.contratos_estructuracion"],
+            ["Inventario puente", "Alta única", "id_puente", "puentes.base_general_puentes"],
+            ["Bitácora estado", "Historial por evento", "id_puente + convenio_o_cto", "puentes.bitacora"],
+            ["Silver relacional", "Sincronización", "id_puente y clave_proceso", "silver_puentes.*"],
+        ],
+    )
+    story.append(P(
+        "Uniones de Puentes: bitácora con inventario por <font face='Courier'>id_puente</font> "
+        "(alternativa <font face='Courier'>codigo_operativo</font>); inventario con estructuración por "
+        "<font face='Courier'>clave_proceso</font> (alternativa <font face='Courier'>contrato_convenio</font>). "
+        "El buscador filtra en este orden: contrato, origen, departamento, municipio, tipo, configuración y ubicación."
+    ))
+    base(
+        "Banco de maquinaria",
+        "Identificador <font face='Courier'>banco-de-maquinaria</font>, versión 6. El modelo sigue el de Puentes: "
+        "el convenio es la raíz y cada máquina cuelga de él por serial. La bitácora del convenio copia el último "
+        "estado a los equipos. Departamento y municipio se heredan del convenio y no se pisan desde la bitácora.",
+        [
+            ["Convenio o proceso", "Alta única", "no_convenio", "Hoja CONVENIOS O PROCESOS"],
+            ["Detalle maquinaria", "Alta por equipo", "serial", "Hoja DETALLE MAQUINARIA; exige el convenio"],
+            ["Bitácora convenio", "Historial", "no_convenio", "Hoja BITACORA CONVENIOS"],
+        ],
+    )
+    base(
+        "FIC",
+        "Identificador <font face='Courier'>fic</font>, versión 4. La fuente es el control de transferencias "
+        "(AppSheet y el Excel histórico de seguimiento). La capa no se elige a mano: sale de la vigencia "
+        "(Transferencia FIC 2014 a 2026). La llave de seguimiento es el número FIC "
+        "(<font face='Courier'>no_cdp</font>). <font face='Courier'>id_transferencia</font> separa duplicados. "
+        "En Quick BI la llave de la fila es <font face='Courier'>record_id</font>, no el número de CDP. "
+        "La vista de lectura es <font face='Courier'>fic.fic</font> (alias <font face='Courier'>medallion.v_fic_all</font>). "
+        "El plazo final es el plazo inicial más los días de prórroga. La fecha final corre ese plazo desde la fecha inicial. "
+        "Un FIC legalizado, anulado, en reintegro o en cierre no cuenta como vencido.",
+        [
+            ["Transferencia FIC", "Alta", "no_cdp", "fic.fic"],
+            ["Seguimiento legalización", "Actualización", "no_cdp", "Misma fila; usa la fecha final"],
+            ["Modificación / prórroga", "Actualización", "no_cdp", "Recalcula plazo_final_dias y la fecha final"],
+        ],
+    )
+    base(
+        "Presupuesto",
+        "Identificador <font face='Courier'>presupuesto</font>, ruta "
+        "<font face='Courier'>/app/temas/presupuesto</font>. Está conectado como tema de la misma tabla "
+        "<font face='Courier'>public.records</font>. No tiene capas ni Silver. Cada registro es una asignación "
+        "por rubro y vigencia. El valor de cabecera es el presupuesto en pesos.",
+        [
+            ["Asignación", "Registro del tema", "rubro + vigencia", "public.records; campos rubro, vigencia y valor en el payload"],
+        ],
+    )
+    base(
+        "Ejecución financiera",
+        "Identificador <font face='Courier'>ejecucion-financiera</font>. No usa formulario de captura. "
+        "Entra el reporte Fidusap tal como sale. Se lee primero la pestaña SMD; si no existe, la hoja "
+        "de CDP extendido, saltando las filas de título hasta el encabezado No CDP. Solo pasan el área "
+        "ejecutora SMD o el área solicitante de Manejo de Desastres. Cada subida marca el corte con el "
+        "nombre del archivo y reemplaza el corte anterior por número de CDP. El tablero agrupa por línea. "
+        "Saldo por comprometer es CDP menos RC. La apropiación y el disponible salen del cupo escrito a mano "
+        "para ese corte, no de un catálogo externo. Disponible es cupo menos CDP.",
+        [
+            ["Carga Fidusap", "Reemplazo por corte", "No CDP", "public.records del tema; grilla SMD"],
+            ["Cupo por línea", "Formulario del corte", "línea + corte", "corte-cupo.ts; no viene en el Excel"],
+            ["Tablero", "Lectura", "línea", "CDP, compromiso, saldo, pagado y por pagar"],
+        ],
+    )
+    base(
+        "Subsidios de arriendo",
+        "Identificador <font face='Courier'>subsidios-de-arriendos</font>, versión 3. La lectura es "
+        "<font face='Courier'>subsidios_arriendos.consolidado</font>. Cada Excel es un envío: el nombre "
+        "del archivo trae número de envío, municipio y departamento. El consolidado guarda "
+        "<font face='Courier'>numero_envio</font>, <font face='Courier'>n_orden</font>, estado, documentos, "
+        "arrendador, arrendatario, vivienda, tenencia, contrato, duración, fechas, valor pagado y código DANE. "
+        "Departamento y municipio solo se aceptan si están en DIVIPOLA. El formulario es opcional, para un alta "
+        "puntual; no reemplaza el Excel. <font face='Courier'>uuid</font> viene en el archivo de consolidado "
+        "y, si el alta es puntual, se genera al guardar. No se pide en pantalla.",
+        [
+            ["Consolidado del envío", "Carga Excel", "numero_envio + n_orden", "subsidios_arriendos.consolidado"],
+            ["Alta puntual", "Formulario opcional", "uuid generado", "Misma capa del consolidado"],
+        ],
+    )
+
     story.append(Marca("s62"))
     story.append(P("5.2 ARQUITECTURA DE LA SOLUCIÓN", "h2"))
     story.append(Marca("s621"))
@@ -712,7 +887,8 @@ def build():
     story.append(tabla(
         ["Versión", "Fecha", "Descripción", "Elaboró"],
         [
-            ["01", "08/10/2026", "Emisión inicial. Plataforma Temas Operativos: modelo de datos, Medallón en RDS Alibaba, conexiones de aplicación y Quick BI, y lineamientos de operación.", "Gestión de Tecnologías de la Información"],
+            ["01", "08/10/2026", "Emisión inicial. Modelo común, Medallón en RDS Alibaba y conexiones de aplicación y Quick BI.", "Gestión de Tecnologías de la Información"],
+            ["02", "08/10/2026", "Detalle de las diez bases conectadas: Agua y saneamiento, Carrotanques, Obras de emergencia, Obras por impuestos, Puentes, Banco de maquinaria, FIC, Presupuesto, Ejecución financiera y Subsidios de arriendo.", "Gestión de Tecnologías de la Información"],
         ],
         [2.2 * cm, 2.8 * cm, 8.8 * cm, 3.0 * cm],
     ))
