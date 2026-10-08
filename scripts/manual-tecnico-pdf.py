@@ -14,6 +14,7 @@ from reportlab.platypus import (
     BaseDocTemplate,
     Flowable,
     Frame,
+    KeepTogether,
     ListFlowable,
     ListItem,
     PageTemplate,
@@ -31,7 +32,7 @@ OUT = ROOT / "docs" / "M-1101-GTI-17-Manual-tecnico-temas-operativos.pdf"
 LOGO = ROOT / "public" / "branding" / "UNGRD-Vertical.png"
 
 CODIGO = "M-1101-GTI-17"
-VERSION = "03"
+VERSION = "01"
 FECHA = "08/10/2026"
 TITULO_L1 = "MANUAL TÉCNICO – SNIGRD – TEMAS"
 TITULO_L2 = "OPERATIVOS"
@@ -882,24 +883,34 @@ def build():
         "no por una columna nueva en public.records."
     ))
 
-    story.append(Marca("s7"))
-    story.append(barra("7. CONTROL DE CAMBIOS DEL DOCUMENTO"))
-    story.append(tabla(
-        ["VERSIÓN", "DESCRIPCIÓN DEL CAMBIO", "FECHA"],
+    plano = ParagraphStyle("plano", fontName="Arial", fontSize=9, leading=12, alignment=TA_CENTER)
+    plano_b = ParagraphStyle("plano_b", fontName="Arial-Bold", fontSize=9, leading=12, alignment=TA_CENTER)
+    cambios = Table(
         [
-            ["01", "Emisión inicial. Modelo de datos, conexiones en Alibaba Cloud y las diez bases conectadas.", "08/10/2026"],
-            ["02", "Revisión técnica: banner, control de cambios y precisión de capas, llaves y tablas.", "08/10/2026"],
-            ["03", "Pie de firmas: elaboran Steven Ricardo Mora González y Camila Andrea Guevara Mejía; revisa Carolina Jiménez Zapata.", "08/10/2026"],
+            [Paragraph(x, plano_b) for x in ("VERSIÓN", "DESCRIPCIÓN DEL CAMBIO", "FECHA")],
+            [Paragraph(x, plano) for x in ("01", "Emisión inicial", "08/10/2026")],
         ],
-        [2.4 * cm, 12.2 * cm, 3.2 * cm],
-    ))
-    story.append(Spacer(1, 14))
+        colWidths=[3.2 * cm, 10.4 * cm, 3.2 * cm],
+    )
+    cambios.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.6, colors.black),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
     firma = [
         [cell("ELABORÓ", True), cell("REVISÓ", True), cell("APROBÓ", True)],
         [
             cell("<b>Nombre:</b> Steven Ricardo Mora González<br/>Camila Andrea Guevara Mejía"),
             cell("<b>Nombre:</b> Carolina Jiménez Zapata"),
-            cell(""),
+            cell("<b>Nombre:</b>"),
+        ],
+        [
+            cell("<b>Cargo:</b>"),
+            cell("<b>Cargo:</b>"),
+            cell("<b>Cargo:</b>"),
         ],
     ]
     pie = Table(firma, colWidths=[5.6 * cm, 5.6 * cm, 5.6 * cm])
@@ -908,14 +919,19 @@ def build():
         ("BACKGROUND", (0, 1), (-1, -1), colors.white),
         ("GRID", (0, 0), (-1, -1), 0.8, colors.black),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-        ("ALIGN", (0, 1), (-1, -1), "CENTER"),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
     ]))
-    story.append(pie)
+    story.append(Marca("s7"))
+    story.append(KeepTogether([
+        barra("7. CONTROL DE CAMBIOS DEL DOCUMENTO"),
+        cambios,
+        Spacer(1, 16),
+        pie,
+    ]))
     return story
 
 
