@@ -267,7 +267,7 @@ def build():
         ("5.2 ARQUITECTURA DE LA SOLUCIÓN", "s62", 12),
         ("5.2.1    Arquitectura general de la solución", "s621", 24),
         ("5.2.2    Componentes tecnológicos e infraestructura", "s622", 24),
-        ("5.3 Lineamientos técnicos de seguridad, operación y escabilidad", "s63", 12),
+        ("5.3 Lineamientos técnicos de seguridad, operación y escalabilidad", "s63", 12),
         ("7. CONTROL DE CAMBIOS DEL DOCUMENTO", "s7", 0),
     ]
     for etiqueta, clave, indent in entradas:
@@ -859,7 +859,7 @@ def build():
     ))
 
     story.append(Marca("s63"))
-    story.append(P("5.3 LINEAMIENTOS TÉCNICOS DE SEGURIDAD, OPERACIÓN Y ESCABILIDAD", "h2"))
+    story.append(P("5.3 LINEAMIENTOS TÉCNICOS DE SEGURIDAD, OPERACIÓN Y ESCALABILIDAD", "h2"))
     story.append(tabla(
         ["Lineamiento", "Qué contempla", "Detalle"],
         [
@@ -885,19 +885,41 @@ def build():
     story.append(Marca("s7"))
     story.append(barra("7. CONTROL DE CAMBIOS DEL DOCUMENTO"))
     story.append(tabla(
-        ["Versión", "Fecha", "Descripción", "Elaboró"],
+        ["VERSIÓN", "DESCRIPCIÓN DEL CAMBIO", "FECHA"],
         [
-            ["01", "08/10/2026", "Emisión inicial. Modelo común, Medallón en RDS Alibaba y conexiones de aplicación y Quick BI.", "Gestión de Tecnologías de la Información"],
-            ["02", "08/10/2026", "Detalle de las diez bases conectadas: Agua y saneamiento, Carrotanques, Obras de emergencia, Obras por impuestos, Puentes, Banco de maquinaria, FIC, Presupuesto, Ejecución financiera y Subsidios de arriendo.", "Gestión de Tecnologías de la Información"],
+            ["01", "Emisión inicial. Modelo de datos, conexiones en Alibaba Cloud y las diez bases conectadas.", "08/10/2026"],
+            ["02", "Revisión técnica: banner, control de cambios, pie de firmas y precisión de capas, llaves y tablas.", "08/10/2026"],
         ],
-        [2.2 * cm, 2.8 * cm, 8.8 * cm, 3.0 * cm],
+        [2.4 * cm, 12.2 * cm, 3.2 * cm],
     ))
-    story.append(Spacer(1, 10))
-    story.append(P(
-        "Documento de uso interno. La contraseña de la base, las AccessKey y el secreto de sesión "
-        "no forman parte de este manual.",
-        "small",
-    ))
+    story.append(Spacer(1, 14))
+    firma = [
+        [cell("ELABORÓ", True), cell("REVISÓ", True), cell("APROBÓ", True)],
+        [
+            cell("<b>Nombre:</b> Carlos Fernando Mejia San Juan"),
+            cell("<b>Nombre:</b> Johan Manuel Redondo"),
+            cell("<b>Nombre:</b> Isabel Cristina Arboleda López"),
+        ],
+        [
+            cell("<b>Cargo:</b> Contratista Fondo Nacional De Gestión Del Riesgo De Desastres - FNGRD"),
+            cell("<b>Cargo:</b> Contratista Fondo Nacional De Gestión Del Riesgo De Desastres - FNGRD"),
+            cell("<b>Cargo:</b> Coordinadora - Grupo de Tecnologías de la Información (E)."),
+        ],
+    ]
+    pie = Table(firma, colWidths=[5.6 * cm, 5.6 * cm, 5.6 * cm])
+    pie.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), AZUL),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.8, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("ALIGN", (0, 1), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(pie)
     return story
 
 
